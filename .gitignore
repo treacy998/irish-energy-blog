@@ -1,0 +1,22 @@
+# Data files (keep repo lean — raw data stays local)
+data/*.csv
+data/*.xlsx
+!data/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Hugo build output
+site/public/
+site/resources/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

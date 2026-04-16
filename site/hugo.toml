@@ -1,0 +1,80 @@
+baseURL = "https://irish-energy-blog.vercel.app/"
+languageCode = "en-ie"
+title = "Irish Energy Market Blog"
+theme = "PaperMod"
+[pagination]
+  pagerSize = 10
+
+# SEO & metadata
+[params]
+  description = "Daily data-driven analysis of Ireland's electricity markets — I-SEM, SEMO, EirGrid"
+  author = "Eoin"
+  env = "production"
+  defaultTheme = "auto"
+  ShowReadingTime = true
+  ShowShareButtons = true
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+  ShowRssButtonInSectionTermList = true
+  ShowAllPagesInArchive = true
+  ShowPageNums = true
+  ShowToc = false
+  images = ["images/cover.png"]
+
+  [params.homeInfoParams]
+    Title = "Irish Energy Market Blog"
+    Content = "Daily data-driven analysis of Ireland's I-SEM wholesale electricity markets. Built with Python, powered by SEMO & EirGrid data."
+
+  [[params.socialIcons]]
+    name = "linkedin"
+    url = "https://www.linkedin.com/in/eoin-treacy-3aa62115b"
+  [[params.socialIcons]]
+    name = "github"
+    url = "https://github.com/treacy998/irish-energy-blog"
+
+# SEO: generate structured URLs
+[permalinks]
+  daily = "/daily/:year/:month/:slug/"
+  weekly = "/weekly/:year/:month/:slug/"
+
+# Taxonomies for filtering
+[taxonomies]
+  tag = "tags"
+  author = "authors"
+
+# Menu
+[[menu.main]]
+  identifier = "daily"
+  name = "Daily Briefings"
+  url = "/daily/"
+  weight = 10
+
+[[menu.main]]
+  identifier = "weekly"
+  name = "Weekly Analysis"
+  url = "/weekly/"
+  weight = 20
+
+[[menu.main]]
+  identifier = "tags"
+  name = "Topics"
+  url = "/tags/"
+  weight = 30
+
+[[menu.main]]
+  identifier = "about"
+  name = "About"
+  url = "/about/"
+  weight = 40
+
+# RSS feed (useful for future email digest)
+[outputFormats.RSS]
+  mediatype = "application/rss+xml"
+  baseName = "feed"
+
+# Build settings
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true  # allows raw HTML in markdown if needed
