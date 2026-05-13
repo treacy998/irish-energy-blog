@@ -1,4 +1,5 @@
 baseURL = "https://irish-energy-blog.vercel.app/"
+
 languageCode = "en-ie"
 title = "Irish Energy Market Blog"
 theme = "PaperMod"
