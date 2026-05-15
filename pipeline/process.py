@@ -12,17 +12,45 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 
 
 def load_dam_data(filepath: Path) -> pd.DataFrame:
-    """Load and clean a SEMO DAM CSV."""
-    df = pd.read_csv(filepath)
+    """Load a SEMO DAM CSV (semicolon-delimited wide block format)."""
+    with open(filepath, encoding="utf-8") as f:
+        rows = [line.rstrip("\n").split(";") for line in f]
 
-    # Standard cleaning — adapt column names if real SEMO format differs
-    expected_cols = ["DeliveryDate", "Period", "StartTime", "DAMPrice_EUR_MWh"]
-    for col in expected_cols:
-        if col not in df.columns:
-            raise ValueError(f"Missing expected column: {col}")
+    # Delivery date = auction date + 1 day (file is always D+1)
+    delivery_date = None
+    for row in rows[:10]:
+        if row[0].lower().startswith("auction date"):
+            delivery_date = (pd.Timestamp(row[1]) + pd.Timedelta(days=1)).date()
+            break
+    if delivery_date is None:
+        raise ValueError("Could not find auction date in file metadata")
 
-    df["DeliveryDate"] = pd.to_datetime(df["DeliveryDate"])
-    return df
+    # Locate the EUR index prices block
+    ts_row = val_row = None
+    for i, row in enumerate(rows):
+        if row[0] == "Index prices" and len(row) >= 3 and row[2] == "EUR":
+            ts_row = rows[i + 1]
+            val_row = rows[i + 2]
+            break
+    if ts_row is None:
+        raise ValueError("Could not find 'Index prices' EUR block")
+
+    records = []
+    for period_num, (ts_str, val_str) in enumerate(zip(ts_row, val_row), start=1):
+        if not ts_str.strip() or not val_str.strip():
+            continue
+        ts = pd.Timestamp(ts_str)
+        # +1 hour: correct for BST (UTC+1, Apr–Oct). In GMT months (Nov–Mar) Irish time = UTC, so this over-corrects by 1h.
+        ts_irish = ts + pd.Timedelta(hours=1)
+        price = float(val_str.replace(",", "."))
+        records.append({
+            "DeliveryDate": pd.Timestamp(delivery_date),
+            "Period": period_num,
+            "StartTime": ts_irish.strftime("%H:%M"),
+            "DAMPrice_EUR_MWh": price,
+        })
+
+    return pd.DataFrame(records)
 
 
 def daily_summary(df: pd.DataFrame, target_date: date) -> dict:
@@ -73,14 +101,16 @@ def get_day_data(filepath: Path, target_date: date) -> pd.DataFrame:
 if __name__ == "__main__":
     from datetime import date
 
-    # Demo with sample data
+    raw = DATA_DIR / "semo_dam_raw.csv"
     sample = DATA_DIR / "semo_dam_sample.csv"
-    if not sample.exists():
-        print("Run generate_sample_data.py first")
+    filepath = raw if raw.exists() else sample
+    if not filepath.exists():
+        print("No data file found — download semo_dam_raw.csv or run generate_sample_data.py")
         raise SystemExit(1)
 
-    target = date(2026, 4, 13)  # low-wind day in sample data
-    summary = daily_summary(load_dam_data(sample), target)
+    df = load_dam_data(filepath)
+    target = df["DeliveryDate"].dt.date.iloc[0]
+    summary = daily_summary(df, target)
 
     print(f"\n{'='*45}")
     print(f"  Daily Summary — {summary['date']}")

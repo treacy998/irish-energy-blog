@@ -1,3 +1,4 @@
-[submodule "site/themes/PaperMod"]
-	path = site/themes/PaperMod
-	url = https://github.com/adityatelange/hugo-PaperMod
+[submodule "site/themes/congo"]
+	path = site/themes/congo
+	url = https://github.com/jpanther/congo.git
+	branch = stable

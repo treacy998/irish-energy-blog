@@ -1,0 +1,26 @@
+baseURL = "https://irish-energy-blog.vercel.app/"
+languageCode = "en-ie"
+title = "Irish Energy Markets"
+theme = "congo"
+
+[pagination]
+  pagerSize = 10
+
+[permalinks]
+  daily = "/daily/:year/:month/:slug/"
+  weekly = "/weekly/:year/:month/:slug/"
+
+[taxonomies]
+  tag = "tags"
+  author = "authors"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+  [markup.highlight]
+    noClasses = false
+
+[outputFormats.RSS]
+  mediatype = "application/rss+xml"
+  baseName = "feed"

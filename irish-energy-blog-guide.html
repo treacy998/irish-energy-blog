@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Irish Energy Blog — Operations Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --surface-alt: #f0efec;
+    --border: #dddbd5;
+    --border-strong: #c4c1b9;
+    --text: #1a1a18;
+    --text-mid: #444240;
+    --text-dim: #6b6862;
+    --accent: #1a5276;
+    --accent-light: #e8f0f7;
+    --green: #1b7a42;
+    --green-light: #e6f5ec;
+    --orange: #b45309;
+    --orange-light: #fef3e2;
+    --red: #b91c1c;
+    --red-light: #fde8e8;
+    --code-bg: #1c1c1c;
+    --code-text: #d4d4d4;
+    --code-cm: #6a9955;
+    --code-kw: #569cd6;
+    --code-st: #ce9178;
+    --code-dim: #707070;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #14394f 0%, #1a5276 60%, #1e6491 100%);
+    color: white;
+    padding: 2.8rem 2rem 2.2rem;
+    position: relative;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #27ae60 0%, #1a5276 40%, #e67e22 100%);
+  }
+  header h1 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.85rem;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  header .subtitle {
+    margin-top: 0.35rem;
+    opacity: 0.8;
+    font-size: 0.9rem;
+  }
+  .header-links {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1.8rem;
+    flex-wrap: wrap;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    opacity: 0.65;
+  }
+
+  /* ── NAV ── */
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    overflow-x: auto;
+    white-space: nowrap;
+    display: flex;
+    gap: 0;
+  }
+  nav a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 0.7rem 0.85rem;
+    transition: color 0.15s, border-color 0.15s;
+    border-bottom: 2px solid transparent;
+    display: inline-block;
+  }
+  nav a:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ── MAIN ── */
+  main {
+    max-width: 840px;
+    margin: 0 auto;
+    padding: 1.8rem 1.5rem 4rem;
+  }
+
+  /* ── SECTIONS ── */
+  section { margin-bottom: 2.8rem; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--accent);
+  }
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--accent);
+    color: white;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .section-header h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 1.4rem 0 0.4rem;
+    color: var(--text);
+  }
+
+  p {
+    margin-bottom: 0.7rem;
+    color: var(--text-mid);
+    font-size: 0.88rem;
+  }
+  p strong { color: var(--text); }
+
+  /* ── CODE ── */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.75;
+    overflow-x: auto;
+    margin: 0.6rem 0 1rem;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+  }
+  p code, li code, td code {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    color: var(--accent);
+    font-size: 0.76rem;
+  }
+  .cm { color: var(--code-cm); }
+  .kw { color: var(--code-kw); }
+  .st { color: var(--code-st); }
+  .dim { color: var(--code-dim); }
+
+  /* ── FLOW ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 1rem 0 1.2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .flow-item {
+    background: var(--surface);
+    border: 1.5px solid var(--accent);
+    border-radius: 6px;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .flow-item.active { background: var(--accent); color: white; }
+  .flow-arrow {
+    font-size: 0.9rem;
+    color: var(--border-strong);
+    padding: 0 0.2rem;
+  }
+
+  /* ── STEPS ── */
+  .step {
+    display: flex;
+    gap: 0.9rem;
+    margin: 1rem 0;
+    align-items: flex-start;
+  }
+  .step-dot {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 0.72rem;
+    background: var(--accent);
+    color: white;
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+  }
+  .step-body { flex: 1; }
+  .step-body h4 { font-size: 0.9rem; margin-bottom: 0.25rem; }
+  .step-body p { font-size: 0.85rem; margin-bottom: 0.3rem; }
+
+  /* ── CALLOUTS ── */
+  .callout {
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    margin: 0.8rem 0;
+    font-size: 0.84rem;
+  }
+  .callout p { margin-bottom: 0.2rem; font-size: 0.84rem; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout-info { background: var(--accent-light); border-left: 3px solid var(--accent); }
+  .callout-ok { background: var(--green-light); border-left: 3px solid var(--green); }
+  .callout-warn { background: var(--orange-light); border-left: 3px solid var(--orange); }
+  .callout-err { background: var(--red-light); border-left: 3px solid var(--red); }
+  .callout-tag {
+    font-weight: 700;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 0.25rem;
+  }
+  .callout-info .callout-tag { color: var(--accent); }
+  .callout-ok .callout-tag { color: var(--green); }
+  .callout-warn .callout-tag { color: var(--orange); }
+  .callout-err .callout-tag { color: var(--red); }
+
+  /* ── TABLES ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin: 0.6rem 0 1rem;
+  }
+  th {
+    text-align: left;
+    font-weight: 600;
+    padding: 0.5rem 0.7rem;
+    background: var(--surface-alt);
+    border-bottom: 2px solid var(--border-strong);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-dim);
+  }
+  td {
+    padding: 0.45rem 0.7rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text-mid);
+  }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { color: var(--text); }
+
+  /* ── TREE ── */
+  .tree {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem;
+    line-height: 1.85;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    margin: 0.6rem 0;
+  }
+  .tree .t-dim { color: var(--text-dim); }
+  .tree .t-hl { color: var(--accent); font-weight: 600; }
+  .tree .t-gr { color: var(--green); }
+
+  /* ── CARDS ── */
+  .card-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.7rem;
+    margin: 0.7rem 0;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.9rem 1rem;
+  }
+  .card h4 {
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+    color: var(--accent);
+  }
+  .card p { font-size: 0.82rem; margin-bottom: 0.2rem; }
+
+  /* ── CONFIG TABLE ── */
+  .config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.7rem;
+    margin: 0.7rem 0;
+  }
+  .config-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem 0.9rem;
+  }
+  .config-card .filename {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 0.25rem;
+  }
+  .config-card p { font-size: 0.8rem; margin: 0; }
+
+  /* ── CHECK LIST ── */
+  .checklist { list-style: none; padding: 0; margin: 0.5rem 0; }
+  .checklist li {
+    font-size: 0.84rem;
+    padding: 0.3rem 0;
+    color: var(--text-mid);
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .checklist .done { color: var(--green); font-weight: 600; }
+  .checklist .todo { color: var(--orange); font-weight: 600; }
+
+  /* ── LINKEDIN QUOTE ── */
+  .li-quote {
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    padding: 0.9rem 1.1rem;
+    border-radius: 0 6px 6px 0;
+    margin: 0.7rem 0;
+    font-style: italic;
+    font-size: 0.86rem;
+    color: var(--text-mid);
+    line-height: 1.65;
+  }
+
+  /* ── FUTURE CARDS ── */
+  .future-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.9rem 1rem;
+    margin: 0.6rem 0;
+  }
+  .future-item h4 {
+    font-size: 0.88rem;
+    margin-bottom: 0.3rem;
+  }
+  .future-item p { font-size: 0.83rem; }
+  .future-item pre {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    font-size: 0.74rem;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 2rem 1.5rem;
+    color: var(--text-dim);
+    font-size: 0.74rem;
+    border-top: 1px solid var(--border);
+    max-width: 840px;
+    margin: 0 auto;
+  }
+
+  @media print {
+    nav { display: none; }
+    header { padding: 1.5rem; }
+    main { padding: 1rem 0; }
+    section { break-inside: avoid; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 1.8rem 1.2rem; }
+    header h1 { font-size: 1.4rem; }
+    main { padding: 1.2rem 1rem 3rem; }
+    nav { padding: 0 0.5rem; }
+    nav a { padding: 0.6rem 0.6rem; font-size: 0.72rem; }
+    .card-row, .config-grid { grid-template-columns: 1fr; }
+    .flow { gap: 0.3rem; }
+    .flow-item { font-size: 0.68rem; padding: 0.35rem 0.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Irish Energy Market Blog</h1>
+  <p class="subtitle">Operations Guide — Python pipeline + Hugo + Vercel</p>
+  <div class="header-links">
+    <span>irish-energy-blog.vercel.app</span>
+    <span>github.com/treacy998/irish-energy-blog</span>
+    <span>~/dev/blog/irish-energy-blog</span>
+  </div>
+</header>
+
+<nav>
+  <a href="#daily">Daily Workflow</a>
+  <a href="#project">Project Map</a>
+  <a href="#pipeline">Pipeline</a>
+  <a href="#data">SEMO Data</a>
+  <a href="#posts">Writing Posts</a>
+  <a href="#theme">Theme</a>
+  <a href="#hugo">Hugo</a>
+  <a href="#deploy">Git &amp; Deploy</a>
+  <a href="#linkedin">LinkedIn</a>
+  <a href="#seo">SEO</a>
+  <a href="#future">Future</a>
+  <a href="#trouble">Troubleshooting</a>
+  <a href="#commands">Commands</a>
+  <a href="#links">Links</a>
+</nav>
+
+<main>
+
+<!-- ════════════════════════════════════════ 1 ══ -->
+<section id="daily">
+<div class="section-header">
+  <span class="section-num">1</span>
+  <h2>Daily Workflow</h2>
+</div>
+
+<div class="flow">
+  <div class="flow-item">Activate venv</div><span class="flow-arrow">→</span>
+  <div class="flow-item">Download CSV</div><span class="flow-arrow">→</span>
+  <div class="flow-item active">run_daily.py</div><span class="flow-arrow">→</span>
+  <div class="flow-item">Enter title</div><span class="flow-arrow">→</span>
+  <div class="flow-item">Write commentary</div><span class="flow-arrow">→</span>
+  <div class="flow-item">Preview</div><span class="flow-arrow">→</span>
+  <div class="flow-item">Push</div><span class="flow-arrow">→</span>
+  <div class="flow-item">LinkedIn</div>
+</div>
+
+<div class="step">
+  <div class="step-dot">1</div>
+  <div class="step-body">
+    <h4>Activate the virtual environment</h4>
+    <p>Do this once per terminal session. You'll see <code>(venv)</code> in your prompt.</p>
+    <pre>cd ~/dev/blog/irish-energy-blog
+source venv/bin/activate</pre>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-dot">2</div>
+  <div class="step-body">
+    <h4>Download the data</h4>
+    <p>Go to <strong>sem-o.com/market-data/dynamic-reports</strong> → <strong>ETS Market Results</strong>. Download yesterday's DAM CSV. Drop it into <code>data/</code> — no renaming needed.</p>
+    <div class="callout callout-err">
+      <div class="callout-tag">Important</div>
+      <p>Only <code>SEM-DA</code> files work. Do not use <code>SEM-IDA1</code>, <code>SEM-IDA2</code>, or <code>SEM-GB</code> files — those are different markets and the pipeline will reject them.</p>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-dot">3</div>
+  <div class="step-body">
+    <h4>Run the pipeline</h4>
+    <pre>python pipeline/run_daily.py</pre>
+    <p>Auto-detects the most recent <code>MarketResult_SEM-DA_*.csv</code>, prints the delivery date, then prompts for a post title:</p>
+    <pre><span class="dim">Post title [I-SEM Daily Briefing — 13 May 2026]:</span>
+<span class="cm"># Press Enter for the default, or type a custom headline</span>
+<span class="cm"># e.g. "Evening spike hits €187/MWh as wind collapses"</span></pre>
+    <p>To use a specific file instead of auto-detecting:</p>
+    <pre>python pipeline/run_daily.py data/MarketResult_SEM-DA_PWR-MRC-D+1_20260513100000.csv</pre>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-dot">4</div>
+  <div class="step-body">
+    <h4>Write your commentary</h4>
+    <p>Open <code>site/content/daily/YYYY-MM-DD.md</code>. Stats table and chart embeds are pre-filled. Write 2–3 paragraphs in the Commentary section.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-dot">5</div>
+  <div class="step-body">
+    <h4>Preview locally</h4>
+    <pre>cd site && ~/.local/bin/hugo server -D</pre>
+    <p>Opens at <strong>localhost:1313</strong>. Hot-reloads on save. <code>Ctrl+C</code> to stop.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-dot">6</div>
+  <div class="step-body">
+    <h4>Publish</h4>
+    <pre>git add . && git commit -m <span class="st">"Daily briefing YYYY-MM-DD"</span> && git push</pre>
+    <p>Vercel auto-deploys. Live in ~60 seconds.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-dot">7</div>
+  <div class="step-body">
+    <h4>Post to LinkedIn</h4>
+    <p>Upload the best chart PNG as an image. Write 2–3 sentences of insight. Put the blog link in the <strong>first comment</strong>, not the post body.</p>
+  </div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════ 2 ══ -->
+<section id="project">
+<div class="section-header">
+  <span class="section-num">2</span>
+  <h2>Project Map</h2>
+</div>
+
+<div class="tree">
+<span class="t-hl">irish-energy-blog/</span><br>
+├── <span class="t-hl">pipeline/</span><br>
+│&nbsp;&nbsp; ├── run_daily.py <span class="t-dim">← one-command entry point, prompts for title</span><br>
+│&nbsp;&nbsp; ├── process.py <span class="t-dim">← parses real SEMO format → clean DataFrame</span><br>
+│&nbsp;&nbsp; ├── charts.py <span class="t-dim">← generates PNG charts</span><br>
+│&nbsp;&nbsp; ├── scaffold.py <span class="t-dim">← creates markdown post from data + charts</span><br>
+│&nbsp;&nbsp; ├── fetch.py <span class="t-dim">← data download stubs (Phase B)</span><br>
+│&nbsp;&nbsp; └── generate_sample_data.py <span class="t-dim">← synthetic test data</span><br>
+├── <span class="t-hl">site/</span><br>
+│&nbsp;&nbsp; ├── <span class="t-gr">config/_default/</span> <span class="t-dim">← Hugo config (4 files)</span><br>
+│&nbsp;&nbsp; │&nbsp;&nbsp; ├── hugo.toml <span class="t-dim">← base config, URLs, permalinks</span><br>
+│&nbsp;&nbsp; │&nbsp;&nbsp; ├── params.toml <span class="t-dim">← theme, colour scheme, layout</span><br>
+│&nbsp;&nbsp; │&nbsp;&nbsp; ├── languages.en.toml <span class="t-dim">← title, author, social links</span><br>
+│&nbsp;&nbsp; │&nbsp;&nbsp; └── menus.en.toml <span class="t-dim">← navigation menu</span><br>
+│&nbsp;&nbsp; ├── content/<br>
+│&nbsp;&nbsp; │&nbsp;&nbsp; ├── <span class="t-gr">daily/</span> <span class="t-dim">← daily briefing .md posts</span><br>
+│&nbsp;&nbsp; │&nbsp;&nbsp; ├── <span class="t-gr">weekly/</span> <span class="t-dim">← weekly analysis .md posts</span><br>
+│&nbsp;&nbsp; │&nbsp;&nbsp; └── about.md<br>
+│&nbsp;&nbsp; ├── static/charts/ <span class="t-dim">← generated PNGs</span><br>
+│&nbsp;&nbsp; └── themes/congo/ <span class="t-dim">← git submodule</span><br>
+├── <span class="t-hl">data/</span> <span class="t-dim">← market CSVs (gitignored)</span><br>
+├── <span class="t-hl">venv/</span> <span class="t-dim">← Python virtual environment (gitignored)</span><br>
+├── vercel.json<br>
+└── README.md
+</div>
+</section>
+
+<!-- ════════════════════════════════════════ 3 ══ -->
+<section id="pipeline">
+<div class="section-header">
+  <span class="section-num">3</span>
+  <h2>Pipeline Reference</h2>
+</div>
+
+<h3>Commands</h3>
+<table>
+  <tr><th>Command</th><th>What it does</th></tr>
+  <tr><td><code>python pipeline/run_daily.py</code></td><td>Full daily run — auto-detects file, prompts for title, generates charts + post</td></tr>
+  <tr><td><code>python pipeline/run_daily.py data/file.csv</code></td><td>Same but with a specific file</td></tr>
+  <tr><td><code>python pipeline/scaffold.py 2026-05-12</code></td><td>Scaffold a specific date's post, auto-detect file</td></tr>
+  <tr><td><code>python pipeline/scaffold.py 2026-05-12 data/file.csv</code></td><td>Scaffold with a specific file</td></tr>
+  <tr><td><code>python pipeline/scaffold.py 2026-05-12 weekly</code></td><td>Scaffold a weekly deep-dive template</td></tr>
+  <tr><td><code>python pipeline/process.py</code></td><td>Test data processing — prints summary to terminal</td></tr>
+  <tr><td><code>python pipeline/charts.py</code></td><td>Test chart generation only</td></tr>
+  <tr><td><code>python pipeline/generate_sample_data.py</code></td><td>Regenerate synthetic test data</td></tr>
+</table>
+
+<h3>File Detection Order</h3>
+<table>
+  <tr><th>Priority</th><th>Pattern</th><th>Notes</th></tr>
+  <tr><td>1st</td><td><code>Explicit path argument</code></td><td><code>python run_daily.py data/file.csv</code></td></tr>
+  <tr><td>2nd</td><td><code>data/semo_dam_YYYY-MM-DD.csv</code></td><td>Date-specific renamed file</td></tr>
+  <tr><td>3rd</td><td><code>data/MarketResult_SEM-DA_*.csv</code></td><td>Most recently modified SEMO download</td></tr>
+  <tr><td>4th</td><td><code>data/semo_dam_sample.csv</code></td><td>Synthetic fallback — prints warning</td></tr>
+</table>
+
+<h3>File Validation</h3>
+<table>
+  <tr><th>Filename pattern</th><th>Market</th><th>Works?</th></tr>
+  <tr><td><code>MarketResult_SEM-DA_*</code></td><td>Day-Ahead Market</td><td><strong style="color:var(--green)">✓ Yes</strong></td></tr>
+  <tr><td><code>MarketResult_SEM-IDA1_*</code></td><td>Intraday Auction 1</td><td><strong style="color:var(--red)">✗ Rejected</strong></td></tr>
+  <tr><td><code>MarketResult_SEM-IDA2_*</code></td><td>Intraday Auction 2</td><td><strong style="color:var(--red)">✗ Rejected</strong></td></tr>
+  <tr><td><code>MarketResult_SEM-GB-D+1_*</code></td><td>GB interconnector</td><td><strong style="color:var(--red)">✗ Rejected</strong></td></tr>
+</table>
+
+<h3>Charts Generated Per Day</h3>
+<table>
+  <tr><th>Chart</th><th>Filename</th><th>Shows</th></tr>
+  <tr><td>Price profile</td><td><code>dam-YYYY-MM-DD.png</code></td><td>48-period DAM curve with peak/min markers and mean line</td></tr>
+  <tr><td>Price vs wind</td><td><code>price-wind-YYYY-MM-DD.png</code></td><td>Dual-axis: price + wind %. <em>Skipped if no wind data.</em></td></tr>
+  <tr><td>7-day comparison</td><td><code>week-compare-YYYY-MM-DD.png</code></td><td>Overlaid price lines, current day bold</td></tr>
+</table>
+
+<div class="callout callout-info">
+  <div class="callout-tag">Styling</div>
+  <p>All colours live in the <code>COLORS</code> dict at the top of <code>charts.py</code>. DPI is 150 — change to 200 for sharper LinkedIn images.</p>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════ 4 ══ -->
+<section id="data">
+<div class="section-header">
+  <span class="section-num">4</span>
+  <h2>SEMO Data Format</h2>
+</div>
+
+<table>
+  <tr><th>Property</th><th>Detail</th></tr>
+  <tr><td>Delimiter</td><td>Semicolon <code>;</code></td></tr>
+  <tr><td>Decimals</td><td>European comma: <code>161,70</code> = 161.70</td></tr>
+  <tr><td>Layout</td><td>Wide/transposed — 48 values across one row, not 48 rows</td></tr>
+  <tr><td>Rows 1–7</td><td>Metadata (auction name, date, FX rate)</td></tr>
+  <tr><td>Data blocks</td><td>Repeating 3-row groups: header / timestamps / values</td></tr>
+  <tr><td>Timestamps</td><td>UTC. SEM day = 22:00Z → 21:30Z (23:00–22:30 Irish)</td></tr>
+  <tr><td>Delivery date</td><td>Auction date + 1 day (D+1 in filename)</td></tr>
+</table>
+
+<h3>Data Blocks</h3>
+<table>
+  <tr><th>Block</th><th>What</th><th>Used?</th></tr>
+  <tr><td>Index prices EUR</td><td>DAM prices in €/MWh</td><td><strong style="color:var(--green)">Yes — core data</strong></td></tr>
+  <tr><td>Index prices GBP</td><td>Same in sterling</td><td>No</td></tr>
+  <tr><td>Index volumes</td><td>Traded volume per period (MWh)</td><td>Not yet</td></tr>
+  <tr><td>Net position</td><td>Cross-border net flow (MW)</td><td>Not yet</td></tr>
+  <tr><td>Default blocks</td><td>Baseload/peak product results</td><td>No</td></tr>
+</table>
+
+<div class="callout callout-warn">
+  <div class="callout-tag">Timezone</div>
+  <p>The pipeline converts UTC → Irish time with a <strong>+1h offset</strong>. Correct for April–October (IST). In November–March (GMT), times show 1 hour ahead. Full DST fix using <code>zoneinfo.ZoneInfo("Europe/Dublin")</code> planned for October.</p>
+</div>
+
+<h3>Other Useful SEMO Reports</h3>
+<table>
+  <tr><th>Report</th><th>What</th><th>When to add</th></tr>
+  <tr><td>Imbalance Price Report</td><td>Balancing Market prices</td><td>Soon — DAM vs BM spread shows flexibility value</td></tr>
+  <tr><td>Intraday Market Results</td><td>IDM volumes and prices</td><td>Soon — the middle market</td></tr>
+  <tr><td>Forecast Imbalance</td><td>Predicted system imbalance</td><td>Soon — BM price predictor</td></tr>
+  <tr><td>Anonymised Inc/Dec Curves</td><td>BM bid/offer stack</td><td>Deep-dives — where BESS sits in merit order</td></tr>
+  <tr><td>Aggregated Wind/Gen/Demand</td><td>Contracted quantities by type</td><td>Weekly analysis context</td></tr>
+</table>
+</section>
+
+<!-- ════════════════════════════════════════ 5 ══ -->
+<section id="posts">
+<div class="section-header">
+  <span class="section-num">5</span>
+  <h2>Writing Posts</h2>
+</div>
+
+<h3>Daily Post Frontmatter</h3>
+<pre>---
+title: <span class="st">"Evening spike hits €187/MWh as wind drops — 12 May 2026"</span>
+date: <span class="st">2026-05-12</span>
+authors: [<span class="st">"Eoin"</span>]
+tags: [<span class="st">"daily-briefing"</span>, <span class="st">"DAM"</span>, <span class="st">"I-SEM"</span>]
+summary: <span class="st">"DAM prices averaged €94/MWh, peaking at €187/MWh at 17:30."</span>
+draft: <span class="kw">false</span>
+---</pre>
+<p>The <strong>title</strong> is set at the prompt when you run the pipeline. The <strong>summary</strong> is auto-filled from stats and doubles as the SEO meta description.</p>
+
+<h3>Commentary Structure</h3>
+<div class="card-row">
+  <div class="card">
+    <h4>¶1 — What happened</h4>
+    <p>"DAM prices followed a typical demand-driven profile, averaging €94/MWh with an evening peak of €187/MWh at 17:30…"</p>
+  </div>
+  <div class="card">
+    <h4>¶2 — Why</h4>
+    <p>"The steep evening ramp coincided with wind dropping to 14% of demand, forcing gas units up the merit order…"</p>
+  </div>
+  <div class="card">
+    <h4>¶3 — Context</h4>
+    <p>"This was the highest evening peak this week, contrasting with Tuesday's flatter profile when wind exceeded 50%…"</p>
+  </div>
+</div>
+
+<h3>Tag Vocabulary</h3>
+<pre><span class="cm"># Content type</span>
+daily-briefing, weekly-analysis
+
+<span class="cm"># Markets</span>
+DAM, IDM, BM, I-SEM
+
+<span class="cm"># Drivers</span>
+wind, solar, demand, interconnector, price-spike, negative-price
+
+<span class="cm"># Flexibility & services</span>
+DS3, FASS, flexibility, demand-response, BESS, battery, storage
+
+<span class="cm"># Grid</span>
+SNSP, curtailment, constraints
+
+<span class="cm"># Policy</span>
+RESS, CfD, PPA, CRM, capacity-market
+
+<span class="cm"># Format</span>
+comparison, benchmark</pre>
+</section>
+
+<!-- ════════════════════════════════════════ 6 ══ -->
+<section id="theme">
+<div class="section-header">
+  <span class="section-num">6</span>
+  <h2>Theme — Congo</h2>
+</div>
+
+<p>Replaced PaperMod. Key features: card layout on list pages, ocean colour scheme, dark/light toggle, built-in search, table of contents, author + reading time on every post.</p>
+
+<h3>Config Files</h3>
+<p>All config lives in <code>site/config/_default/</code>. Do <strong>not</strong> create a <code>site/hugo.toml</code> — Hugo uses the directory instead.</p>
+
+<div class="config-grid">
+  <div class="config-card">
+    <div class="filename">hugo.toml</div>
+    <p>Base URL, permalinks, taxonomies, markup settings</p>
+  </div>
+  <div class="config-card">
+    <div class="filename">params.toml</div>
+    <p>Colour scheme, layout, article/list display options</p>
+  </div>
+  <div class="config-card">
+    <div class="filename">languages.en.toml</div>
+    <p>Site title, description, author name, social links</p>
+  </div>
+  <div class="config-card">
+    <div class="filename">menus.en.toml</div>
+    <p>Navigation menu items and ordering</p>
+  </div>
+</div>
+
+<h3>Colour Scheme</h3>
+<p>Edit <code>params.toml</code>:</p>
+<pre>colorScheme = <span class="st">"ocean"</span>   <span class="cm"># options: ocean, sapphire, azure, slate, fire, forest, neon, congo, rose, pink</span></pre>
+
+<h3>Dark Mode</h3>
+<pre>defaultAppearance = <span class="st">"light"</span>   <span class="cm"># "light" or "dark"</span>
+autoSwitchAppearance = <span class="kw">true</span>    <span class="cm"># follows OS preference</span></pre>
+</section>
+
+<!-- ════════════════════════════════════════ 7 ══ -->
+<section id="hugo">
+<div class="section-header">
+  <span class="section-num">7</span>
+  <h2>Hugo Commands</h2>
+</div>
+
+<pre><span class="cm"># Always run from site/ directory</span>
+<span class="kw">cd</span> site
+
+~/.local/bin/hugo server -D     <span class="cm"># preview with drafts — localhost:1313</span>
+~/.local/bin/hugo server        <span class="cm"># preview published only</span>
+~/.local/bin/hugo               <span class="cm"># build to site/public/</span>
+~/.local/bin/hugo version</pre>
+
+<div class="callout callout-info">
+  <div class="callout-tag">Path Fix</div>
+  <p>If <code>hugo</code> isn't found, use <code>~/.local/bin/hugo</code>. To fix permanently:</p>
+  <pre style="margin:0.4rem 0 0">echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc</pre>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════ 8 ══ -->
+<section id="deploy">
+<div class="section-header">
+  <span class="section-num">8</span>
+  <h2>Git &amp; Deployment</h2>
+</div>
+
+<h3>Daily Commands</h3>
+<pre>git add .
+git commit -m <span class="st">"Daily briefing YYYY-MM-DD"</span>
+git push    <span class="cm"># triggers Vercel auto-deploy</span></pre>
+
+<h3>Useful Git</h3>
+<pre>git status                <span class="cm"># what's changed</span>
+git diff                  <span class="cm"># see changes before committing</span>
+git log --oneline -5      <span class="cm"># recent commits</span>
+git pull                  <span class="cm"># fetch remote changes</span></pre>
+
+<h3>Cloning on a New Machine</h3>
+<pre>git clone git@github.com:treacy998/irish-energy-blog.git
+<span class="kw">cd</span> irish-energy-blog
+git submodule init && git submodule update   <span class="cm"># Congo theme</span>
+python3 -m venv venv
+source venv/bin/activate
+pip install pandas matplotlib</pre>
+
+<h3>Vercel</h3>
+<table>
+  <tr><th>Setting</th><th>Value</th></tr>
+  <tr><td>Build command</td><td><code>cd site && hugo</code></td></tr>
+  <tr><td>Output directory</td><td><code>site/public</code></td></tr>
+  <tr><td>Trigger</td><td>Every push to <code>master</code></td></tr>
+  <tr><td>Deploy time</td><td>~60 seconds</td></tr>
+</table>
+
+<h3>Custom Domain</h3>
+<p>Buy domain → Vercel dashboard → Settings → Domains → Add → Update DNS → Change <code>baseURL</code> in <code>hugo.toml</code> → Commit and push. Vercel handles SSL.</p>
+</section>
+
+<!-- ════════════════════════════════════════ 9 ══ -->
+<section id="linkedin">
+<div class="section-header">
+  <span class="section-num">9</span>
+  <h2>LinkedIn Strategy</h2>
+</div>
+
+<div class="callout callout-err">
+  <div class="callout-tag">Critical</div>
+  <p>Do NOT put external links in the LinkedIn post body. The algorithm suppresses outbound links. Put the blog URL in the <strong>first comment</strong>.</p>
+</div>
+
+<div class="card-row">
+  <div class="card">
+    <h4>Image</h4>
+    <p>Upload the best chart PNG from <code>site/static/charts/</code></p>
+  </div>
+  <div class="card">
+    <h4>Text</h4>
+    <p>2–3 sentences. Lead with a number or surprising finding.</p>
+  </div>
+  <div class="card">
+    <h4>First comment</h4>
+    <p>"Full analysis with all charts: [link]"</p>
+  </div>
+</div>
+
+<div class="li-quote">
+  "Yesterday's I-SEM DAM prices peaked at €187/MWh at 17:30 as wind dropped to 14% of demand. The evening ramp was the steepest this month — tightening margins during low-wind periods are becoming the pattern, not the exception."
+</div>
+</section>
+
+<!-- ════════════════════════════════════════ 10 ═ -->
+<section id="seo">
+<div class="section-header">
+  <span class="section-num">10</span>
+  <h2>SEO Checklist</h2>
+</div>
+
+<h3>Already configured</h3>
+<ul class="checklist">
+  <li><span class="done">✓</span> Meta description (auto-filled summary field)</li>
+  <li><span class="done">✓</span> Open Graph / social sharing metadata</li>
+  <li><span class="done">✓</span> Semantic URLs (/daily/2026/05/slug/)</li>
+  <li><span class="done">✓</span> RSS feed at /feed.xml</li>
+  <li><span class="done">✓</span> Reading time on posts</li>
+  <li><span class="done">✓</span> Built-in search (Congo)</li>
+  <li><span class="done">✓</span> Dark/light mode</li>
+</ul>
+
+<h3>Still to do</h3>
+<ul class="checklist">
+  <li><span class="todo">☐</span> Write a unique summary for every post</li>
+  <li><span class="todo">☐</span> Add alt text to chart images in markdown</li>
+  <li><span class="todo">☐</span> Add favicon — save as <code>site/static/favicon.ico</code></li>
+  <li><span class="todo">☐</span> Add social preview image — <code>site/static/images/cover.png</code></li>
+  <li><span class="todo">☐</span> Submit sitemap at <strong>search.google.com/search-console</strong></li>
+</ul>
+
+<div class="callout callout-ok">
+  <div class="callout-tag">SEO Advantage</div>
+  <p>Irish energy market data content is a low-competition niche. Consistent daily posts about I-SEM, SEMO prices, and Irish wind generation can rank within months.</p>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════ 11 ═ -->
+<section id="future">
+<div class="section-header">
+  <span class="section-num">11</span>
+  <h2>Future Enhancements</h2>
+</div>
+
+<p>Each includes a Claude Code prompt you can paste directly.</p>
+
+<div class="future-item">
+  <h4>EirGrid Wind Data</h4>
+  <p>Adds wind generation % so the price-vs-wind chart works and the daily summary includes wind metrics.</p>
+  <pre><span class="cm"># Claude Code:</span>
+Add an EirGrid wind data fetcher to pipeline/fetch.py. Use the Smart Grid
+Dashboard API to pull actual wind generation data for a given date. Merge
+it into the DataFrame in process.py so WindGeneration_pct is available
+for charts and the daily summary.</pre>
+</div>
+
+<div class="future-item">
+  <h4>Automated SEMO Fetching (Phase B)</h4>
+  <p>Eliminates the manual CSV download.</p>
+  <pre><span class="cm"># Claude Code:</span>
+Implement fetch_semo_dam() in pipeline/fetch.py to download ETS Market
+Results from SEMO's reporting portal automatically. Investigate the URL
+pattern on sem-o.com/market-data/dynamic-reports. Save to data/ with
+the standard naming convention.</pre>
+</div>
+
+<div class="future-item">
+  <h4>GitHub Actions</h4>
+  <p>Scheduled daily pipeline run. You just add commentary.</p>
+  <pre><span class="cm"># Claude Code:</span>
+Create .github/workflows/daily.yml that runs at 08:00 UTC daily: checkout
+repo, install deps, run pipeline/fetch.py then pipeline/run_daily.py,
+commit the generated charts and post scaffold, push. Commentary added
+manually after.</pre>
+</div>
+
+<div class="future-item">
+  <h4>DST Fix (October)</h4>
+  <p>Replace +1h offset with proper timezone handling.</p>
+  <pre><span class="cm"># Claude Code:</span>
+Update UTC → Irish time conversion in process.py to use
+zoneinfo.ZoneInfo("Europe/Dublin") instead of the +1h offset.</pre>
+</div>
+
+<div class="future-item">
+  <h4>More Chart Types</h4>
+  <p>Price duration curve, monthly heatmap, rolling averages, BM vs DAM spread.</p>
+  <pre><span class="cm"># Claude Code:</span>
+Add a chart_price_duration() function to charts.py — all 48 periods
+sorted highest to lowest. Shows how many hours were above/below a given
+price level. Include it in generate_daily_charts().</pre>
+</div>
+
+<div class="future-item">
+  <h4>Interactive Charts</h4>
+  <p>Replace static PNGs with Plotly HTML — hover, zoom, pan in browser.</p>
+</div>
+
+<div class="future-item">
+  <h4>Email Newsletter</h4>
+  <p>Hugo generates RSS at <code>/feed.xml</code>. Connect to Buttondown or Mailchimp for auto-sends.</p>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════ 12 ═ -->
+<section id="trouble">
+<div class="section-header">
+  <span class="section-num">12</span>
+  <h2>Troubleshooting</h2>
+</div>
+
+<table>
+  <tr><th>Problem</th><th>Fix</th></tr>
+  <tr><td><code>python</code> not found</td><td>Use <code>python3</code>, or activate the venv first: <code>source venv/bin/activate</code></td></tr>
+  <tr><td>No module named <code>pandas</code></td><td>Activate the venv: <code>source venv/bin/activate</code></td></tr>
+  <tr><td>Pipeline ignores my file</td><td>Check filename contains <code>SEM-DA</code>. IDA1/IDA2/SEM-GB are rejected. Or pass the path explicitly.</td></tr>
+  <tr><td>No data for {date}</td><td>Date in CSV doesn't match. Run <code>python pipeline/process.py</code> to see detected date.</td></tr>
+  <tr><td>FileNotFoundError</td><td>No <code>MarketResult_SEM-DA_*.csv</code> in <code>data/</code>. Download from SEMO.</td></tr>
+  <tr><td>Charts look wrong</td><td>Run <code>python pipeline/process.py</code> to inspect parsed numbers.</td></tr>
+  <tr><td>Times show UTC</td><td>Check +1h conversion in <code>process.py</code>. Correct April–October only.</td></tr>
+  <tr><td>Hugo not found</td><td>Use <code>~/.local/bin/hugo server -D</code></td></tr>
+  <tr><td>Theme not loading</td><td><code>git submodule update --init</code></td></tr>
+  <tr><td>Vercel deploy failed</td><td>Dashboard → Deployments → failed build → read log. Usually bad YAML frontmatter.</td></tr>
+  <tr><td>Post not showing</td><td>Check <code>draft: false</code> in frontmatter. Check date isn't in the future.</td></tr>
+  <tr><td>Git push rejected</td><td><code>git pull --rebase</code>, fix conflicts, push again.</td></tr>
+</table>
+</section>
+
+<!-- ════════════════════════════════════════ 13 ═ -->
+<section id="commands">
+<div class="section-header">
+  <span class="section-num">13</span>
+  <h2>Quick Commands</h2>
+</div>
+
+<pre><span class="cm"># ═══ SETUP (once per terminal) ═══</span>
+cd ~/dev/blog/irish-energy-blog
+source venv/bin/activate
+
+<span class="cm"># ═══ DAILY ═══</span>
+python pipeline/run_daily.py                                <span class="cm"># auto-detect, prompt title</span>
+python pipeline/run_daily.py data/MarketResult_SEM-DA_*.csv <span class="cm"># specific file</span>
+cd site && ~/.local/bin/hugo server -D                      <span class="cm"># preview</span>
+git add . && git commit -m <span class="st">"Daily briefing YYYY-MM-DD"</span> && git push
+
+<span class="cm"># ═══ PIPELINE ═══</span>
+python pipeline/scaffold.py 2026-05-12                      <span class="cm"># specific date</span>
+python pipeline/scaffold.py 2026-05-12 data/file.csv        <span class="cm"># specific date + file</span>
+python pipeline/scaffold.py 2026-05-12 weekly               <span class="cm"># weekly template</span>
+python pipeline/process.py                                  <span class="cm"># test processing</span>
+python pipeline/generate_sample_data.py                     <span class="cm"># regenerate test data</span>
+
+<span class="cm"># ═══ HUGO ═══</span>
+~/.local/bin/hugo server -D     <span class="cm"># preview with drafts</span>
+~/.local/bin/hugo               <span class="cm"># build</span>
+
+<span class="cm"># ═══ GIT ═══</span>
+git status
+git log --oneline -5
+git pull
+git submodule update --init     <span class="cm"># fix missing theme</span></pre>
+</section>
+
+<!-- ════════════════════════════════════════ 14 ═ -->
+<section id="links">
+<div class="section-header">
+  <span class="section-num">14</span>
+  <h2>Key Links</h2>
+</div>
+
+<table>
+  <tr><th>What</th><th>URL</th></tr>
+  <tr><td>Live site</td><td>irish-energy-blog.vercel.app</td></tr>
+  <tr><td>GitHub repo</td><td>github.com/treacy998/irish-energy-blog</td></tr>
+  <tr><td>Vercel dashboard</td><td>vercel.com/dashboard</td></tr>
+  <tr><td>SEMO market data</td><td>sem-o.com/market-data/dynamic-reports</td></tr>
+  <tr><td>EirGrid dashboard</td><td>smartgriddashboard.com</td></tr>
+  <tr><td>Congo theme docs</td><td>jpanther.github.io/congo/docs</td></tr>
+  <tr><td>Hugo docs</td><td>gohugo.io/documentation</td></tr>
+  <tr><td>Google Search Console</td><td>search.google.com/search-console</td></tr>
+</table>
+</section>
+
+</main>
+
+<footer>
+  INIS Energy — Irish Energy Market Blog Operations Guide
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+colorScheme = "ocean"
+defaultAppearance = "light"
+autoSwitchAppearance = true
+
+enableSearch = true
+enableCodeCopy = true
+enableImageLazyLoading = true
+
+mainSections = ["daily", "weekly"]
+showRecent = true
+showRecentItems = 5
+
+[homepage]
+  layout = "page"
+  homepageImage = ""
+  showRecent = true
+  showRecentItems = 6
+  cardView = true
+  cardViewScreenWidth = false
+
+[article]
+  showDate = true
+  showDateUpdated = false
+  showAuthor = true
+  showReadingTime = true
+  showWordCount = false
+  showTableOfContents = true
+  showTaxonomies = true
+  showEdit = false
+  sharingLinks = ["linkedin", "twitter"]
+  showPagination = true
+  invertPagination = false
+
+[list]
+  showSummary = true
+  showViews = false
+  showLikes = false
+  cardView = true
+  groupByYear = true
+
+[sitemap]
+  excludedKinds = []
+
+[taxonomy]
+  showTermCount = true
+  cardView = false

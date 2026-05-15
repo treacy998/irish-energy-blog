@@ -207,11 +207,13 @@ def generate_daily_charts(data_filepath: Path, target_date: date):
 
 
 if __name__ == "__main__":
-    target = date(2026, 4, 16)
-    data_file = DATA_DIR / "semo_dam_sample.csv"
-
+    raw = DATA_DIR / "semo_dam_raw.csv"
+    sample = DATA_DIR / "semo_dam_sample.csv"
+    data_file = raw if raw.exists() else sample
     if not data_file.exists():
-        print("Run generate_sample_data.py first")
+        print("No data file found — download semo_dam_raw.csv or run generate_sample_data.py")
         raise SystemExit(1)
 
+    df = load_dam_data(data_file)
+    target = df["DeliveryDate"].dt.date.iloc[0]
     generate_daily_charts(data_file, target)

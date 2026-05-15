@@ -21,24 +21,39 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 CONTENT_DIR = Path(__file__).parent.parent / "site" / "content"
 
 
-def find_data_file(target_date: date) -> Path:
+def find_data_file(target_date: date, explicit: Path = None) -> Path:
     """Locate the data file for the target date."""
-    # Check for date-specific file first, then fall back to sample
-    specific = DATA_DIR / f"semo_dam_{target_date.isoformat()}.csv"
-    sample = DATA_DIR / "semo_dam_sample.csv"
+    if explicit is not None:
+        if not explicit.exists():
+            raise FileNotFoundError(f"File not found: {explicit}")
+        return explicit
 
+    specific = DATA_DIR / f"semo_dam_{target_date.isoformat()}.csv"
     if specific.exists():
         return specific
-    elif sample.exists():
-        print(f"  Using sample data (no file for {target_date})")
+
+    market_results = sorted(
+        DATA_DIR.glob("MarketResult_SEM-DA_*.csv"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    if market_results:
+        print(f"  Using {market_results[0].name} (most recent MarketResult file)")
+        return market_results[0]
+
+    sample = DATA_DIR / "semo_dam_sample.csv"
+    if sample.exists():
+        print(f"  Using sample data (no real data file found)")
         return sample
-    else:
-        raise FileNotFoundError(f"No data file found for {target_date}")
+
+    raise FileNotFoundError(f"No data file found for {target_date}")
 
 
-def scaffold_daily(target_date: date):
+def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = None):
     """Generate a daily briefing post with charts and pre-filled metrics."""
-    data_file = find_data_file(target_date)
+    data_file = find_data_file(target_date, explicit=explicit_file)
+    if title is None:
+        title = f"I-SEM Daily Briefing — {target_date.strftime('%-d %B %Y')}"
     date_str = target_date.isoformat()
 
     # Generate charts and get summary stats
@@ -55,7 +70,7 @@ def scaffold_daily(target_date: date):
 
     # Generate markdown
     md = f"""---
-title: "I-SEM Daily Briefing — {target_date.strftime('%-d %B %Y')}"
+title: "{title}"
 date: {date_str}
 authors: ["Eoin"]
 tags: ["daily-briefing", "DAM", "I-SEM"]
@@ -152,15 +167,21 @@ Code available at [GitHub](https://github.com/YOURUSERNAME/irish-energy-blog).
 
 
 if __name__ == "__main__":
-    # Parse arguments
+    # Usage:
+    #   python scaffold.py                                        # yesterday, auto-detect file
+    #   python scaffold.py 2026-05-12                            # specific date, auto-detect file
+    #   python scaffold.py 2026-05-12 data/MarketResult_...csv  # specific date + specific file
+    #   python scaffold.py 2026-05-12 weekly                    # weekly post template
     if len(sys.argv) >= 2:
         target = date.fromisoformat(sys.argv[1])
     else:
         target = date.today() - timedelta(days=1)
 
-    post_type = sys.argv[2] if len(sys.argv) >= 3 else "daily"
+    arg2 = sys.argv[2] if len(sys.argv) >= 3 else None
 
-    if post_type == "weekly":
+    if arg2 == "weekly":
         scaffold_weekly(target)
+    elif arg2 is not None:
+        scaffold_daily(target, explicit_file=Path(arg2))
     else:
         scaffold_daily(target)

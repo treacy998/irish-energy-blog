@@ -1,0 +1,18 @@
+title = "Irish Energy Markets"
+languageCode = "en-ie"
+weight = 1
+
+[params]
+  displayName = "EN"
+  isoCode = "en"
+  rtl = false
+  dateFormat = "2 January 2006"
+  [params.header]
+    logo = ""
+  description = "Daily data-driven analysis of Ireland's electricity markets — I-SEM, SEMO, EirGrid"
+  author.name = "Eoin Treacy"
+  author.headline = "Irish energy market analyst"
+  author.links = [
+    {linkedin = "https://www.linkedin.com/in/eoin-treacy-3aa62115b"},
+    {github = "https://github.com/treacy998/irish-energy-blog"},
+  ]

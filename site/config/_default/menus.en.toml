@@ -1,0 +1,23 @@
+[[main]]
+  identifier = "daily"
+  name = "Daily Briefings"
+  url = "/daily/"
+  weight = 10
+
+[[main]]
+  identifier = "weekly"
+  name = "Weekly Analysis"
+  url = "/weekly/"
+  weight = 20
+
+[[main]]
+  identifier = "tags"
+  name = "Topics"
+  url = "/tags/"
+  weight = 30
+
+[[main]]
+  identifier = "about"
+  name = "About"
+  url = "/about/"
+  weight = 40
