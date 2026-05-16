@@ -1,0 +1,91 @@
+2026-05-16 20:51:24  INFO      ============================================================
+2026-05-16 20:51:24  INFO      blog TUI started
+2026-05-16 20:52:05  INFO      ============================================================
+2026-05-16 20:52:05  INFO      blog TUI started
+2026-05-16 20:52:05  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-16 20:52:05  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-16 20:52:05  INFO      HUGO exists: True
+2026-05-16 20:52:05  INFO      Entering main menu
+2026-05-16 20:52:26  INFO      ============================================================
+2026-05-16 20:52:26  INFO      blog TUI started
+2026-05-16 20:52:26  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-16 20:52:26  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-16 20:52:26  INFO      HUGO exists: True
+2026-05-16 20:52:26  INFO      Entering main menu
+2026-05-16 20:52:26  INFO      Menu selection: quit
+2026-05-16 20:52:37  INFO      Menu selection: None
+2026-05-16 20:52:38  INFO      Menu selection: None
+2026-05-16 20:52:39  INFO      Menu selection: None
+2026-05-16 20:52:40  INFO      Menu selection: None
+2026-05-16 20:52:41  INFO      Menu selection: None
+2026-05-16 20:52:41  INFO      Menu selection: None
+2026-05-16 20:52:41  INFO      Menu selection: None
+2026-05-16 20:52:42  INFO      Menu selection: None
+2026-05-16 20:52:42  INFO      Menu selection: None
+2026-05-16 20:52:42  INFO      Menu selection: None
+2026-05-16 20:52:43  INFO      Menu selection: None
+2026-05-16 20:52:43  INFO      Menu selection: None
+2026-05-16 20:52:49  INFO      Menu selection: None
+2026-05-16 20:52:50  INFO      Menu selection: None
+2026-05-16 20:52:57  INFO      ============================================================
+2026-05-16 20:52:57  INFO      blog TUI started
+2026-05-16 20:52:57  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-16 20:52:57  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-16 20:52:57  INFO      HUGO exists: True
+2026-05-16 20:52:57  INFO      Entering main menu
+2026-05-16 22:22:12  INFO      Menu selection: daily
+2026-05-16 22:22:12  INFO      new_daily: started
+2026-05-16 22:22:12  INFO      new_daily: found 4 SEMO files in /home/treacy998/dev/blog/irish-energy-blog/data
+2026-05-16 22:22:12  INFO      new_daily: using MarketResult_SEM-DA_PWR-MRC-D+1_20260505100000_20260505105501.csv
+2026-05-16 22:22:12  INFO      new_daily: running pipeline /home/treacy998/dev/blog/irish-energy-blog/pipeline/run_daily.py (cwd=/home/treacy998/dev/blog/irish-energy-blog/pipeline)
+2026-05-16 22:22:14  INFO      new_daily: pipeline exit code 0
+2026-05-16 22:22:14  INFO      new_daily: opening 2026-05-06.md in VS Code
+2026-05-16 22:22:24  INFO      Menu selection: daily
+2026-05-16 22:22:24  INFO      new_daily: started
+2026-05-16 22:22:24  INFO      new_daily: found 4 SEMO files in /home/treacy998/dev/blog/irish-energy-blog/data
+2026-05-16 22:22:24  INFO      new_daily: using MarketResult_SEM-DA_PWR-MRC-D+1_20260505100000_20260505105501.csv
+2026-05-16 22:22:24  INFO      new_daily: running pipeline /home/treacy998/dev/blog/irish-energy-blog/pipeline/run_daily.py (cwd=/home/treacy998/dev/blog/irish-energy-blog/pipeline)
+2026-05-16 22:22:26  INFO      new_daily: pipeline exit code 0
+2026-05-16 22:22:26  INFO      new_daily: opening 2026-05-06.md in VS Code
+2026-05-16 22:23:07  INFO      Menu selection: None
+2026-05-16 22:23:15  INFO      Menu selection: preview
+2026-05-16 22:23:15  INFO      preview_site: starting Hugo server (hugo=/home/treacy998/.local/bin/hugo, cwd=/home/treacy998/dev/blog/irish-energy-blog/site)
+2026-05-16 22:52:23  INFO      preview_site: stopped by user (Ctrl+C)
+2026-05-16 23:00:30  INFO      Menu selection: quit
+2026-05-16 23:00:32  INFO      ============================================================
+2026-05-16 23:00:32  INFO      blog TUI started
+2026-05-16 23:00:32  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-16 23:00:32  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-16 23:00:32  INFO      HUGO exists: True
+2026-05-16 23:00:32  INFO      Entering main menu
+2026-05-16 23:00:38  INFO      Menu selection: daily
+2026-05-16 23:00:38  INFO      new_daily: started
+2026-05-16 23:00:38  INFO      new_daily: found 4 SEMO files in /home/treacy998/dev/blog/irish-energy-blog/data
+2026-05-16 23:00:38  INFO      new_daily: using MarketResult_SEM-DA_PWR-MRC-D+1_20260505100000_20260505105501.csv
+2026-05-16 23:00:38  INFO      new_daily: running pipeline /home/treacy998/dev/blog/irish-energy-blog/pipeline/run_daily.py (cwd=/home/treacy998/dev/blog/irish-energy-blog/pipeline)
+2026-05-16 23:00:40  INFO      new_daily: pipeline exit code 0
+2026-05-16 23:00:40  INFO      new_daily: opening 2026-05-06.md in VS Code
+2026-05-16 23:08:16  INFO      Menu selection: post
+2026-05-16 23:08:16  INFO      new_post: started
+2026-05-16 23:08:30  INFO      new_post: creating /home/treacy998/dev/blog/irish-energy-blog/site/content/weekly/2026-05-16-test-title-for-weekly-deep-dive.md (section=weekly)
+2026-05-16 23:08:46  INFO      Menu selection: manage
+2026-05-16 23:09:01  INFO      Menu selection: manage
+2026-05-16 23:09:09  INFO      Menu selection: manage
+2026-05-16 23:09:22  INFO      Menu selection: preview
+2026-05-16 23:09:22  INFO      preview_site: starting Hugo server (hugo=/home/treacy998/.local/bin/hugo, cwd=/home/treacy998/dev/blog/irish-energy-blog/site)
+2026-05-16 23:28:49  INFO      preview_site: stopped by user (Ctrl+C)
+2026-05-16 23:28:51  INFO      Menu selection: None
+2026-05-16 23:28:52  INFO      Menu selection: None
+2026-05-16 23:28:53  INFO      Menu selection: quit
+2026-05-16 23:28:56  INFO      ============================================================
+2026-05-16 23:28:56  INFO      blog TUI started
+2026-05-16 23:28:56  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-16 23:28:56  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-16 23:28:56  INFO      HUGO exists: True
+2026-05-16 23:28:56  INFO      Entering main menu
+2026-05-16 23:29:01  INFO      Menu selection: preview
+2026-05-16 23:29:01  INFO      preview_site: starting Hugo server (hugo=/home/treacy998/.local/bin/hugo, cwd=/home/treacy998/dev/blog/irish-energy-blog/site)
+2026-05-16 23:40:12  INFO      preview_site: stopped by user (Ctrl+C)
+2026-05-16 23:40:24  INFO      Menu selection: deploy
+2026-05-16 23:40:24  INFO      deploy: started
+2026-05-16 23:40:56  INFO      deploy: running git add .

@@ -27,7 +27,7 @@ showRecentItems = 5
   showTableOfContents = true
   showTaxonomies = true
   showEdit = false
-  sharingLinks = ["linkedin", "twitter"]
+  sharingLinks = ["linkedin"]
   showPagination = true
   invertPagination = false
 
@@ -37,6 +37,9 @@ showRecentItems = 5
   showLikes = false
   cardView = true
   groupByYear = true
+
+[header]
+  layout = "basic"
 
 [sitemap]
   excludedKinds = []

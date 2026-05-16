@@ -12,7 +12,7 @@ A daily, data-driven blog covering Ireland's wholesale electricity markets. Ever
 
 ## Who We Are
 
-**Eoin** — Energy broker and founder of INIS Energy, a CRU-regulated brokerage based in Cork. Background in computer science with a focus on the intersection of energy markets and data analysis. Building expertise in wholesale market mechanics, flexibility services, and grid operations.
+**Eoin** — Energy broker and founder of INIS Energy, a brokerage based in Cork. Background in software development with a focus on the intersection of energy markets and data analysis. Building expertise in wholesale market mechanics, flexibility services, and grid operations.
 
 <!-- Add your brother's bio here when he joins -->
 
@@ -29,4 +29,4 @@ All analysis is produced using Python (pandas, matplotlib).
 ## Get In Touch
 
 - [LinkedIn](https://linkedin.com/in/eointreacy)
-- Email: treacy998@gmail.com
+- Email: eointreacy@inisenergy.com

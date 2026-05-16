@@ -1,0 +1,134 @@
+/* ── Google Fonts ─────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── Typography — body & headings (Inter throughout) ──────── */
+
+body,
+h1, h2, h3, h4, h5, h6,
+.article-title,
+.list-item-title,
+.not-found-title,
+.home-title,
+header h1,
+.logo-name,
+.site-name,
+.article-content p,
+.article-content li,
+.article-content blockquote {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6,
+.article-title,
+.list-item-title {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.logo-name,
+.site-name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #ffffff !important;
+}
+
+/* ── Price numbers — monospaced ───────────────────────────── */
+
+code, kbd, pre, .highlight {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 0.875em;
+}
+
+table code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.9em;
+}
+
+/* ── Navigation — white menu items ────────────────────────── */
+
+header nav a,
+header nav a span,
+header nav button,
+header nav button span,
+header nav li,
+header nav li a {
+  color: #ffffff !important;
+}
+
+header nav a:hover,
+header nav a:hover span {
+  color: #2EC4B6 !important;
+  text-decoration-color: #2EC4B6;
+}
+
+/* ── Colour identity ──────────────────────────────────────── */
+
+:root {
+  --color-primary: #2EC4B6;
+  --color-primary-dark: #1A9B8F;
+}
+
+html.dark a {
+  color: #ffffff;
+}
+
+html.dark a:hover {
+  color: #2EC4B6;
+}
+
+html:not(.dark) a {
+  color: #0e7a72;
+}
+
+html:not(.dark) a:hover {
+  color: #1A9B8F;
+}
+
+/* Tag pills */
+.badge,
+.article-tags a,
+.list-tags a {
+  background-color: #0D1B2A !important;
+  color: #2EC4B6 !important;
+  border: 1px solid #1E3450;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75em;
+  letter-spacing: 0.03em;
+}
+
+.badge:hover,
+.article-tags a:hover,
+.list-tags a:hover {
+  background-color: #112236 !important;
+  color: #FFB703 !important;
+}
+
+/* ── Layout — centre article content ──────────────────────── */
+
+article > section.prose {
+  justify-content: center;
+}
+
+article section.prose div.min-w-0 {
+  max-width: 78ch;
+}
+
+/* ── Article body refinements ─────────────────────────────── */
+
+.article-content p {
+  line-height: 1.75;
+}
+
+.article-content table {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.875em;
+}
+
+.article-content th {
+  font-weight: 600;
+  font-size: 0.875em;
+  letter-spacing: 0.02em;
+}
