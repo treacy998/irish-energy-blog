@@ -59,6 +59,8 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     # Generate charts and get summary stats
     summary = generate_daily_charts(data_file, target_date)
 
+    CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
+
     # Build wind row if data available
     wind_row = ""
     if "wind_pct_mean" in summary:
@@ -67,6 +69,9 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     demand_row = ""
     if "demand_mean_mw" in summary:
         demand_row = f"\n| Mean Demand          | {summary['demand_mean_mw']:.0f} MW       |"
+
+    has_wind_chart = (CHART_DIR / f"price-wind-{date_str}.png").exists()
+    wind_chart_section = f"\n## Price vs Wind\n\n![Price vs Wind Generation](/charts/price-wind-{date_str}.png)\n" if has_wind_chart else ""
 
     # Generate markdown
     md = f"""---
@@ -91,11 +96,7 @@ draft: false
 ## Price Profile
 
 ![DAM Price Profile](/charts/dam-{date_str}.png)
-
-## Price vs Wind
-
-![Price vs Wind Generation](/charts/price-wind-{date_str}.png)
-
+{wind_chart_section}
 ## Week in Context
 
 ![7-Day Price Comparison](/charts/week-compare-{date_str}.png)
@@ -155,7 +156,6 @@ ShowToc: true
 
 Data sourced from SEMO Day-Ahead Market results and EirGrid generation reports.
 Analysis performed in Python using pandas and matplotlib.
-Code available at [GitHub](https://github.com/YOURUSERNAME/irish-energy-blog).
 
 """
 

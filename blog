@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# blog — entry point for the INIS Energy Blog TUI
+# Run from anywhere: ./blog
+
+set -e
+cd "$(dirname "$0")"
+source venv/bin/activate
+python pipeline/tui.py

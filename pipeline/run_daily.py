@@ -30,7 +30,7 @@ def find_latest_data_file() -> Path:
 
     sample = DATA_DIR / "semo_dam_sample.csv"
     if sample.exists():
-        print("Warning: no real data found, falling back to sample data")
+        print("  Warning: no real data found, falling back to sample data")
         return sample
 
     raise FileNotFoundError(
@@ -40,7 +40,16 @@ def find_latest_data_file() -> Path:
     )
 
 
+def step(n: int, total: int, msg: str):
+    print(f"\n[{n}/{total}] {msg}")
+
+
 def main():
+    TOTAL_STEPS = 3
+
+    # ── Step 1: find data file ────────────────────────────────────────────────
+    step(1, TOTAL_STEPS, "Finding data file...")
+
     if len(sys.argv) >= 2:
         filepath = Path(sys.argv[1])
         if not filepath.exists():
@@ -52,39 +61,51 @@ def main():
             )
     else:
         filepath = find_latest_data_file()
-    print(f"Data file:  {filepath.name}")
 
+    print(f"  File:  {filepath.name}")
+
+    # ── Step 2: detect delivery date ─────────────────────────────────────────
+    step(2, TOTAL_STEPS, "Reading data...")
     df = load_dam_data(filepath)
     delivery_date = df["DeliveryDate"].dt.date.iloc[0]
     date_str = delivery_date.isoformat()
-    print(f"Delivery:   {date_str}\n")
+    print(f"  Delivery date: {delivery_date.strftime('%-d %B %Y')} ({date_str})")
+    print(f"  Periods loaded: {len(df)}")
 
-    default_title = f"I-SEM Daily Briefing — {delivery_date.strftime('%-d %B %Y')}"
-    user_input = input(f"Post title [{default_title}]: ").strip()
-    title = user_input if user_input else default_title
+    title = f"I-SEM Daily Briefing — {delivery_date.strftime('%-d %B %Y')}"
 
+    # ── Step 3: generate charts + scaffold post ──────────────────────────────
+    step(3, TOTAL_STEPS, "Generating charts and scaffolding post...")
     scaffold_daily(delivery_date, explicit_file=filepath, title=title)
 
+    # ── Done ─────────────────────────────────────────────────────────────────
     post_path = CONTENT_DIR / "daily" / f"{date_str}.md"
     chart_names = [
         f"dam-{date_str}.png",
         f"price-wind-{date_str}.png",
         f"week-compare-{date_str}.png",
     ]
+    charts_found = [n for n in chart_names if (CHART_DIR / n).exists()]
 
-    print(f"\n{'='*50}")
-    print(f"  Done — {date_str}")
-    print(f"{'='*50}")
+    print(f"\n{'─'*52}")
+    print(f"  Done — {delivery_date.strftime('%-d %B %Y')}")
+    print(f"{'─'*52}")
     print(f"  Post:   site/content/daily/{date_str}.md")
-    print(f"  Charts:")
-    for name in chart_names:
-        if (CHART_DIR / name).exists():
+    if charts_found:
+        print(f"  Charts: {len(charts_found)} generated")
+        for name in charts_found:
             print(f"    site/static/charts/{name}")
     print(f"""
   Next steps:
-    1. Open site/content/daily/{date_str}.md — write commentary
-    2. cd site && hugo server -D        (preview at localhost:1313)
-    3. git add . && git commit -m "Daily briefing {date_str}" && git push
+    1. Open  site/content/daily/{date_str}.md
+       Write 2–3 paragraphs in the Commentary section.
+
+    2. Preview locally:
+       cd site && ~/.local/bin/hugo server -D
+       (open http://localhost:1313 — hot-reloads on save)
+
+    3. Publish:
+       git add . && git commit -m "Daily briefing {date_str}" && git push
 """)
 
 

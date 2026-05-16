@@ -18,7 +18,7 @@ A daily, data-driven blog covering Ireland's wholesale electricity markets. Ever
 
 ## The Pipeline
 
-All analysis is produced using Python (pandas, matplotlib). The data pipeline, chart generation scripts, and raw analysis notebooks are open source and available on [GitHub](https://github.com/YOURUSERNAME/irish-energy-blog).
+All analysis is produced using Python (pandas, matplotlib).
 
 ## Data Sources
 
@@ -28,5 +28,5 @@ All analysis is produced using Python (pandas, matplotlib). The data pipeline, c
 
 ## Get In Touch
 
-- [LinkedIn](https://linkedin.com/in/YOURPROFILE)
-- [GitHub](https://github.com/YOURUSERNAME/irish-energy-blog)
+- [LinkedIn](https://linkedin.com/in/eointreacy)
+- Email: treacy998@gmail.com
