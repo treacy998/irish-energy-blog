@@ -13,6 +13,7 @@ from pathlib import Path
 
 from process import load_dam_data
 from scaffold import scaffold_daily
+from fetch import fetch_wind_and_demand
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
@@ -76,7 +77,14 @@ def main():
 
     # ── Step 3: generate charts + scaffold post ──────────────────────────────
     step(3, TOTAL_STEPS, "Generating charts and scaffolding post...")
-    scaffold_daily(delivery_date, explicit_file=filepath, title=title)
+    print("  Fetching EirGrid wind and demand data…")
+    eirgrid_df = fetch_wind_and_demand(delivery_date)
+    if eirgrid_df is not None:
+        print(f"  ✓ EirGrid data fetched — {eirgrid_df['WindGeneration_pct'].mean():.1f}% avg wind")
+    else:
+        print("  – EirGrid fetch failed, continuing without wind data")
+
+    scaffold_daily(delivery_date, explicit_file=filepath, title=title, eirgrid_df=eirgrid_df)
 
     # ── Done ─────────────────────────────────────────────────────────────────
     post_path = CONTENT_DIR / "daily" / f"{date_str}.md"

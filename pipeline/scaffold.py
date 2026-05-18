@@ -49,7 +49,7 @@ def find_data_file(target_date: date, explicit: Path = None) -> Path:
     raise FileNotFoundError(f"No data file found for {target_date}")
 
 
-def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = None):
+def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = None, eirgrid_df=None):
     """Generate a daily briefing post with charts and pre-filled metrics."""
     data_file = find_data_file(target_date, explicit=explicit_file)
     if title is None:
@@ -57,7 +57,7 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     date_str = target_date.isoformat()
 
     # Generate charts and get summary stats
-    summary = generate_daily_charts(data_file, target_date)
+    summary = generate_daily_charts(data_file, target_date, eirgrid_df=eirgrid_df)
 
     CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
 

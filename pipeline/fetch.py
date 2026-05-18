@@ -1,65 +1,137 @@
 """
-fetch.py — Download SEMO and EirGrid data.
+fetch.py — EirGrid Smart Grid Dashboard data fetcher
 
-PHASE A (current): Manual download.
-    1. Go to https://www.sem-o.com/market-data/
-    2. Download Day-Ahead Market results CSV
-    3. Save to data/ folder
+Fetches wind generation and system demand for a given delivery date.
+Returns a DataFrame aligned to SEMO's 30-minute half-hourly periods.
 
-PHASE B (future): Automate with requests.
-    SEMO publishes DAM results at predictable URLs.
-    EirGrid Smart Grid Dashboard has an API.
-    Uncomment and adapt the functions below when ready.
+No authentication required. Fails gracefully — if the fetch fails,
+the pipeline continues without wind data (wind chart is skipped).
 """
 
-import sys
+import requests
+import pandas as pd
+from datetime import datetime, date
 from pathlib import Path
-from datetime import date, timedelta
-
-DATA_DIR = Path(__file__).parent.parent / "data"
 
 
-def check_data_exists(target_date: date) -> bool:
-    """Check if we have data for the target date."""
-    # Adjust this pattern to match your actual SEMO filename convention
-    patterns = [
-        f"semo_dam_{target_date.isoformat()}.csv",
-        "semo_dam_sample.csv",  # fallback for demo
-    ]
-    for p in patterns:
-        if (DATA_DIR / p).exists():
-            return True
-    return False
+EIRGRID_BASE = "https://www.smartgriddashboard.com/api/chart/"
+TIMEOUT      = 15  # seconds
 
 
-# ─── PHASE B STUBS ──────────────────────────────────────────────
-#
-# def fetch_semo_dam(target_date: date) -> Path:
-#     """Fetch DAM results from SEMO reporting portal."""
-#     import requests
-#     url = f"https://reports.sem-o.com/..."  # build URL for target date
-#     resp = requests.get(url)
-#     resp.raise_for_status()
-#     outpath = DATA_DIR / f"semo_dam_{target_date.isoformat()}.csv"
-#     outpath.write_bytes(resp.content)
-#     return outpath
-#
-# def fetch_eirgrid_wind(target_date: date) -> Path:
-#     """Fetch wind generation data from EirGrid."""
-#     import requests
-#     url = "https://www.smartgriddashboard.com/..."
-#     ...
-# ────────────────────────────────────────────────────────────────
+def fetch_wind_and_demand(delivery_date: date) -> pd.DataFrame | None:
+    """
+    Fetch wind generation and demand for delivery_date from EirGrid.
+
+    Returns a DataFrame with columns:
+        StartTime           datetime (Irish local time, 30-min intervals)
+        WindMW              float — wind generation in MW
+        DemandMW            float — system demand in MW
+        WindGeneration_pct  float — wind as % of demand
+
+    Returns None if the fetch fails for any reason.
+    The pipeline continues without wind data if None is returned.
+    """
+    date_str = delivery_date.strftime("%d-%b-%Y")   # e.g. "17-May-2026"
+
+    wind   = _fetch_area("wind",   date_str)
+    demand = _fetch_area("demand", date_str)
+
+    if wind is None or demand is None:
+        return None
+
+    # Resample both to 30-minute intervals (EirGrid is 15-min)
+    wind   = _resample_30min(wind,   "WindMW")
+    demand = _resample_30min(demand, "DemandMW")
+
+    if wind is None or demand is None:
+        return None
+
+    # Merge on StartTime
+    df = pd.merge(wind, demand, on="StartTime", how="inner")
+
+    # Calculate wind penetration %
+    df["WindGeneration_pct"] = (
+        (df["WindMW"] / df["DemandMW"].replace(0, pd.NA)) * 100
+    ).clip(0, 100).round(1)
+
+    return df
 
 
-if __name__ == "__main__":
-    yesterday = date.today() - timedelta(days=1)
-    target = yesterday
+def _fetch_area(area: str, date_str: str) -> pd.DataFrame | None:
+    """Fetch a single area (wind or demand) from EirGrid API."""
+    try:
+        resp = requests.get(
+            EIRGRID_BASE,
+            params={
+                "region":    "ROI",
+                "chartType": area,
+                "dateRange": "day",
+                "dateFrom":  date_str,
+                "dateTo":    date_str,
+                "areas":     "windactual,windforecast" if area == "wind" else "demandactual,demandforecast",
+            },
+            timeout=TIMEOUT,
+        )
+        resp.raise_for_status()
+        data = resp.json()
 
-    if check_data_exists(target):
-        print(f"Data for {target} found in {DATA_DIR}")
-    else:
-        print(f"No data for {target}.")
-        print(f"Download DAM results from https://www.sem-o.com/market-data/")
-        print(f"Save to: {DATA_DIR}/semo_dam_{target.isoformat()}.csv")
-        sys.exit(1)
+        rows = data.get("Rows") or data.get("rows") or []
+        if not rows:
+            print(f"  [fetch] EirGrid returned no rows for area={area}")
+            return None
+
+        records = []
+        for row in rows:
+            ts_raw = (
+                row.get("EffectiveTime")
+                or row.get("effectivetime")
+                or row.get("DateTime")
+            )
+            value = row.get("Value") or row.get("value")
+
+            field = row.get("FieldName", "")
+            if area == "wind" and field != "WIND_ACTUAL":
+                continue
+            if area == "demand" and field != "SYSTEM_DEMAND":
+                continue
+
+            if ts_raw is None or value is None:
+                continue
+
+            for fmt in ("%d-%b-%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%d/%m/%Y %H:%M"):
+                try:
+                    ts = datetime.strptime(ts_raw, fmt)
+                    break
+                except ValueError:
+                    continue
+            else:
+                continue
+
+            records.append({"StartTime": ts, "value": float(value)})
+
+        if not records:
+            print(f"  [fetch] Could not parse any rows for area={area}")
+            return None
+
+        return pd.DataFrame(records)
+
+    except requests.RequestException as e:
+        print(f"  [fetch] EirGrid request failed for area={area}: {e}")
+        return None
+    except Exception as e:
+        print(f"  [fetch] Unexpected error fetching area={area}: {e}")
+        return None
+
+
+def _resample_30min(df: pd.DataFrame, col_name: str) -> pd.DataFrame | None:
+    """Resample 15-minute EirGrid data to 30-minute SEMO periods."""
+    try:
+        df = df.set_index("StartTime").sort_index()
+        df = df["value"].resample("30min").mean()
+        df = df.reset_index()
+        df.columns = ["StartTime", col_name]
+        df = df.dropna()
+        return df
+    except Exception as e:
+        print(f"  [fetch] Resample failed: {e}")
+        return None

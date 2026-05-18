@@ -223,7 +223,7 @@ def _load_all_dam_data() -> pd.DataFrame:
     ).sort_values(["DeliveryDate", "Period"])
 
 
-def generate_daily_charts(data_filepath: Path, target_date: date):
+def generate_daily_charts(data_filepath: Path, target_date: date, eirgrid_df=None):
     """Generate all charts for a given day. Returns the daily summary dict."""
     CHART_DIR.mkdir(parents=True, exist_ok=True)
     date_str = target_date.isoformat()
@@ -231,6 +231,15 @@ def generate_daily_charts(data_filepath: Path, target_date: date):
     df      = load_dam_data(data_filepath)
     day_df  = get_day_data(data_filepath, target_date)
     summary = daily_summary(df, target_date)
+
+    if eirgrid_df is not None:
+        eg = eirgrid_df.copy()
+        eg["StartTime"] = eg["StartTime"].dt.strftime("%H:%M")
+        wind_cols = ["StartTime", "WindMW", "DemandMW", "WindGeneration_pct"]
+        day_df = pd.merge(day_df, eg[wind_cols], on="StartTime", how="left")
+        if day_df["WindGeneration_pct"].notna().any():
+            summary["wind_pct_mean"] = round(day_df["WindGeneration_pct"].mean(), 1)
+            summary["demand_mean_mw"] = round(day_df["DemandMW"].mean(), 0)
 
     print(f"\nGenerating charts for {date_str}...")
 

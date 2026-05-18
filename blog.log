@@ -89,3 +89,47 @@
 2026-05-16 23:40:24  INFO      Menu selection: deploy
 2026-05-16 23:40:24  INFO      deploy: started
 2026-05-16 23:40:56  INFO      deploy: running git add .
+2026-05-16 23:40:56  INFO      deploy: add exit code 0
+2026-05-16 23:40:56  INFO      deploy: running git commit -m Stable version 1: changes needed regarding coloring, commentary areas, but it's working
+2026-05-16 23:40:56  INFO      deploy: commit exit code 0
+2026-05-16 23:40:56  INFO      deploy: running git push
+2026-05-16 23:40:58  INFO      deploy: push exit code 0
+2026-05-16 23:40:58  INFO      deploy: completed successfully
+2026-05-16 23:42:41  INFO      Menu selection: quit
+2026-05-16 23:45:00  INFO      ============================================================
+2026-05-16 23:45:00  INFO      blog TUI started
+2026-05-16 23:45:00  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-16 23:45:00  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-16 23:45:00  INFO      HUGO exists: True
+2026-05-16 23:45:00  INFO      Entering main menu
+2026-05-16 23:45:03  INFO      Menu selection: daily
+2026-05-16 23:45:03  INFO      new_daily: started
+2026-05-16 23:45:03  INFO      new_daily: found 4 SEMO files in /home/treacy998/dev/blog/irish-energy-blog/data
+2026-05-16 23:45:03  INFO      new_daily: using MarketResult_SEM-DA_PWR-MRC-D+1_20260505100000_20260505105501.csv
+2026-05-16 23:45:03  INFO      new_daily: running pipeline /home/treacy998/dev/blog/irish-energy-blog/pipeline/run_daily.py (cwd=/home/treacy998/dev/blog/irish-energy-blog/pipeline)
+2026-05-16 23:45:04  INFO      new_daily: pipeline exit code 0
+2026-05-16 23:45:04  INFO      new_daily: opening 2026-05-06.md in VS Code
+2026-05-16 23:46:19  INFO      Menu selection: quit
+2026-05-18 13:09:42  INFO      ============================================================
+2026-05-18 13:09:42  INFO      blog TUI started
+2026-05-18 13:09:42  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-18 13:09:42  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-18 13:09:42  INFO      HUGO exists: True
+2026-05-18 13:09:42  INFO      Entering main menu
+2026-05-18 13:09:43  INFO      Menu selection: daily
+2026-05-18 13:09:43  INFO      new_daily: started
+2026-05-18 13:09:43  INFO      new_daily: found 4 SEMO files in /home/treacy998/dev/blog/irish-energy-blog/data
+2026-05-18 13:09:43  INFO      new_daily: using MarketResult_SEM-DA_PWR-MRC-D+1_20260505100000_20260505105501.csv
+2026-05-18 13:09:43  INFO      new_daily: running pipeline /home/treacy998/dev/blog/irish-energy-blog/pipeline/run_daily.py (cwd=/home/treacy998/dev/blog/irish-energy-blog/pipeline)
+2026-05-18 13:09:45  INFO      new_daily: pipeline exit code 0
+2026-05-18 13:09:45  INFO      new_daily: opening 2026-05-06.md in VS Code
+2026-05-18 13:10:53  INFO      Menu selection: preview
+2026-05-18 13:10:53  INFO      preview_site: starting Hugo server (hugo=/home/treacy998/.local/bin/hugo, cwd=/home/treacy998/dev/blog/irish-energy-blog/site)
+2026-05-18 13:11:34  INFO      preview_site: stopped by user (Ctrl+C)
+2026-05-18 13:11:37  INFO      Menu selection: daily
+2026-05-18 13:11:37  INFO      new_daily: started
+2026-05-18 13:11:37  INFO      new_daily: found 4 SEMO files in /home/treacy998/dev/blog/irish-energy-blog/data
+2026-05-18 13:11:37  INFO      new_daily: using MarketResult_SEM-DA_PWR-MRC-D+1_20260505100000_20260505105501.csv
+2026-05-18 13:11:37  INFO      new_daily: running pipeline /home/treacy998/dev/blog/irish-energy-blog/pipeline/run_daily.py (cwd=/home/treacy998/dev/blog/irish-energy-blog/pipeline)
+2026-05-18 13:11:40  INFO      new_daily: pipeline exit code 0
+2026-05-18 13:11:40  INFO      new_daily: opening 2026-05-06.md in VS Code
