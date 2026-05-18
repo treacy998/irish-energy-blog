@@ -133,3 +133,12 @@
 2026-05-18 13:11:37  INFO      new_daily: running pipeline /home/treacy998/dev/blog/irish-energy-blog/pipeline/run_daily.py (cwd=/home/treacy998/dev/blog/irish-energy-blog/pipeline)
 2026-05-18 13:11:40  INFO      new_daily: pipeline exit code 0
 2026-05-18 13:11:40  INFO      new_daily: opening 2026-05-06.md in VS Code
+2026-05-18 13:12:54  INFO      ============================================================
+2026-05-18 13:12:54  INFO      blog TUI started
+2026-05-18 13:12:54  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-18 13:12:54  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-18 13:12:54  INFO      HUGO exists: True
+2026-05-18 13:12:54  INFO      Entering main menu
+2026-05-18 13:12:56  INFO      Menu selection: deploy
+2026-05-18 13:12:56  INFO      deploy: started
+2026-05-18 13:13:02  INFO      deploy: running git add .
