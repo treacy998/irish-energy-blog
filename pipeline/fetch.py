@@ -1,5 +1,5 @@
 """
-fetch.py — EirGrid Smart Grid Dashboard data fetcher
+fetch.py — EirGrid Smart Grid Dashboard data fetcher + SEMOpx DAM fetcher
 
 Fetches wind generation and system demand for a given delivery date.
 Returns a DataFrame aligned to SEMO's 30-minute half-hourly periods.
@@ -10,12 +10,86 @@ the pipeline continues without wind data (wind chart is skipped).
 
 import requests
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pathlib import Path
 
 
-EIRGRID_BASE = "https://www.smartgriddashboard.com/api/chart/"
-TIMEOUT      = 15  # seconds
+EIRGRID_BASE  = "https://www.smartgriddashboard.com/api/chart/"
+SEMOPX_BASE   = "https://reports.semopx.com"
+TIMEOUT       = 15  # seconds
+TIMEOUT_DL    = 60  # seconds — download
+
+
+def fetch_semo(delivery_date: date | str | None = None, out_dir: Path | str = "data") -> Path:
+    """
+    Fetch the EA-001 ETS Market Results CSV from SEMOpx.
+
+    delivery_date is the market delivery date (the date in the blog post title).
+    When omitted, the most recently published DA report is returned — useful for
+    the daily automation where you just want the latest available file.
+
+    If a matching file already exists in out_dir, it is returned immediately
+    without re-downloading.
+
+    Raises FileNotFoundError if the API returns no matching report.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if delivery_date is not None:
+        if isinstance(delivery_date, str):
+            delivery_date = date.fromisoformat(delivery_date)
+        # DA reports use DateRetention = trading date = delivery_date - 1
+        trade_date = delivery_date - timedelta(days=1)
+        # Avoid re-downloading a file we already have for this trading date.
+        stamp = trade_date.strftime("%Y%m%d")
+        existing = list(out_dir.glob(f"MarketResult_SEM-DA_PWR-MRC-D+1_{stamp}*.csv"))
+        if existing:
+            return existing[0]
+        params: dict = {
+            "DPuG_ID":       "EA-001",
+            "DateRetention": trade_date.isoformat(),
+            "page_size":     10,
+            "sort_by":       "PublishTime",
+            "order_by":      "DESC",
+        }
+    else:
+        params = {
+            "DPuG_ID":  "EA-001",
+            "page_size": 20,
+            "sort_by":   "PublishTime",
+            "order_by":  "DESC",
+        }
+
+    resp = requests.get(
+        f"{SEMOPX_BASE}/api/v1/documents/static-reports",
+        params=params,
+        timeout=TIMEOUT,
+    )
+    resp.raise_for_status()
+    items = resp.json().get("items", [])
+
+    target = next(
+        (i for i in items if i.get("ResourceName", "").startswith("MarketResult_SEM-DA_PWR-MRC-D+1_")),
+        None,
+    )
+    if target is None:
+        label = delivery_date.isoformat() if delivery_date else "latest"
+        raise FileNotFoundError(f"No SEM-DA market result CSV found ({label})")
+
+    resource_name = target["ResourceName"]
+    out_path = out_dir / resource_name
+    if out_path.exists():
+        return out_path
+
+    with requests.get(f"{SEMOPX_BASE}/documents/{resource_name}", timeout=TIMEOUT_DL, stream=True) as dl:
+        dl.raise_for_status()
+        with open(out_path, "wb") as f:
+            for chunk in dl.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+
+    return out_path
 
 
 def fetch_wind_and_demand(delivery_date: date) -> pd.DataFrame | None:

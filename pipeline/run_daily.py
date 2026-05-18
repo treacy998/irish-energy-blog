@@ -1,19 +1,21 @@
 """
 run_daily.py — One-command daily workflow.
 
-Finds the most recent SEMO data file, generates charts, and scaffolds the post.
+Fetches today's SEMO DAM data automatically, generates charts, and scaffolds the post.
 
 Usage:
-    python pipeline/run_daily.py
+    python pipeline/run_daily.py                                        # auto-fetch yesterday's DAM report
     python pipeline/run_daily.py data/MarketResult_SEM-DA_PWR-MRC-D+1_20260513100000.csv
 """
 
 import sys
+from datetime import date
 from pathlib import Path
 
 from process import load_dam_data
 from scaffold import scaffold_daily
-from fetch import fetch_wind_and_demand
+from fetch import fetch_wind_and_demand, fetch_semo
+from bess import simulate_bess
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
@@ -36,8 +38,7 @@ def find_latest_data_file() -> Path:
 
     raise FileNotFoundError(
         "No data file found in data/.\n"
-        "Download ETS Market Results from sem-o.com/market-data/dynamic-reports "
-        "and drop the CSV into data/"
+        "Run without arguments to auto-fetch, or download from semopx.com and drop the CSV into data/"
     )
 
 
@@ -48,7 +49,7 @@ def step(n: int, total: int, msg: str):
 def main():
     TOTAL_STEPS = 3
 
-    # ── Step 1: find data file ────────────────────────────────────────────────
+    # ── Step 1: find / fetch data file ───────────────────────────────────────
     step(1, TOTAL_STEPS, "Finding data file...")
 
     if len(sys.argv) >= 2:
@@ -61,7 +62,13 @@ def main():
                 "Expected a file containing 'SEM-DA' in the name (ETS Market Results)."
             )
     else:
-        filepath = find_latest_data_file()
+        print("  Auto-fetching latest EA-001 report from SEMOpx…")
+        try:
+            filepath = fetch_semo(out_dir=DATA_DIR)
+            print(f"  ✓ {filepath.name}")
+        except Exception as e:
+            print(f"  – SEMOpx fetch failed ({e}), falling back to cached files")
+            filepath = find_latest_data_file()
 
     print(f"  File:  {filepath.name}")
 
@@ -84,7 +91,11 @@ def main():
     else:
         print("  – EirGrid fetch failed, continuing without wind data")
 
-    scaffold_daily(delivery_date, explicit_file=filepath, title=title, eirgrid_df=eirgrid_df)
+    bess_result = simulate_bess(df)
+    if bess_result:
+        print(f"  ✓ BESS simulation: €{bess_result['gross_profit']:.0f} gross profit")
+
+    scaffold_daily(delivery_date, explicit_file=filepath, title=title, eirgrid_df=eirgrid_df, bess_result=bess_result)
 
     # ── Done ─────────────────────────────────────────────────────────────────
     post_path = CONTENT_DIR / "daily" / f"{date_str}.md"

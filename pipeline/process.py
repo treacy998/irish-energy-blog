@@ -7,6 +7,9 @@ Reads from data/ and outputs processed summaries used by charts.py and scaffold.
 import pandas as pd
 from pathlib import Path
 from datetime import date
+from zoneinfo import ZoneInfo
+
+DUBLIN_TZ = ZoneInfo("Europe/Dublin")
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -40,8 +43,9 @@ def load_dam_data(filepath: Path) -> pd.DataFrame:
         if not ts_str.strip() or not val_str.strip():
             continue
         ts = pd.Timestamp(ts_str)
-        # +1 hour: correct for BST (UTC+1, Apr–Oct). In GMT months (Nov–Mar) Irish time = UTC, so this over-corrects by 1h.
-        ts_irish = ts + pd.Timedelta(hours=1)
+        if ts.tzinfo is None:
+            ts = ts.tz_localize("UTC")
+        ts_irish = ts.tz_convert(DUBLIN_TZ).tz_localize(None)
         price = float(val_str.replace(",", "."))
         records.append({
             "DeliveryDate": pd.Timestamp(delivery_date),

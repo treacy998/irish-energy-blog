@@ -49,7 +49,7 @@ def find_data_file(target_date: date, explicit: Path = None) -> Path:
     raise FileNotFoundError(f"No data file found for {target_date}")
 
 
-def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = None, eirgrid_df=None):
+def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = None, eirgrid_df=None, bess_result=None):
     """Generate a daily briefing post with charts and pre-filled metrics."""
     data_file = find_data_file(target_date, explicit=explicit_file)
     if title is None:
@@ -57,7 +57,7 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     date_str = target_date.isoformat()
 
     # Generate charts and get summary stats
-    summary = generate_daily_charts(data_file, target_date, eirgrid_df=eirgrid_df)
+    summary = generate_daily_charts(data_file, target_date, eirgrid_df=eirgrid_df, bess_result=bess_result)
 
     CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
 
@@ -73,6 +73,33 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     has_wind_chart = (CHART_DIR / f"price-wind-{date_str}.png").exists()
     wind_chart_section = f"\n## Price vs Wind\n\n![Price vs Wind Generation](/charts/price-wind-{date_str}.png)\n" if has_wind_chart else ""
 
+    has_pdc_chart = (CHART_DIR / f"pdc-{date_str}.png").exists()
+    pdc_section = f"\n## Price Duration Curve\n\n![Price Duration Curve](/charts/pdc-{date_str}.png)\n" if has_pdc_chart else ""
+
+    has_spread_chart = (CHART_DIR / f"spread-{date_str}.png").exists()
+    spread_section = f"\n## Peak / Off-Peak Spread\n\n![Peak / Off-Peak Spread](/charts/spread-{date_str}.png)\n" if has_spread_chart else ""
+
+    has_bess_chart = (CHART_DIR / f"bess-{date_str}.png").exists()
+    if bess_result is not None:
+        b = bess_result
+        bess_section = f"""
+## BESS Dispatch Signal
+
+| | Price | Time | Energy | Value |
+|--|--|--|--|--|
+| **Charge** | €{b['charge_mean']:.0f}/MWh | {b['charge_start']} | 2 MWh | −€{b['charge_cost']:.0f} |
+| **Discharge** | €{b['discharge_mean']:.0f}/MWh | {b['discharge_start']} | 1.7 MWh (85% RTE) | +€{b['gross_revenue']:.0f} |
+| **Gross profit** | | | | **€{b['gross_profit']:.0f}** |
+
+*Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+{"" if not has_bess_chart else f"""
+![BESS Dispatch](/charts/bess-{date_str}.png)
+"""}
+<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
+"""
+    else:
+        bess_section = ""
+
     # Generate markdown
     md = f"""---
 title: "{title}"
@@ -83,7 +110,10 @@ summary: "DAM prices averaged €{summary['mean_price']}/MWh, peaking at €{sum
 draft: false
 ---
 
-## Market Snapshot
+{{{{< statbar mean="€{summary['mean_price']}" peak="€{summary['peak_price']}" min="€{summary['min_price']}" spread="€{summary['price_range']}" >}}}}
+
+<details>
+<summary>Market Snapshot</summary>
 
 | Metric               | Value               |
 |----------------------|---------------------|
@@ -93,6 +123,8 @@ draft: false
 | Price Range          | €{summary['price_range']}/MWh   |
 {wind_row}{demand_row}
 
+</details>
+
 ## Price Profile
 
 ![DAM Price Profile](/charts/dam-{date_str}.png)
@@ -100,7 +132,7 @@ draft: false
 ## Week in Context
 
 ![7-Day Price Comparison](/charts/week-compare-{date_str}.png)
-
+{pdc_section}{spread_section}{bess_section}
 ## Commentary
 
 <!-- 
