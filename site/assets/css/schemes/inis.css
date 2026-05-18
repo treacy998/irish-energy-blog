@@ -1,0 +1,40 @@
+/* Inis — warm stone base · muted forest green · walnut brown */
+:root {
+  --color-neutral: 255, 255, 255;
+  /* Warm stone — near-white base, dark warm near-black */
+  --color-neutral-50:  250, 250, 249;   /* #fafaf9 — page bg */
+  --color-neutral-100: 245, 244, 242;   /* #f5f4f2 — subtle surface */
+  --color-neutral-200: 231, 228, 224;   /* #e7e4e0 — hairline borders */
+  --color-neutral-300: 214, 210, 204;   /* #d6d2cc */
+  --color-neutral-400: 168, 161, 153;   /* #a8a199 — placeholder */
+  --color-neutral-500: 120, 112, 104;   /* #787068 — secondary text */
+  --color-neutral-600:  87,  80,  73;   /* #575049 */
+  --color-neutral-700:  68,  60,  54;   /* #443c36 */
+  --color-neutral-800:  41,  34,  29;   /* #29221d */
+  --color-neutral-900:  28,  22,  18;   /* #1c1612 */
+  --color-neutral-950:  14,  10,   8;   /* #0e0a08 — near-black */
+  /* Muted forest green — primary accent (desaturated from #396606) */
+  --color-primary-50:  246, 249, 241;
+  --color-primary-100: 234, 242, 221;
+  --color-primary-200: 209, 226, 183;
+  --color-primary-300: 173, 203, 134;
+  --color-primary-400: 131, 172,  84;
+  --color-primary-500:  96, 142,  50;
+  --color-primary-600:  72, 114,  28;   /* #48721c — main link light */
+  --color-primary-700:  57,  94,  22;   /* #395e16 — muted anchor */
+  --color-primary-800:  41,  68,  13;
+  --color-primary-900:  29,  48,  10;
+  --color-primary-950:  15,  26,   5;
+  /* Warm walnut brown — secondary */
+  --color-secondary-50:  251, 247, 241;
+  --color-secondary-100: 244, 232, 212;
+  --color-secondary-200: 227, 204, 163;
+  --color-secondary-300: 204, 170, 112;
+  --color-secondary-400: 178, 135,  72;
+  --color-secondary-500: 149, 104,  44;
+  --color-secondary-600: 118,  78,  24;
+  --color-secondary-700:  93,  58,  14;
+  --color-secondary-800:  67,  40,   9;
+  --color-secondary-900:  44,  26,   6;
+  --color-secondary-950:  24,  13,   3;
+}

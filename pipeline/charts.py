@@ -16,20 +16,22 @@ from datetime import date
 from process import load_dam_data, get_day_data, daily_summary
 
 # ── Palette ────────────────────────────────────────────────────────────────
-BG         = "#0D1B2A"   # figure background — deep navy
-PANEL      = "#112236"   # axes background — slightly lighter
-PRICE_LINE = "#2EC4B6"   # teal — main price series
-PRICE_FILL = "#1A6B65"   # dark teal — area fill under price
-PEAK_COLOR = "#FFB703"   # amber — peak annotation
-MIN_COLOR  = "#E63946"   # red — minimum annotation
-MEAN_LINE  = "#FFFFFF"   # white — mean reference line
-WIND_LINE  = "#7FB069"   # green — wind % series
-WIND_FILL  = "#3D6B38"   # dark green — wind area fill
-HIST_LINE  = "#85B7EB"   # pale blue — prior days in week-compare
-TEXT_PRI   = "#F0F4F8"   # primary text — titles
-TEXT_SEC   = "#8BA3BE"   # secondary text — axis labels
-GRID       = "#1A2F47"   # grid lines
-BORDER     = "#1E3450"   # spine colour
+BG         = "#FAFAF9"   # near-white warm — figure background
+PANEL      = "#F3F2EF"   # subtle surface — axes background
+PRICE_LINE = "#395e16"   # muted forest green — main price series
+PRICE_FILL = "#395e16"   # same green — low-alpha area fill
+PEAK_COLOR = "#B8722A"   # muted amber — peak annotation
+MIN_COLOR  = "#A83C3C"   # muted rose red — minimum annotation
+MEAN_LINE  = "#2A2520"   # near-black warm — mean reference
+WIND_LINE  = "#7A6D5E"   # warm stone — wind % series
+WIND_FILL  = "#7A6D5E"   # same stone — wind area fill
+TEXT_PRI   = "#1C1612"   # near-black warm — titles
+TEXT_SEC   = "#78706A"   # mid stone — axis labels
+GRID       = "#E8E4DE"   # hairline beige — grid
+BORDER     = "#D4CFC8"   # subtle border
+
+# Week-compare: stone neutrals, oldest lightest → today muted green
+HIST_COLORS = ["#C8C4BE", "#B8B2AA", "#A09690", "#887E78", "#6B6460"]
 
 FIG_W = 12
 FIG_H = 4.8
@@ -42,16 +44,16 @@ DATA_DIR  = Path(__file__).parent.parent / "data"
 # ── Style helpers ──────────────────────────────────────────────────────────
 
 def _style(ax, fig):
-    """Apply dark navy style to an axes."""
+    """Apply warm cream style to an axes."""
     fig.patch.set_facecolor(BG)
     ax.set_facecolor(PANEL)
     ax.tick_params(colors=TEXT_SEC, labelsize=8.5)
     ax.xaxis.label.set_color(TEXT_SEC)
     ax.yaxis.label.set_color(TEXT_SEC)
     for spine in ax.spines.values():
-        spine.set_color(BORDER)
-        spine.set_linewidth(0.5)
-    ax.grid(True, color=GRID, linewidth=0.5, linestyle="--", alpha=0.8)
+        spine.set_edgecolor(BORDER)
+        spine.set_linewidth(0.8)
+    ax.grid(True, color=GRID, linewidth=0.5, linestyle="--", alpha=0.9)
     ax.set_axisbelow(True)
 
 
@@ -83,29 +85,33 @@ def chart_dam_price_profile(day_df: pd.DataFrame, summary: dict, outpath: Path):
     prices = day_df["DAMPrice_EUR_MWh"].values
     mean   = summary["mean_price"]
 
-    ax.fill_between(x, prices, alpha=0.12, color=PRICE_FILL, zorder=1)
-    ax.plot(x, prices, color=PRICE_LINE, linewidth=2.2, zorder=3)
-    ax.axhline(mean, color=MEAN_LINE, linewidth=0.7, linestyle="--", alpha=0.35)
+    ax.fill_between(x, prices, alpha=0.18, color=PRICE_FILL, zorder=1)
+    ax.plot(x, prices, color=PRICE_LINE, linewidth=2.4, zorder=3, label="DAM Price (€/MWh)")
+    ax.axhline(mean, color=MEAN_LINE, linewidth=1.0, linestyle="--", alpha=0.6, label=f"Mean  €{mean:.0f}")
+    # Mean label on the right axis edge
+    ax.text(47.5, mean, f"avg €{mean:.0f}", color=MEAN_LINE, fontsize=7.5,
+            va="center", ha="left", fontweight="bold")
 
     peak_x = summary["peak_period"] - 1
     min_x  = summary["min_period"]  - 1
 
-    ax.scatter([peak_x], [summary["peak_price"]], color=PEAK_COLOR, s=55, zorder=6)
+    ax.scatter([peak_x], [summary["peak_price"]], color=PEAK_COLOR, s=65, zorder=6)
     ax.annotate(
         f"Peak  €{summary['peak_price']:.0f}  ({summary['peak_time']})",
         xy=(peak_x, summary["peak_price"]),
-        xytext=(0, 10), textcoords="offset points",
+        xytext=(0, 11), textcoords="offset points",
         color=PEAK_COLOR, fontsize=8.5, fontweight="bold", ha="center",
     )
 
-    ax.scatter([min_x], [summary["min_price"]], color=MIN_COLOR, s=55, zorder=6)
+    ax.scatter([min_x], [summary["min_price"]], color=MIN_COLOR, s=65, zorder=6)
     ax.annotate(
         f"Min  €{summary['min_price']:.0f}  ({summary['min_time']})",
         xy=(min_x, summary["min_price"]),
-        xytext=(0, -14), textcoords="offset points",
+        xytext=(0, -15), textcoords="offset points",
         color=MIN_COLOR, fontsize=8.5, ha="center",
     )
 
+    ax.set_ylabel("€ / MWh", color=TEXT_SEC, fontsize=8.5)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"€{v:.0f}"))
     _format_time_axis(ax)
 
@@ -135,26 +141,37 @@ def chart_price_vs_wind(day_df: pd.DataFrame, summary: dict, outpath: Path):
     prices = day_df["DAMPrice_EUR_MWh"].values
     wind   = day_df["WindGeneration_pct"].values
 
-    ax1.fill_between(x, prices, alpha=0.12, color=PRICE_FILL, zorder=1)
-    ax1.plot(x, prices, color=PRICE_LINE, linewidth=2.2, zorder=3)
-    ax1.tick_params(axis="y", colors=PRICE_LINE)
+    ax1.fill_between(x, prices, alpha=0.18, color=PRICE_FILL, zorder=1)
+    line_price, = ax1.plot(x, prices, color=PRICE_LINE, linewidth=2.4, zorder=3, label="DAM Price")
+    ax1.tick_params(axis="y", colors=PRICE_LINE, labelsize=8.5)
+    ax1.set_ylabel("DAM Price (€/MWh)", color=PRICE_LINE, fontsize=8.5)
     ax1.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"€{v:.0f}"))
 
     ax2 = ax1.twinx()
-    ax2.fill_between(x, wind, alpha=0.10, color=WIND_FILL, zorder=1)
-    ax2.plot(x, wind, color=WIND_LINE, linewidth=1.6, linestyle="--", zorder=3)
+    ax2.fill_between(x, wind, alpha=0.14, color=WIND_FILL, zorder=1)
+    line_wind, = ax2.plot(x, wind, color=WIND_LINE, linewidth=2.0, linestyle="--", zorder=3, label="Wind %")
     ax2.tick_params(axis="y", colors=WIND_LINE, labelsize=8.5)
+    ax2.set_ylabel("Wind Generation (%)", color=WIND_LINE, fontsize=8.5)
     ax2.set_ylim(0, 105)
     for spine in ax2.spines.values():
-        spine.set_color(BORDER)
+        spine.set_edgecolor(BORDER)
         spine.set_linewidth(0.5)
+
+    # Combined legend
+    ax1.legend(
+        handles=[line_price, line_wind],
+        labels=["DAM Price (€/MWh)", "Wind Generation (%)"],
+        loc="upper left", fontsize=8, framealpha=0.85,
+        facecolor=BG, edgecolor=BORDER,
+        labelcolor=[PRICE_LINE, WIND_LINE],
+    )
 
     _format_time_axis(ax1)
 
     _header(
         fig,
         f"Price vs Wind Generation — {summary['date']}",
-        "DAM price (€/MWh, teal)  and  wind generation share (%, green dashed)",
+        "DAM price (€/MWh, green)  ·  wind share (%, brown dashed)  ·  Irish time",
     )
 
     plt.tight_layout(rect=[0, 0, 1, 0.86])
@@ -179,25 +196,40 @@ def chart_week_comparison(df: pd.DataFrame, target_date: date, outpath: Path):
     recent_dates = dates_available[max(0, target_idx - 6): target_idx + 1]
     n            = len(recent_dates)
 
+    legend_handles = []
+    hist_idx = 0
     for i, d in enumerate(recent_dates):
         day = df[df["DeliveryDate"].dt.date == d]
         x   = day["Period"].values - 1
         y   = day["DAMPrice_EUR_MWh"].values
 
         if d == target_date:
-            ax.fill_between(x, y, color=PRICE_FILL, alpha=0.09, zorder=1)
-            ax.plot(x, y, color=PRICE_LINE, linewidth=2.4, zorder=3)
+            ax.fill_between(x, y, color=PRICE_FILL, alpha=0.12, zorder=1)
+            line, = ax.plot(x, y, color=PRICE_LINE, linewidth=2.6, zorder=5,
+                            label=f"{d.strftime('%a %d %b')}  ← today")
         else:
-            alpha = 0.20 + 0.30 * (i / max(n - 1, 1))
-            ax.plot(x, y, color=HIST_LINE, linewidth=0.9, alpha=alpha)
+            color = HIST_COLORS[min(hist_idx, len(HIST_COLORS) - 1)]
+            lw    = 0.8 + 0.25 * hist_idx
+            line, = ax.plot(x, y, color=color, linewidth=lw, alpha=0.85,
+                            label=d.strftime("%a %d %b"))
+            hist_idx += 1
 
+        legend_handles.append(line)
+
+    ax.legend(
+        handles=legend_handles,
+        loc="upper left", fontsize=7.5, framealpha=0.85,
+        facecolor=BG, edgecolor=BORDER,
+    )
+
+    ax.set_ylabel("€ / MWh", color=TEXT_SEC, fontsize=8.5)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"€{v:.0f}"))
     _format_time_axis(ax)
 
     _header(
         fig,
         f"Week in Context — {target_date}",
-        "Last 7 days overlaid  |  today highlighted in teal  |  earlier days faded",
+        "Last 7 days overlaid  ·  today (green) vs prior days (brown shades)",
     )
 
     plt.tight_layout(rect=[0, 0, 1, 0.86])
@@ -219,20 +251,22 @@ def chart_price_duration(df: pd.DataFrame, date_str: str, output_dir: Path):
         fig, ax = plt.subplots(figsize=(FIG_W, FIG_H))
         _style(ax, fig)
 
-        ax.bar(ranks, sorted_prices, color=PRICE_LINE, alpha=0.72, width=0.85, zorder=3)
+        ax.bar(ranks, sorted_prices, color=PRICE_LINE, alpha=0.78, width=0.85, zorder=3)
 
         for level in (100, 150, 200):
-            ax.axhline(level, color=PEAK_COLOR, linewidth=0.9, linestyle="--", alpha=0.7, zorder=4)
-            ax.text(48.8, level, f"€{level}", color=PEAK_COLOR, fontsize=7.5, va="center", ha="left")
+            ax.axhline(level, color=PEAK_COLOR, linewidth=1.0, linestyle="--", alpha=0.8, zorder=4)
+            ax.text(48.8, level, f"€{level}", color=PEAK_COLOR, fontsize=7.5, va="center", ha="left",
+                    fontweight="bold")
 
         above_150 = int(np.sum(sorted_prices > 150))
         above_200 = int(np.sum(sorted_prices > 200))
-        ax.text(0.97, 0.96, f"Above €150: {above_150}\nAbove €200: {above_200}",
+        ax.text(0.97, 0.96, f"Above €150: {above_150} periods\nAbove €200: {above_200} periods",
                 transform=ax.transAxes, color=TEXT_PRI, fontsize=8.5,
                 va="top", ha="right",
                 bbox=dict(facecolor=PANEL, edgecolor=BORDER, boxstyle="round,pad=0.4", alpha=0.9))
 
-        ax.set_xlabel("Hours, ranked by price", color=TEXT_SEC, fontsize=8.5)
+        ax.set_xlabel("Half-hour periods, ranked high → low", color=TEXT_SEC, fontsize=8.5)
+        ax.set_ylabel("€ / MWh", color=TEXT_SEC, fontsize=8.5)
         ax.set_xlim(0.5, 50.5)
         ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"€{v:.0f}"))
 
@@ -282,8 +316,8 @@ def chart_spread_tracker(df: pd.DataFrame, date_str: str, output_dir: Path):
 
         y_pos  = [1, 0]
         values = [peak_mean, offpeak_mean]
-        colors = [PEAK_COLOR, HIST_LINE]
-        bars = ax.barh(y_pos, values, color=colors, alpha=0.82, height=0.45, zorder=3)
+        colors = [PEAK_COLOR, WIND_LINE]   # amber peak, brown off-peak
+        bars = ax.barh(y_pos, values, color=colors, alpha=0.85, height=0.45, zorder=3)
 
         ax.set_yticks(y_pos)
         ax.set_yticklabels(["Peak avg", "Off-peak avg"], fontsize=10, color=TEXT_PRI)
@@ -342,10 +376,10 @@ def chart_bess_dispatch(df: pd.DataFrame, bess_result: dict, date_str: str, outp
 
         # Shade charge window (blue)
         c_idx = bess_result["charge_periods"]
-        ax.axvspan(c_idx[0] - 0.5, c_idx[-1] + 0.5, color=HIST_LINE, alpha=0.30, zorder=2)
+        ax.axvspan(c_idx[0] - 0.5, c_idx[-1] + 0.5, color=WIND_LINE, alpha=0.30, zorder=2)
         c_mid = (c_idx[0] + c_idx[-1]) / 2
         ax.text(c_mid, ax.get_ylim()[1] if ax.get_ylim()[1] != 1.0 else max(prices) * 0.95,
-                "Charge\nwindow", color=HIST_LINE, fontsize=8, ha="center", va="top",
+                "Charge\nwindow", color=WIND_LINE, fontsize=8, ha="center", va="top",
                 fontweight="bold", zorder=5)
 
         # Shade discharge window (amber)
@@ -367,7 +401,7 @@ def chart_bess_dispatch(df: pd.DataFrame, bess_result: dict, date_str: str, outp
                 color=TEXT_PRI, fontsize=8.5, va="center", ha="left", fontweight="bold",
                 bbox=dict(facecolor=BG, edgecolor="none", alpha=0.75, pad=3))
 
-        ax.axhline(c_price, color=HIST_LINE, linewidth=0.7, linestyle=":", alpha=0.6)
+        ax.axhline(c_price, color=WIND_LINE, linewidth=0.7, linestyle=":", alpha=0.6)
         ax.axhline(d_price, color=PEAK_COLOR, linewidth=0.7, linestyle=":", alpha=0.6)
 
         ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"€{v:.0f}"))
@@ -376,7 +410,7 @@ def chart_bess_dispatch(df: pd.DataFrame, bess_result: dict, date_str: str, outp
         _header(
             fig,
             f"BESS Dispatch Signal — {date_str}",
-            f"Optimal 1MW/2MWh cycle  |  charge {bess_result['charge_start']} (blue)  |  discharge {bess_result['discharge_start']} (amber)  |  gross profit €{bess_result['gross_profit']:.0f}",
+            f"Optimal 1MW/2MWh cycle  ·  charge {bess_result['charge_start']} (brown)  ·  discharge {bess_result['discharge_start']} (amber)  ·  gross profit €{bess_result['gross_profit']:.0f}",
         )
 
         plt.tight_layout(rect=[0, 0, 1, 0.86])
