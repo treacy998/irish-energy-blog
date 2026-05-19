@@ -127,25 +127,25 @@ def main():
     scaffold_daily(delivery_date, explicit_file=filepath, title=title, eirgrid_df=eirgrid_df, bess_result=bess_result)
 
     # ── Done ─────────────────────────────────────────────────────────────────
-    post_path = CONTENT_DIR / "daily" / f"{date_str}.md"
+    chart_day_dir = CHART_DIR / date_str
     chart_names = [
         f"dam-{date_str}.png",
         f"price-wind-{date_str}.png",
         f"week-compare-{date_str}.png",
     ]
-    charts_found = [n for n in chart_names if (CHART_DIR / n).exists()]
+    charts_found = [n for n in chart_names if (chart_day_dir / n).exists()]
 
     print(f"\n{'─'*52}")
     print(f"  Done — {delivery_date.strftime('%-d %B %Y')}")
     print(f"{'─'*52}")
-    print(f"  Post:   site/content/daily/{date_str}.md")
+    print(f"  Post:   site/content/daily/{date_str}/index.md")
     if charts_found:
         print(f"  Charts: {len(charts_found)} generated")
         for name in charts_found:
-            print(f"    site/static/charts/{name}")
+            print(f"    site/static/charts/{date_str}/{name}")
     print(f"""
   Next steps:
-    1. Open  site/content/daily/{date_str}.md
+    1. Open  site/content/daily/{date_str}/index.md
        Write 2–3 paragraphs in the Commentary section.
 
     2. Preview locally:

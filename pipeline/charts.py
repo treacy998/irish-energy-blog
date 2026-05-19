@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import date
 
 from process import load_dam_data, get_day_data, daily_summary
+from charts_interactive import generate_interactive_charts
 
 # ── Palette ────────────────────────────────────────────────────────────────
 BG         = "#FAFAF9"   # near-white warm — figure background
@@ -443,8 +444,9 @@ def _load_all_dam_data() -> pd.DataFrame:
 
 def generate_daily_charts(data_filepath: Path, target_date: date, eirgrid_df=None, bess_result=None):
     """Generate all charts for a given day. Returns the daily summary dict."""
-    CHART_DIR.mkdir(parents=True, exist_ok=True)
     date_str = target_date.isoformat()
+    chart_day_dir = CHART_DIR / date_str
+    chart_day_dir.mkdir(parents=True, exist_ok=True)
 
     df      = load_dam_data(data_filepath)
     day_df  = get_day_data(data_filepath, target_date)
@@ -463,11 +465,11 @@ def generate_daily_charts(data_filepath: Path, target_date: date, eirgrid_df=Non
 
     chart_dam_price_profile(
         day_df, summary,
-        CHART_DIR / f"dam-{date_str}.png",
+        chart_day_dir / f"dam-{date_str}.png",
     )
     chart_price_vs_wind(
         day_df, summary,
-        CHART_DIR / f"price-wind-{date_str}.png",
+        chart_day_dir / f"price-wind-{date_str}.png",
     )
 
     # Combine all available data files so the week-compare has history
@@ -475,14 +477,19 @@ def generate_daily_charts(data_filepath: Path, target_date: date, eirgrid_df=Non
     chart_week_comparison(
         combined if not combined.empty else df,
         target_date,
-        CHART_DIR / f"week-compare-{date_str}.png",
+        chart_day_dir / f"week-compare-{date_str}.png",
     )
 
-    chart_price_duration(day_df, date_str, CHART_DIR)
-    chart_spread_tracker(day_df, date_str, CHART_DIR)
+    chart_price_duration(day_df, date_str, chart_day_dir)
+    chart_spread_tracker(day_df, date_str, chart_day_dir)
 
     if bess_result is not None:
-        chart_bess_dispatch(day_df, bess_result, date_str, CHART_DIR)
+        chart_bess_dispatch(day_df, bess_result, date_str, chart_day_dir)
+
+    generate_interactive_charts(
+        day_df, combined if not combined.empty else df,
+        summary, bess_result, target_date, chart_day_dir,
+    )
 
     return summary
 

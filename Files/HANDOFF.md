@@ -1,5 +1,5 @@
 # INIS Energy Blog — Full Project Handoff
-*Updated 19 May 2026*
+*Updated 19 May 2026 (rev 2)*
 
 ---
 
@@ -58,7 +58,8 @@ SEMO API (auto)               EirGrid API (auto)
                           ┌──────────┼──────────┐
                        charts.py  bess.py  scaffold.py
                           │                     │
-              static/charts/*.png     content/daily/YYYY-MM-DD.md
+    static/charts/YYYY-MM-DD/*.png     content/daily/YYYY-MM-DD/index.md
+    static/charts/YYYY-MM-DD/*.html    (interactive Plotly, local only)
                                      │
                                 Hugo build
                                      │
@@ -74,7 +75,7 @@ SEMO API (auto)               EirGrid API (auto)
 | Site generator | Hugo Extended 0.146.0 | Static, ~250ms build |
 | Theme | Congo (git submodule) | Ocean scheme, custom CSS overrides |
 | Data processing | Python 3.13.7 + pandas | In `venv/` |
-| Charts | matplotlib | 5 chart types, dark navy style |
+| Charts | matplotlib + Plotly | 5 chart types per day — PNG for blog, interactive HTML for local analysis |
 | CLI/TUI | Rich + plain input() | Numbered menu |
 | Deployment | Vercel | Auto-deploy on push |
 | Source control | Git | github.com/treacy998/irish-energy-blog |
@@ -119,26 +120,36 @@ Simulates a 1MW/2MWh battery making one optimal DAM cycle per day.
 - Gross figures only — before network charges, capacity costs, degradation
 
 ### `pipeline/charts.py`
-5 charts per day, 12×4.8", 150 DPI, dark navy:
+5 charts per day, 12×4.8", 150 DPI, warm cream palette. All outputs go into `site/static/charts/YYYY-MM-DD/` (one folder per date).
 
-| Chart | File | Description |
-|-------|------|-------------|
+| Chart | PNG file | Description |
+|-------|----------|-------------|
 | DAM Price Profile | `dam-YYYY-MM-DD.png` | 48-period price line, peak/min annotations, mean dashed |
 | Price vs Wind | `price-wind-YYYY-MM-DD.png` | Dual-axis price + wind %. Skipped if no EirGrid data |
-| Price Duration Curve | `pdc-YYYY-MM-DD.png` | 48 prices sorted high-to-low, teal bars, €100/150/200 reference lines, period count annotations |
-| Peak/Off-Peak Spread | `spread-YYYY-MM-DD.png` | Two horizontal bars (amber peak, blue off-peak), spread bracket, large €X label |
-| BESS Dispatch | `bess-YYYY-MM-DD.png` | Full price profile with charge window (blue), discharge window (amber), spread bracket |
+| Price Duration Curve | `pdc-YYYY-MM-DD.png` | 48 prices sorted high-to-low, bars, €100/150/200 reference lines |
+| Peak/Off-Peak Spread | `spread-YYYY-MM-DD.png` | Two horizontal bars (amber peak, brown off-peak), spread bracket |
+| BESS Dispatch | `bess-YYYY-MM-DD.png` | Price profile with charge (brown) and discharge (amber) windows |
 
-Palette: `#0D1B2A` bg, `#2EC4B6` price, `#FFB703` amber, `#E63946` min, `#7FB069` wind, `#85B7EB` historical.
+After generating PNGs, `charts.py` calls `generate_interactive_charts()` from `charts_interactive.py`, producing an `.html` version of each chart in the same folder.
+
+Palette: `#FAFAF9` bg, `#395e16` price green, `#B8722A` amber, `#A83C3C` min red, `#7A6D5E` wind stone.
+
+### `pipeline/charts_interactive.py`
+Generates standalone Plotly HTML charts alongside every PNG. Same 5 chart types; same palette. Files are self-contained (CDN-linked Plotly.js) — open directly in a browser. Features:
+- Hover for exact price/time values on every period
+- Zoom and pan any time window
+- Week comparison: click legend entries to show/hide individual days
+- No extra installs beyond `plotly` (already in `venv/`)
 
 ### `pipeline/scaffold.py`
-Generates `site/content/daily/YYYY-MM-DD.md` with:
+Generates `site/content/daily/YYYY-MM-DD/index.md` (Hugo leaf bundle — keeps URL as `/daily/YYYY-MM-DD/`). Contains:
 - YAML frontmatter
 - `{{< statbar >}}` shortcode — 4 metric chips (mean/peak/min/spread)
 - Collapsible full stats table
-- 5 conditionally embedded chart images
+- 5 conditionally embedded chart images (paths: `/charts/YYYY-MM-DD/chartname.png`)
 - BESS dispatch table (charge/discharge windows, gross profit)
-- `## Commentary` and `## BESS Dispatch` commentary placeholders
+- `## Commentary` placeholder
+- Collapsed `<details>` block with the full 48-period half-hourly data table (period, time, price, wind % if available) — copy-paste into a spreadsheet for ad hoc analysis
 
 ### `site/layouts/shortcodes/statbar.html`
 Named params: `mean`, `peak`, `min`, `spread`. Renders 4 dark navy metric chips with teal values.
@@ -184,9 +195,9 @@ done
 ```
 
 ### 7.2 Git grows with binary chart PNGs
-5 charts per post committed to git. After 100 days: ~500 PNGs, ~70MB git history.
+5 PNGs + 5 HTML files per post committed to git. After 100 days: ~500 PNGs + 500 HTMLs, growing git history. The interactive HTMLs are large (Plotly CDN-linked so small on disk, but still accumulate).
 
-**Fix:** Add `site/static/charts/` to `.gitignore`, upload to Vercel Blob or Cloudflare R2 at build time.
+**Fix:** Add `site/static/charts/` to `.gitignore`, upload PNGs to Vercel Blob or Cloudflare R2 at build time. Keep HTML files gitignored entirely (local-only analysis tool).
 
 ### 7.3 Week comparison requires retained CSVs
 `chart_week_comparison()` scans `data/` for prior files.
@@ -268,7 +279,7 @@ File pattern: `MarketResult_SEM-DA_PWR-MRC-D+1_*.csv`
 | Python env | `venv/` (Python 3.13.7) |
 | Hugo binary | `~/.local/bin/hugo` v0.146.0 |
 | Content | `site/content/daily/` and `site/content/weekly/` |
-| Charts output | `site/static/charts/` |
+| Charts output | `site/static/charts/YYYY-MM-DD/` (one folder per date, PNG + HTML) |
 | Raw data | `data/` (gitignored) |
 | Activity log | `blog.log` |
 | Editor | VS Code (`code <file>`) |

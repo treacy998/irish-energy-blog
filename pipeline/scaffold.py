@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 from datetime import date, timedelta
 
-from process import load_dam_data, daily_summary
+from process import load_dam_data, get_day_data, daily_summary
 from charts import generate_daily_charts
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -49,6 +49,41 @@ def find_data_file(target_date: date, explicit: Path = None) -> Path:
     raise FileNotFoundError(f"No data file found for {target_date}")
 
 
+def _build_data_table(day_df, eirgrid_df, date_str: str) -> str:
+    """Return a collapsed markdown table of half-hourly data for the day."""
+    cols = ["Period", "StartTime", "DAMPrice_EUR_MWh"]
+    has_wind = eirgrid_df is not None and "WindGeneration_pct" in day_df.columns
+
+    header = "| Period | Time | Price (€/MWh) |"
+    sep    = "|--------|------|--------------|"
+    if has_wind:
+        header += " Wind % |"
+        sep    += "--------|"
+
+    rows = [header, sep]
+    for _, row in day_df.iterrows():
+        period = int(row["Period"])
+        time   = row.get("StartTime", "")
+        if hasattr(time, "strftime"):
+            time = time.strftime("%H:%M")
+        price  = f"{row['DAMPrice_EUR_MWh']:.2f}"
+        line   = f"| {period} | {time} | {price} |"
+        if has_wind:
+            wind = row.get("WindGeneration_pct", float("nan"))
+            line += f" {wind:.1f}% |" if wind == wind else " — |"
+        rows.append(line)
+
+    table = "\n".join(rows)
+    return f"""
+<details>
+<summary>Half-hourly data — {date_str}</summary>
+
+{table}
+
+</details>
+"""
+
+
 def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = None, eirgrid_df=None, bess_result=None):
     """Generate a daily briefing post with charts and pre-filled metrics."""
     data_file = find_data_file(target_date, explicit=explicit_file)
@@ -59,7 +94,18 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     # Generate charts and get summary stats
     summary = generate_daily_charts(data_file, target_date, eirgrid_df=eirgrid_df, bess_result=bess_result)
 
+    # Load day-level data for the table (same data used by charts)
+    day_df = get_day_data(data_file, target_date)
+    if eirgrid_df is not None:
+        eg = eirgrid_df.copy()
+        eg["StartTime"] = eg["StartTime"].dt.strftime("%H:%M")
+        wind_cols = ["StartTime", "WindMW", "DemandMW", "WindGeneration_pct"]
+        day_df = day_df.merge(eg[wind_cols], on="StartTime", how="left")
+
+    data_table = _build_data_table(day_df, eirgrid_df, date_str)
+
     CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
+    chart_day_dir = CHART_DIR / date_str
 
     # Build wind row if data available
     wind_row = ""
@@ -70,16 +116,16 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     if "demand_mean_mw" in summary:
         demand_row = f"\n| Mean Demand          | {summary['demand_mean_mw']:.0f} MW       |"
 
-    has_wind_chart = (CHART_DIR / f"price-wind-{date_str}.png").exists()
-    wind_chart_section = f"\n## Price vs Wind\n\n![Price vs Wind Generation](/charts/price-wind-{date_str}.png)\n" if has_wind_chart else ""
+    has_wind_chart = (chart_day_dir / f"price-wind-{date_str}.png").exists()
+    wind_chart_section = f"\n## Price vs Wind\n\n![Price vs Wind Generation](/charts/{date_str}/price-wind-{date_str}.png)\n" if has_wind_chart else ""
 
-    has_pdc_chart = (CHART_DIR / f"pdc-{date_str}.png").exists()
-    pdc_section = f"\n## Price Duration Curve\n\n![Price Duration Curve](/charts/pdc-{date_str}.png)\n" if has_pdc_chart else ""
+    has_pdc_chart = (chart_day_dir / f"pdc-{date_str}.png").exists()
+    pdc_section = f"\n## Price Duration Curve\n\n![Price Duration Curve](/charts/{date_str}/pdc-{date_str}.png)\n" if has_pdc_chart else ""
 
-    has_spread_chart = (CHART_DIR / f"spread-{date_str}.png").exists()
-    spread_section = f"\n## Peak / Off-Peak Spread\n\n![Peak / Off-Peak Spread](/charts/spread-{date_str}.png)\n" if has_spread_chart else ""
+    has_spread_chart = (chart_day_dir / f"spread-{date_str}.png").exists()
+    spread_section = f"\n## Peak / Off-Peak Spread\n\n![Peak / Off-Peak Spread](/charts/{date_str}/spread-{date_str}.png)\n" if has_spread_chart else ""
 
-    has_bess_chart = (CHART_DIR / f"bess-{date_str}.png").exists()
+    has_bess_chart = (chart_day_dir / f"bess-{date_str}.png").exists()
     if bess_result is not None:
         b = bess_result
         bess_section = f"""
@@ -93,7 +139,7 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
 {"" if not has_bess_chart else f"""
-![BESS Dispatch](/charts/bess-{date_str}.png)
+![BESS Dispatch](/charts/{date_str}/bess-{date_str}.png)
 """}
 <!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
 """
@@ -127,15 +173,15 @@ draft: false
 
 ## Price Profile
 
-![DAM Price Profile](/charts/dam-{date_str}.png)
+![DAM Price Profile](/charts/{date_str}/dam-{date_str}.png)
 {wind_chart_section}
 ## Week in Context
 
-![7-Day Price Comparison](/charts/week-compare-{date_str}.png)
+![7-Day Price Comparison](/charts/{date_str}/week-compare-{date_str}.png)
 {pdc_section}{spread_section}{bess_section}
 ## Commentary
 
-<!-- 
+<!--
 Write 2-3 paragraphs here:
 - What drove the price shape today?
 - How does wind/demand explain the peak and trough?
@@ -143,13 +189,13 @@ Write 2-3 paragraphs here:
 - Market context: outages, interconnector, weather forecast?
 -->
 
-
+{data_table}
 """
 
-    # Write post
-    outdir = CONTENT_DIR / "daily"
+    # Write post as a Hugo leaf bundle so assets can co-locate in the same folder
+    outdir = CONTENT_DIR / "daily" / date_str
     outdir.mkdir(parents=True, exist_ok=True)
-    outpath = outdir / f"{date_str}.md"
+    outpath = outdir / "index.md"
     outpath.write_text(md)
     print(f"\nPost scaffolded: {outpath}")
     print(f"Next: open the file, write your commentary, push to git.")
