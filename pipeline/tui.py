@@ -101,7 +101,7 @@ def get_all_posts() -> list[dict]:
     for section_dir, section in [(DAILY_DIR, "daily"), (WEEKLY_DIR, "weekly")]:
         if not section_dir.exists():
             continue
-        for md in sorted(section_dir.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True):
+        for md in sorted((f for f in section_dir.glob("*.md") if f.name != "_index.md"), key=lambda f: f.stat().st_mtime, reverse=True):
             fm = parse_frontmatter(md)
             posts.append({
                 "path":    md,

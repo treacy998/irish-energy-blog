@@ -1,13 +1,15 @@
 """
 run_daily.py — One-command daily workflow.
 
-Fetches today's SEMO DAM data automatically, generates charts, and scaffolds the post.
+Fetches SEMO DAM data automatically, generates charts, and scaffolds the post.
 
 Usage:
-    python pipeline/run_daily.py                                        # auto-fetch yesterday's DAM report
-    python pipeline/run_daily.py data/MarketResult_SEM-DA_PWR-MRC-D+1_20260513100000.csv
+    python pipeline/run_daily.py                      # auto-fetch latest DAM report
+    python pipeline/run_daily.py --date 2026-05-04    # fetch/backfill a specific date
+    python pipeline/run_daily.py path/to/file.csv     # use a local CSV directly
 """
 
+import argparse
 import sys
 from datetime import date
 from pathlib import Path
@@ -46,14 +48,40 @@ def step(n: int, total: int, msg: str):
     print(f"\n[{n}/{total}] {msg}")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run the daily INIS Energy Blog pipeline.")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--date",
+        metavar="YYYY-MM-DD",
+        help="Delivery date to fetch/backfill (e.g. 2026-05-04). Defaults to latest available.",
+    )
+    group.add_argument(
+        "csv_file",
+        nargs="?",
+        metavar="CSV_FILE",
+        help="Path to a local SEM-DA CSV file to use instead of fetching.",
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
     TOTAL_STEPS = 3
 
     # ── Step 1: find / fetch data file ───────────────────────────────────────
     step(1, TOTAL_STEPS, "Finding data file...")
 
-    if len(sys.argv) >= 2:
-        filepath = Path(sys.argv[1])
+    target_date: date | None = None
+    if args.date:
+        try:
+            target_date = date.fromisoformat(args.date)
+        except ValueError:
+            print(f"  Error: --date must be YYYY-MM-DD, got '{args.date}'")
+            sys.exit(1)
+
+    if args.csv_file:
+        filepath = Path(args.csv_file)
         if not filepath.exists():
             raise FileNotFoundError(f"File not found: {filepath}")
         if "SEM-DA" not in filepath.name and filepath.name != "semo_dam_sample.csv":
@@ -62,9 +90,10 @@ def main():
                 "Expected a file containing 'SEM-DA' in the name (ETS Market Results)."
             )
     else:
-        print("  Auto-fetching latest EA-001 report from SEMOpx…")
+        label = target_date.isoformat() if target_date else "latest"
+        print(f"  Auto-fetching {label} EA-001 report from SEMOpx…")
         try:
-            filepath = fetch_semo(out_dir=DATA_DIR)
+            filepath = fetch_semo(delivery_date=target_date, out_dir=DATA_DIR)
             print(f"  ✓ {filepath.name}")
         except Exception as e:
             print(f"  – SEMOpx fetch failed ({e}), falling back to cached files")

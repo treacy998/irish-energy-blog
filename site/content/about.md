@@ -4,6 +4,8 @@ layout: "single"
 url: "/about/"
 summary: "About this blog"
 ShowToc: false
+showDate: false
+showReadingTime: false
 ---
 
 ## What This Is
@@ -29,4 +31,4 @@ All analysis is produced using Python (pandas, matplotlib).
 ## Get In Touch
 
 - [LinkedIn](https://linkedin.com/in/eointreacy)
-- Email: eointreacy@inisenergy.com
+- Email: eointreacy&#64;inisenergy.com
