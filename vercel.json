@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd site && hugo",
-  "outputDirectory": "site/public",
-  "installCommand": "curl -sL https://github.com/gohugoio/hugo/releases/download/v0.146.0/hugo_extended_0.146.0_linux-amd64.tar.gz | tar -xz -C /usr/local/bin hugo"
+  "installCommand": "curl -sL https://github.com/gohugoio/hugo/releases/download/v0.146.0/hugo_extended_0.146.0_linux-amd64.tar.gz | tar -xz -C /usr/local/bin hugo && pip install requests --quiet",
+  "buildCommand": "python3 pipeline/storage.py download && cd site && hugo",
+  "outputDirectory": "site/public"
 }

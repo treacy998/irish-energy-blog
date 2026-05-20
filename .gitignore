@@ -21,3 +21,10 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Chart files
+# HTML charts are local-only interactive tools — never commit them
+site/static/charts/**/*.html
+# PNG charts: uncomment the line below AFTER running `python pipeline/storage.py upload`
+# and adding BLOB_READ_WRITE_TOKEN to Vercel env vars (see pipeline/storage.py docstring)
+# site/static/charts/**/*.png

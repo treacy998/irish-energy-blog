@@ -1,5 +1,5 @@
 # INIS Energy Blog — Full Project Handoff
-*Updated 19 May 2026 (rev 2)*
+*Updated 20 May 2026 (rev 4)*
 
 ---
 
@@ -23,7 +23,7 @@ Eoin's brother (also in energy) will join as co-author later.
 
 ---
 
-## 3. Current State (as of 19 May 2026)
+## 3. Current State (as of 20 May 2026)
 
 **The full pipeline is operational.** All infrastructure priorities are complete.
 
@@ -40,6 +40,7 @@ Eoin's brother (also in energy) will join as co-author later.
 - **5 charts per daily post:** DAM profile, price-vs-wind, price duration curve, peak/off-peak spread, BESS dispatch
 - Stat bar shortcode — 4 metric chips (mean/peak/min/spread) at top of every post
 - BESS dispatch simulation — optimal 1MW/2MWh cycle, gross profit, running total
+- **Extended stats in every post** — median price, std dev, periods above €150/€200, peak/off-peak averages and spread, wind range (min/max %) — surfaced in the Market Snapshot table and as inline callouts under each chart section
 - Dark navy chart style, IBM Plex Serif headings, JetBrains Mono numbers
 - BST/GMT timezone correct via `zoneinfo.ZoneInfo("Europe/Dublin")`
 - Hugo + Congo + Vercel — auto-deploys on push, ~30s
@@ -113,6 +114,25 @@ Parses SEMO's non-standard semicolon-delimited format. Extracts 48-period EUR DA
 
 Output: DataFrame with `DeliveryDate | Period | StartTime | DAMPrice_EUR_MWh`
 
+`daily_summary()` returns an extended stats dict:
+
+| Key | Description |
+|-----|-------------|
+| `mean_price` | Daily mean DAM price |
+| `median_price` | Median — less sensitive to spike distortion than mean |
+| `peak_price` / `peak_time` | Highest half-hour price and its time |
+| `min_price` / `min_time` | Lowest half-hour price and its time |
+| `price_range` | Peak − min |
+| `std_dev` | Standard deviation — proxy for intraday price volatility |
+| `periods_above_150` | Count of half-hours with price > €150 |
+| `periods_above_200` | Count of half-hours with price > €200 |
+| `peak_mean` | Mean price during peak hours (07:00–22:00) |
+| `offpeak_mean` | Mean price during off-peak hours (22:00–07:00) |
+| `peak_offpeak_spread` | `peak_mean − offpeak_mean` |
+| `wind_pct_mean` | Mean wind % of demand (if EirGrid data available) |
+| `wind_pct_min` / `wind_pct_max` | Wind generation range across the day |
+| `demand_mean_mw` | Mean system demand in MW |
+
 ### `pipeline/bess.py`
 Simulates a 1MW/2MWh battery making one optimal DAM cycle per day.
 
@@ -152,11 +172,22 @@ To re-open charts for any date, use the TUI: `./blog → option 4 → pick a dat
 Generates `site/content/daily/YYYY-MM-DD/index.md` (Hugo leaf bundle — keeps URL as `/daily/YYYY-MM-DD/`). Contains:
 - YAML frontmatter
 - `{{< statbar >}}` shortcode — 4 metric chips (mean/peak/min/spread)
-- Collapsible full stats table
-- 5 conditionally embedded chart images (paths: `/charts/YYYY-MM-DD/chartname.png`)
-- BESS dispatch table (charge/discharge windows, gross profit)
+- Collapsible **Market Snapshot** table — expanded to include: mean, median, std dev, peak, min, range, periods above €150/€200, peak avg, off-peak avg, peak/off-peak spread, wind % mean, wind range, mean demand
+- 5 conditionally embedded chart images (paths: `/charts/YYYY-MM-DD/chartname.png`), each followed by an inline stat callout:
+  - **Price Profile** → std dev · median · periods above €150
+  - **Price vs Wind** → mean wind · wind range (min–max %)
+  - **Price Duration Curve** → periods above €150 and €200 with % of day
+  - **Peak/Off-Peak Spread** → peak avg · off-peak avg · spread
+- BESS dispatch table — charge/discharge windows, gross profit, price spread, ROI %
 - `## Commentary` placeholder
-- Collapsed `<details>` block with the full 48-period half-hourly data table (period, time, price, wind % if available) — copy-paste into a spreadsheet for ad hoc analysis
+- Collapsed `<details>` block with the full 48-period half-hourly data table (period, time, price, wind % if available)
+
+### `pipeline/storage.py`
+Handles upload and download of chart PNGs to/from Vercel Blob. All functions are no-ops when `BLOB_READ_WRITE_TOKEN` is not set, so the pipeline works without blob configured.
+
+- `upload_charts_for_date(chart_day_dir)` — called automatically by `run_daily.py` after chart generation
+- `bulk_upload()` — one-time migration of all existing PNGs
+- `bulk_download()` — called by Vercel at build time to restore charts before Hugo runs
 
 ### `site/layouts/shortcodes/statbar.html`
 Named params: `mean`, `peak`, `min`, `spread`. Renders 4 dark navy metric chips with teal values.
@@ -165,7 +196,7 @@ Named params: `mean`, `peak`, `min`, `spread`. Renders 4 dark navy metric chips 
 IBM Plex Serif headings, JetBrains Mono numbers, teal accent `#2EC4B6`, tag pills navy/teal.
 
 ### `vercel.json`
-Downloads Hugo Extended 0.146.0 at build time. Builds from `site/`, outputs to `site/public/`.
+Downloads Hugo Extended 0.146.0 and installs `requests` at build time. Runs `python3 pipeline/storage.py download` before the Hugo build — no-ops if no blob token, downloads charts from Vercel Blob if token is set. Builds from `site/`, outputs to `site/public/`.
 
 ---
 
@@ -173,58 +204,139 @@ Downloads Hugo Extended 0.146.0 at build time. Builds from `site/`, outputs to `
 
 Fully automated — no manual steps except writing commentary.
 
-```
-./blog → option 1    # auto-downloads SEMO, fetches EirGrid,
-                     # generates 5 charts, scaffolds post, opens in VS Code
+**Normal daily run (from project root):**
+
+```bash
+cd ~/dev/blog/irish-energy-blog
+./blog
+# Select option 1 — New daily briefing
+# Pipeline auto-downloads SEMO, fetches EirGrid, generates 5 charts,
+# scaffolds the post, and opens it in VS Code.
 ```
 
-Write commentary → `./blog → option 4` (preview) → `./blog → option 5` (deploy)
+**Write the Commentary section, then preview and deploy:**
 
-**For backfilling past dates:** Pass `--date YYYY-MM-DD` directly to `run_daily.py` — it auto-downloads that day's SEM-DA CSV, fetches EirGrid wind/demand, generates all 5 charts, and scaffolds the post.
+```bash
+./blog
+# Select option 5 — Preview site (http://localhost:1313)
+
+./blog
+# Select option 6 — Deploy (git add → commit → push → Vercel auto-builds)
+```
+
+**Backfill a specific past date (without the TUI):**
+
+```bash
+cd ~/dev/blog/irish-energy-blog
+venv/bin/python pipeline/run_daily.py --date 2026-05-04
+```
+
+**Backfill a range of dates:**
+
+```bash
+cd ~/dev/blog/irish-energy-blog
+for d in 2026-05-04 2026-05-05 2026-05-06 2026-05-07 2026-05-08; do
+    venv/bin/python pipeline/run_daily.py --date $d
+done
+```
 
 ---
 
 ## 7. Known Gaps
 
-### ✅ 7.1 `--date` flag added to `run_daily.py`
-`argparse` added with a `--date YYYY-MM-DD` argument (mutually exclusive with a positional CSV path). When provided, it is passed directly to `fetch_semo()`, which converts to the correct SEMOpx trading date and skips the download if the file is already cached. Backfill a day with:
+### ✅ 7.1 `--date` backfill flag
+
+`argparse` added to `run_daily.py` with a `--date YYYY-MM-DD` argument. When provided, it is passed directly to `fetch_semo()`, which converts to the correct SEMOpx trading date and skips the download if the file is already cached.
 
 ```bash
+cd ~/dev/blog/irish-energy-blog
 venv/bin/python pipeline/run_daily.py --date 2026-05-04
 ```
 
-Or loop over a range:
+---
+
+### ✅ 7.2 Git grows with binary chart files
+
+**HTML files** — fully resolved. Interactive Plotly charts (`*.html`) are now gitignored and removed from the index. They are local-only analysis tools; Hugo and Vercel never needed them. New pipeline runs will not track them.
+
+**PNG files** — infrastructure complete, activation requires a Vercel Blob store (one-time setup below).
+
+#### What was built
+
+- `pipeline/storage.py` — uploads PNGs to Vercel Blob after each pipeline run; downloads them at Vercel build time so Hugo can find them. No-ops gracefully without the token.
+- `pipeline/run_daily.py` — calls `upload_charts_for_date()` after every run. New charts auto-upload once the token is in the environment.
+- `vercel.json` — runs `python3 pipeline/storage.py download` before `hugo` at build time. Without a token this is a no-op and charts are served from git as before.
+- `.gitignore` — HTML files gitignored and removed from index. PNG rule is present but commented out, ready to uncomment after the one-time upload below.
+
+#### How to activate Vercel Blob (one-time)
+
+**Step 1 — Create the Blob store:**
+
+Go to https://vercel.com/dashboard → your project → **Storage** tab → **Create Database** → **Blob**. Copy the `BLOB_READ_WRITE_TOKEN` value shown.
+
+**Step 2 — Upload all existing chart PNGs:**
 
 ```bash
-for d in 2026-05-04 2026-05-05 2026-05-06 ...; do
-    venv/bin/python pipeline/run_daily.py --date $d
-done
+cd ~/dev/blog/irish-energy-blog
+export BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxxxxxxxxxxxxxxx
+venv/bin/python pipeline/storage.py upload
 ```
 
-### 7.2 Git grows with binary chart PNGs
-5 PNGs + 5 HTML files per post committed to git. After 100 days: ~500 PNGs + 500 HTMLs, growing git history. The interactive HTMLs are large (Plotly CDN-linked so small on disk, but still accumulate).
+**Step 3 — Add the token to Vercel's build environment:**
 
-**Fix:** Add `site/static/charts/` to `.gitignore`, upload PNGs to Vercel Blob or Cloudflare R2 at build time. Keep HTML files gitignored entirely (local-only analysis tool).
+Go to https://vercel.com/dashboard → your project → **Settings** → **Environment Variables** → add:
+- Key: `BLOB_READ_WRITE_TOKEN`
+- Value: the token from Step 1
+- Environments: Production, Preview, Development
+
+**Step 4 — Stop tracking PNGs in git:**
+
+```bash
+cd ~/dev/blog/irish-energy-blog
+
+# Uncomment the PNG line in .gitignore (line reads: # site/static/charts/**/*.png)
+sed -i 's|# site/static/charts/\*\*/\*.png|site/static/charts/**/*.png|' .gitignore
+
+# Remove all tracked PNGs from the git index (keeps local files intact)
+git rm --cached site/static/charts/**/*.png
+
+# Commit and push — Vercel will now download from blob at build time
+git add .gitignore
+git commit -m "Move chart PNGs to Vercel Blob, stop tracking in git"
+git push
+```
+
+After this, every `run_daily.py` run automatically uploads new PNGs to blob. The git repo no longer grows with binary files.
+
+---
 
 ### 7.3 Week comparison requires retained CSVs
-`chart_week_comparison()` scans `data/` for prior files.
 
-**Fix:** Export processed DataFrames to SQLite or Parquet.
+`chart_week_comparison()` scans `data/` for prior CSV files. If old CSVs are deleted the week-compare chart shows fewer days.
+
+**Fix:** Export processed DataFrames to SQLite or Parquet so week history is preserved independently of the raw CSV files.
 
 ### 7.4 TUI shows exit code not error detail
-When `run_daily.py` fails, check `blog.log` for the actual error.
+
+When `run_daily.py` fails inside the TUI, the error is swallowed. Check `blog.log` for the full traceback:
+
+```bash
+cat ~/dev/blog/irish-energy-blog/blog.log | tail -50
+```
 
 ### 7.5 Weekly posts section unused
+
 Zero posts published. Looks empty to visitors.
 
 ### 7.6 Commentary placeholder on all live posts
+
 Active work item — targeting 2 weeks of backfilled daily commentary.
 
 ---
 
 ## 8. Priority Backlog
 
-### ✅ Complete (1–8)
+### ✅ Complete (1–9)
 1. Chart style overhaul — dark navy palette, annotations, watermark
 2. Congo typography + colour identity — IBM Plex Serif, JetBrains Mono, teal accent
 3. EirGrid wind + demand integration — new `/api/chart/` endpoint
@@ -233,12 +345,16 @@ Active work item — targeting 2 weeks of backfilled daily commentary.
 6. BESS dispatch simulation — `bess.py` module, chart, scaffold integration
 7. BST/GMT timezone fix — `zoneinfo.ZoneInfo("Europe/Dublin")`
 8. Automated SEMO download — `fetch_semo()` via SEMOpx REST API
+9. Extended post statistics — median, std dev, periods above €150/€200, peak/off-peak breakdown, wind range. Surfaced in Market Snapshot table and as inline stat callouts below each chart.
 
-### Remaining (9–12)
-9. **Homepage hero** — sparkline of last 7 days mean price
-10. **Post card redesign** — mean price on list page cards (Congo partial override)
-11. **Carbon intensity overlay** — EirGrid CO₂ intensity (gCO₂/kWh) per half-hour
-12. **GB interconnector data** — Elexon BMRS, I-SEM vs GB daily comparison
+### ✅ 7.2 Git binary growth — HTML charts removed; PNG blob infrastructure ready
+HTML chart files are gitignored and removed from index. PNG upload/download via Vercel Blob is implemented and wired into the pipeline. One manual step remaining: create a Blob store and follow the §7.2 activation steps above.
+
+### Remaining (10–13)
+10. **Homepage hero** — sparkline of last 7 days mean price
+11. **Post card redesign** — mean price on list page cards (Congo partial override)
+12. **Carbon intensity overlay** — EirGrid CO₂ intensity (gCO₂/kWh) per half-hour
+13. **GB interconnector data** — Elexon BMRS, I-SEM vs GB daily comparison
 
 ---
 

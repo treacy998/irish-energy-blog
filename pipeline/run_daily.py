@@ -19,6 +19,7 @@ from process import load_dam_data
 from scaffold import scaffold_daily
 from fetch import fetch_wind_and_demand, fetch_semo
 from bess import simulate_bess
+from storage import upload_charts_for_date
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
@@ -127,8 +128,11 @@ def main():
 
     scaffold_daily(delivery_date, explicit_file=filepath, title=title, eirgrid_df=eirgrid_df, bess_result=bess_result)
 
-    # ── Done ─────────────────────────────────────────────────────────────────
+    # ── Upload charts to Vercel Blob (no-op if BLOB_READ_WRITE_TOKEN not set) ─
     chart_day_dir = CHART_DIR / date_str
+    upload_charts_for_date(chart_day_dir)
+
+    # ── Done ─────────────────────────────────────────────────────────────────
     chart_names = [
         f"dam-{date_str}.png",
         f"price-wind-{date_str}.png",
