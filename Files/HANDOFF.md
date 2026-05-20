@@ -88,13 +88,16 @@ SEMO API (auto)               EirGrid API (auto)
 Two-line bash script. Activates venv, launches `pipeline/tui.py`. All activity logged to `blog.log`.
 
 ### `pipeline/tui.py`
-6-option numbered menu:
+7-option numbered menu:
 1. New daily briefing — runs pipeline, opens post in VS Code
 2. New post — blank daily or weekly, opens in VS Code
 3. Manage posts — table of all posts; edit/toggle draft/delete
-4. Preview site — hugo server -D at localhost:1313
-5. Deploy — git add → commit → push
-6. Quit
+4. Open interactive charts — lists last 10 dates with charts, pick a number, all HTML charts open in browser
+5. Preview site — hugo server -D at localhost:1313
+6. Deploy — git add → commit → push
+7. Quit
+
+`get_all_posts()` finds both leaf bundles (`YYYY-MM-DD/index.md`) and legacy flat `.md` files, so Manage Posts works correctly with the new directory structure.
 
 ### `pipeline/fetch.py`
 Two public functions:
@@ -140,6 +143,10 @@ Generates standalone Plotly HTML charts alongside every PNG. Same 5 chart types;
 - Zoom and pan any time window
 - Week comparison: click legend entries to show/hide individual days
 - No extra installs beyond `plotly` (already in `venv/`)
+
+**Viewing:** At the end of every `run_daily.py` run, all HTML charts for that date are auto-opened in the browser via `xdg-open`. Write commentary in VS Code while charts are live in the browser — no manual navigation needed.
+
+To re-open charts for any date, use the TUI: `./blog → option 4 → pick a date`. Lists the 10 most recent dates with charts; defaults to the most recent.
 
 ### `pipeline/scaffold.py`
 Generates `site/content/daily/YYYY-MM-DD/index.md` (Hugo leaf bundle — keeps URL as `/daily/YYYY-MM-DD/`). Contains:

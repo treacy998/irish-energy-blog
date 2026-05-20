@@ -107,27 +107,94 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
     chart_day_dir = CHART_DIR / date_str
 
-    # Build wind row if data available
+    # ── Snapshot table rows (conditional on data availability) ──────────────
+    pct_48 = lambda n: f"{n/48*100:.0f}%"
+
+    median_row = f"\n| Median Price         | €{summary['median_price']}/MWh    |"
+    std_row    = f"\n| Std Dev              | €{summary['std_dev']}/MWh    |"
+    above_rows = (
+        f"\n| Periods above €150   | {summary['periods_above_150']} of 48 ({pct_48(summary['periods_above_150'])}) |"
+        f"\n| Periods above €200   | {summary['periods_above_200']} of 48 ({pct_48(summary['periods_above_200'])}) |"
+    )
+
+    spread_rows = ""
+    if "peak_mean" in summary:
+        spread_rows = (
+            f"\n| Peak Avg (07–22)     | €{summary['peak_mean']}/MWh    |"
+            f"\n| Off-peak Avg (22–07) | €{summary['offpeak_mean']}/MWh    |"
+            f"\n| Peak/Off-Peak Spread | €{summary['peak_offpeak_spread']}/MWh   |"
+        )
+
     wind_row = ""
     if "wind_pct_mean" in summary:
-        wind_row = f"| Wind % of Demand     | {summary['wind_pct_mean']}%          |"
+        wind_row = f"\n| Wind % of Demand     | {summary['wind_pct_mean']}%          |"
+
+    wind_range_row = ""
+    if "wind_pct_min" in summary and "wind_pct_max" in summary:
+        wind_range_row = f"\n| Wind Range           | {summary['wind_pct_min']}%–{summary['wind_pct_max']}% |"
 
     demand_row = ""
     if "demand_mean_mw" in summary:
         demand_row = f"\n| Mean Demand          | {summary['demand_mean_mw']:.0f} MW       |"
 
+    # ── Per-section stat callouts ─────────────────────────────────────────────
+    price_profile_stats = (
+        f"\n**Std dev** €{summary['std_dev']}/MWh"
+        f"  ·  **Median** €{summary['median_price']}/MWh"
+        f"  ·  **Periods above €150:** {summary['periods_above_150']} of 48 ({pct_48(summary['periods_above_150'])})"
+    )
+
     has_wind_chart = (chart_day_dir / f"price-wind-{date_str}.png").exists()
-    wind_chart_section = f"\n## Price vs Wind\n\n![Price vs Wind Generation](/charts/{date_str}/price-wind-{date_str}.png)\n" if has_wind_chart else ""
+    if has_wind_chart and "wind_pct_mean" in summary:
+        wind_stats = (
+            f"\n**Mean wind:** {summary['wind_pct_mean']}%"
+            + (f"  ·  **Range:** {summary['wind_pct_min']}%–{summary['wind_pct_max']}%" if "wind_pct_min" in summary else "")
+        )
+        wind_chart_section = (
+            f"\n## Price vs Wind\n\n"
+            f"![Price vs Wind Generation](/charts/{date_str}/price-wind-{date_str}.png)\n"
+            f"{wind_stats}\n"
+        )
+    elif has_wind_chart:
+        wind_chart_section = f"\n## Price vs Wind\n\n![Price vs Wind Generation](/charts/{date_str}/price-wind-{date_str}.png)\n"
+    else:
+        wind_chart_section = ""
 
     has_pdc_chart = (chart_day_dir / f"pdc-{date_str}.png").exists()
-    pdc_section = f"\n## Price Duration Curve\n\n![Price Duration Curve](/charts/{date_str}/pdc-{date_str}.png)\n" if has_pdc_chart else ""
+    if has_pdc_chart:
+        pdc_stats = (
+            f"\n**Periods above €150:** {summary['periods_above_150']} ({pct_48(summary['periods_above_150'])} of day)"
+            f"  ·  **Above €200:** {summary['periods_above_200']} ({pct_48(summary['periods_above_200'])} of day)"
+        )
+        pdc_section = (
+            f"\n## Price Duration Curve\n\n"
+            f"![Price Duration Curve](/charts/{date_str}/pdc-{date_str}.png)\n"
+            f"{pdc_stats}\n"
+        )
+    else:
+        pdc_section = ""
 
     has_spread_chart = (chart_day_dir / f"spread-{date_str}.png").exists()
-    spread_section = f"\n## Peak / Off-Peak Spread\n\n![Peak / Off-Peak Spread](/charts/{date_str}/spread-{date_str}.png)\n" if has_spread_chart else ""
+    if has_spread_chart and "peak_mean" in summary:
+        spread_stats = (
+            f"\n**Peak avg (07:00–22:00):** €{summary['peak_mean']}/MWh"
+            f"  ·  **Off-peak avg:** €{summary['offpeak_mean']}/MWh"
+            f"  ·  **Spread:** €{summary['peak_offpeak_spread']}/MWh"
+        )
+        spread_section = (
+            f"\n## Peak / Off-Peak Spread\n\n"
+            f"![Peak / Off-Peak Spread](/charts/{date_str}/spread-{date_str}.png)\n"
+            f"{spread_stats}\n"
+        )
+    elif has_spread_chart:
+        spread_section = f"\n## Peak / Off-Peak Spread\n\n![Peak / Off-Peak Spread](/charts/{date_str}/spread-{date_str}.png)\n"
+    else:
+        spread_section = ""
 
     has_bess_chart = (chart_day_dir / f"bess-{date_str}.png").exists()
     if bess_result is not None:
         b = bess_result
+        bess_roi = round((b['gross_profit'] / b['charge_cost']) * 100, 1) if b['charge_cost'] > 0 else 0
         bess_section = f"""
 ## BESS Dispatch Signal
 
@@ -136,6 +203,7 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
 | **Charge** | €{b['charge_mean']:.0f}/MWh | {b['charge_start']} | 2 MWh | −€{b['charge_cost']:.0f} |
 | **Discharge** | €{b['discharge_mean']:.0f}/MWh | {b['discharge_start']} | 1.7 MWh (85% RTE) | +€{b['gross_revenue']:.0f} |
 | **Gross profit** | | | | **€{b['gross_profit']:.0f}** |
+| **Price spread** | €{b['spread']:.0f}/MWh | | | **ROI: {bess_roi}%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
 {"" if not has_bess_chart else f"""
@@ -163,17 +231,17 @@ draft: false
 
 | Metric               | Value               |
 |----------------------|---------------------|
-| Mean DAM Price       | €{summary['mean_price']}/MWh    |
+| Mean DAM Price       | €{summary['mean_price']}/MWh    |{median_row}{std_row}
 | Peak Price           | €{summary['peak_price']}/MWh ({summary['peak_time']}) |
 | Min Price            | €{summary['min_price']}/MWh ({summary['min_time']})   |
-| Price Range          | €{summary['price_range']}/MWh   |
-{wind_row}{demand_row}
+| Price Range          | €{summary['price_range']}/MWh   |{above_rows}{spread_rows}{wind_row}{wind_range_row}{demand_row}
 
 </details>
 
 ## Price Profile
 
 ![DAM Price Profile](/charts/{date_str}/dam-{date_str}.png)
+{price_profile_stats}
 {wind_chart_section}
 ## Week in Context
 

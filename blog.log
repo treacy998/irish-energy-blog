@@ -273,3 +273,22 @@
 2026-05-19 11:49:37  INFO      HUGO exists: True
 2026-05-19 11:49:37  INFO      Entering main menu
 2026-05-19 11:59:28  INFO      Menu selection: quit
+2026-05-19 12:00:34  INFO      ============================================================
+2026-05-19 12:00:34  INFO      blog TUI started
+2026-05-19 12:00:34  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-19 12:00:34  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-19 12:00:34  INFO      HUGO exists: True
+2026-05-19 12:00:34  INFO      Entering main menu
+2026-05-19 12:00:55  INFO      Menu selection: quit
+2026-05-19 12:03:53  INFO      ============================================================
+2026-05-19 12:03:53  INFO      blog TUI started
+2026-05-19 12:03:53  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-19 12:03:53  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-19 12:03:53  INFO      HUGO exists: True
+2026-05-19 12:03:53  INFO      Entering main menu
+2026-05-19 12:03:55  INFO      Menu selection: preview
+2026-05-19 12:03:55  INFO      preview_site: starting Hugo server (hugo=/home/treacy998/.local/bin/hugo, cwd=/home/treacy998/dev/blog/irish-energy-blog/site)
+2026-05-19 12:23:43  INFO      ============================================================
+2026-05-19 12:23:43  INFO      blog TUI started
+2026-05-20 13:01:27  INFO      preview_site: stopped by user (Ctrl+C)
+2026-05-20 13:01:30  INFO      Menu selection: quit

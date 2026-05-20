@@ -17,6 +17,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 ROOT        = Path(__file__).parent.parent
+CHART_DIR   = ROOT / "site" / "static" / "charts"
 
 # ── Logging ────────────────────────────────────────────────────────────────
 LOG_FILE = ROOT / "blog.log"
@@ -101,11 +102,17 @@ def get_all_posts() -> list[dict]:
     for section_dir, section in [(DAILY_DIR, "daily"), (WEEKLY_DIR, "weekly")]:
         if not section_dir.exists():
             continue
-        for md in sorted((f for f in section_dir.glob("*.md") if f.name != "_index.md"), key=lambda f: f.stat().st_mtime, reverse=True):
+        # Leaf bundles: YYYY-MM-DD/index.md
+        bundle_mds = [d / "index.md" for d in section_dir.iterdir()
+                      if d.is_dir() and (d / "index.md").exists()]
+        # Flat .md files (legacy / weekly)
+        flat_mds = [f for f in section_dir.glob("*.md") if f.name != "_index.md"]
+        all_mds = sorted(bundle_mds + flat_mds, key=lambda f: f.stat().st_mtime, reverse=True)
+        for md in all_mds:
             fm = parse_frontmatter(md)
             posts.append({
                 "path":    md,
-                "title":   fm.get("title", md.stem),
+                "title":   fm.get("title", md.parent.name if md.name == "index.md" else md.stem),
                 "date":    fm.get("date", ""),
                 "section": section,
                 "draft":   fm.get("draft", "false").lower() == "true",
@@ -139,6 +146,7 @@ def main_menu():
             ("daily",   "New daily briefing    (run pipeline)"),
             ("post",    "New post               (blank, manual)"),
             ("manage",  "Manage posts"),
+            ("charts",  "Open interactive charts"),
             ("preview", "Preview site           (localhost:1313)"),
             ("deploy",  "Deploy to Vercel"),
             ("quit",    "Quit"),
@@ -149,6 +157,7 @@ def main_menu():
         if   key == "daily":   new_daily()
         elif key == "post":    new_post()
         elif key == "manage":  manage_posts()
+        elif key == "charts":  open_charts()
         elif key == "preview": preview_site()
         elif key == "deploy":  deploy()
         elif key == "quit":    sys.exit(0)
@@ -327,6 +336,53 @@ def _post_actions(post: dict) -> bool:
             return False
 
     return True
+
+
+def open_charts():
+    log.info("open_charts: started")
+    console.print()
+    console.rule("[cyan]Open Interactive Charts[/cyan]")
+    console.print()
+
+    if not CHART_DIR.exists():
+        console.print("  [dim]No charts directory found.[/dim]")
+        return
+
+    date_dirs = sorted(
+        [d for d in CHART_DIR.iterdir() if d.is_dir() and (d / f"dam-{d.name}.html").exists()],
+        reverse=True,
+    )
+
+    if not date_dirs:
+        console.print("  [dim]No interactive charts found. Run the pipeline first.[/dim]")
+        return
+
+    console.print("  Available dates:\n")
+    for i, d in enumerate(date_dirs[:10], 1):
+        count = len(list(d.glob("*.html")))
+        console.print(f"  [bold cyan]{i}[/bold cyan]  {d.name}  [dim]({count} charts)[/dim]")
+    console.print()
+
+    raw = ask("Date number", default="1")
+    try:
+        idx = int(raw) - 1
+        if not (0 <= idx < len(date_dirs)):
+            console.print("  [dim]Out of range.[/dim]")
+            return
+    except ValueError:
+        console.print("  [dim]Enter a number.[/dim]")
+        return
+
+    chosen = date_dirs[idx]
+    html_files = sorted(chosen.glob("*.html"))
+    if not html_files:
+        console.print("  [dim]No HTML charts in that folder.[/dim]")
+        return
+
+    console.print(f"\n  Opening {len(html_files)} charts for {chosen.name}…")
+    log.info("open_charts: opening %d charts for %s", len(html_files), chosen.name)
+    for f in html_files:
+        subprocess.Popen(["xdg-open", str(f)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def preview_site():

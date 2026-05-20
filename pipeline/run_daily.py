@@ -10,6 +10,7 @@ Usage:
 """
 
 import argparse
+import subprocess
 import sys
 from datetime import date
 from pathlib import Path
@@ -135,18 +136,23 @@ def main():
     ]
     charts_found = [n for n in chart_names if (chart_day_dir / n).exists()]
 
+    # Open all interactive HTML charts in the browser
+    html_charts = sorted(chart_day_dir.glob("*.html"))
+    if html_charts:
+        print(f"\n  Opening {len(html_charts)} interactive charts in browser...")
+        for html in html_charts:
+            subprocess.Popen(["xdg-open", str(html)],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
     print(f"\n{'─'*52}")
     print(f"  Done — {delivery_date.strftime('%-d %B %Y')}")
     print(f"{'─'*52}")
     print(f"  Post:   site/content/daily/{date_str}/index.md")
     if charts_found:
-        print(f"  Charts: {len(charts_found)} generated")
-        for name in charts_found:
-            print(f"    site/static/charts/{date_str}/{name}")
+        print(f"  Charts: {len(charts_found)} generated in site/static/charts/{date_str}/")
     print(f"""
   Next steps:
-    1. Open  site/content/daily/{date_str}/index.md
-       Write 2–3 paragraphs in the Commentary section.
+    1. Write 2–3 paragraphs in the Commentary section of the post.
 
     2. Preview locally:
        cd site && ~/.local/bin/hugo server -D

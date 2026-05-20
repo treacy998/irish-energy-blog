@@ -459,6 +459,8 @@ def generate_daily_charts(data_filepath: Path, target_date: date, eirgrid_df=Non
         day_df = pd.merge(day_df, eg[wind_cols], on="StartTime", how="left")
         if day_df["WindGeneration_pct"].notna().any():
             summary["wind_pct_mean"] = round(day_df["WindGeneration_pct"].mean(), 1)
+            summary["wind_pct_min"] = round(float(day_df["WindGeneration_pct"].min()), 1)
+            summary["wind_pct_max"] = round(float(day_df["WindGeneration_pct"].max()), 1)
             summary["demand_mean_mw"] = round(day_df["DemandMW"].mean(), 0)
 
     print(f"\nGenerating charts for {date_str}...")

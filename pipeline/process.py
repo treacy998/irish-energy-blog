@@ -74,6 +74,7 @@ def daily_summary(df: pd.DataFrame, target_date: date) -> dict:
     summary = {
         "date": target_date.isoformat(),
         "mean_price": round(price.mean(), 2),
+        "median_price": round(float(price.median()), 2),
         "peak_price": round(price.max(), 2),
         "peak_period": int(day.loc[peak_idx, "Period"]),
         "peak_time": day.loc[peak_idx, "StartTime"],
@@ -82,7 +83,20 @@ def daily_summary(df: pd.DataFrame, target_date: date) -> dict:
         "min_time": day.loc[min_idx, "StartTime"],
         "price_range": round(price.max() - price.min(), 2),
         "std_dev": round(price.std(), 2),
+        "periods_above_150": int((price > 150).sum()),
+        "periods_above_200": int((price > 200).sum()),
     }
+
+    # Peak vs off-peak breakdown (07:00–22:00 vs 22:00–07:00)
+    try:
+        hours = pd.to_numeric(day["StartTime"].str[:2], errors="coerce")
+        peak_mask = (hours >= 7) & (hours < 22)
+        if peak_mask.any() and (~peak_mask).any():
+            summary["peak_mean"] = round(float(price[peak_mask].mean()), 2)
+            summary["offpeak_mean"] = round(float(price[~peak_mask].mean()), 2)
+            summary["peak_offpeak_spread"] = round(summary["peak_mean"] - summary["offpeak_mean"], 2)
+    except Exception:
+        pass
 
     # Wind data if available
     if "WindGeneration_pct" in day.columns:

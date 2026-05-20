@@ -146,7 +146,7 @@ def chart_price_vs_wind(day_df: pd.DataFrame, summary: dict, outpath: Path):
         f"Price vs Wind Generation — {summary['date']}",
         "DAM price (€/MWh, green)  ·  wind share (%, brown dashed)  ·  Irish time",
     )
-    layout["yaxis"] = dict(**layout.get("yaxis", {}), title="€/MWh", tickprefix="€", gridcolor=GRID)
+    layout.setdefault("yaxis", {}).update(title="€/MWh", gridcolor=GRID)
     layout["yaxis2"] = dict(title="Wind %", ticksuffix="%", range=[0, 105], gridcolor=GRID)
     fig.update_layout(**layout)
     _save(fig, outpath)
