@@ -48,7 +48,13 @@ def _base_layout(title: str, subtitle: str) -> dict:
 
 
 def _period_to_label(periods):
-    return [f"{(p // 2):02d}:{(p % 2)*30:02d}" for p in periods]
+    # I-SEM period 1 = 23:00; each period is 30 min
+    return [f"{((23*60 + (p-1)*30) % 1440) // 60:02d}:{((23*60 + (p-1)*30) % 1440) % 60:02d}" for p in periods]
+
+
+def _full_day_categoryarray():
+    """All 48 period labels in I-SEM day order (23:00 … 22:30)."""
+    return _period_to_label(range(1, 49))
 
 
 def _save(fig: go.Figure, outpath: Path):
@@ -110,6 +116,7 @@ def chart_dam_price_profile(day_df: pd.DataFrame, summary: dict, outpath: Path):
         f"I-SEM Day-Ahead Market — {summary['date']}",
         "Half-hourly DAM clearing prices  |  €/MWh  |  Irish time",
     ))
+    fig.update_xaxes(categoryarray=_full_day_categoryarray(), categoryorder="array")
     _save(fig, outpath)
 
 
@@ -149,6 +156,7 @@ def chart_price_vs_wind(day_df: pd.DataFrame, summary: dict, outpath: Path):
     layout.setdefault("yaxis", {}).update(title="€/MWh", gridcolor=GRID)
     layout["yaxis2"] = dict(title="Wind %", ticksuffix="%", range=[0, 105], gridcolor=GRID)
     fig.update_layout(**layout)
+    fig.update_xaxes(categoryarray=_full_day_categoryarray(), categoryorder="array")
     _save(fig, outpath)
 
 
@@ -196,6 +204,7 @@ def chart_week_comparison(df: pd.DataFrame, target_date: date, outpath: Path):
         f"Week in Context — {target_date}",
         "Last 7 days overlaid  ·  today (green) vs prior days  ·  click legend to toggle",
     ))
+    fig.update_xaxes(categoryarray=_full_day_categoryarray(), categoryorder="array")
     _save(fig, outpath)
 
 
@@ -307,6 +316,7 @@ def chart_bess_dispatch(day_df: pd.DataFrame, bess_result: dict, date_str: str, 
         f"BESS Dispatch Signal — {date_str}",
         f"Charge {b['charge_start']} €{b['charge_mean']:.0f}/MWh  ·  Discharge {b['discharge_start']} €{b['discharge_mean']:.0f}/MWh  ·  Gross profit €{b['gross_profit']:.0f}",
     ))
+    fig.update_xaxes(categoryarray=_full_day_categoryarray(), categoryorder="array")
     _save(fig, outpath)
 
 

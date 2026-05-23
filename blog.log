@@ -304,3 +304,71 @@
 2026-05-20 13:53:39  INFO      open_charts: started
 2026-05-20 13:53:45  INFO      open_charts: opening 4 charts for 2026-05-06
 2026-05-20 13:53:54  INFO      Menu selection: quit
+2026-05-20 14:11:40  INFO      ============================================================
+2026-05-20 14:11:40  INFO      blog TUI started
+2026-05-20 14:11:40  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-20 14:11:40  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-20 14:11:40  INFO      HUGO exists: True
+2026-05-20 14:11:40  INFO      Entering main menu
+2026-05-20 14:11:44  INFO      Menu selection: preview
+2026-05-20 14:11:44  INFO      preview_site: starting Hugo server (hugo=/home/treacy998/.local/bin/hugo, cwd=/home/treacy998/dev/blog/irish-energy-blog/site)
+2026-05-20 14:28:02  INFO      preview_site: stopped by user (Ctrl+C)
+2026-05-20 14:28:04  INFO      Menu selection: quit
+2026-05-20 18:57:49  INFO      ============================================================
+2026-05-20 18:57:49  INFO      blog TUI started
+2026-05-20 18:57:49  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-20 18:57:49  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-20 18:57:49  INFO      HUGO exists: True
+2026-05-20 18:57:49  INFO      Entering main menu
+2026-05-20 18:57:54  INFO      Menu selection: preview
+2026-05-20 18:57:54  INFO      preview_site: starting Hugo server (hugo=/home/treacy998/.local/bin/hugo, cwd=/home/treacy998/dev/blog/irish-energy-blog/site)
+2026-05-20 19:02:59  INFO      preview_site: stopped by user (Ctrl+C)
+2026-05-20 19:03:02  INFO      Menu selection: charts
+2026-05-20 19:03:02  INFO      open_charts: started
+2026-05-20 19:03:05  INFO      open_charts: opening 6 charts for 2026-05-05
+2026-05-20 19:06:18  INFO      Menu selection: charts
+2026-05-20 19:06:18  INFO      open_charts: started
+2026-05-20 19:06:21  INFO      open_charts: opening 6 charts for 2026-05-04
+2026-05-20 19:09:57  INFO      Menu selection: preview
+2026-05-20 19:09:57  INFO      preview_site: starting Hugo server (hugo=/home/treacy998/.local/bin/hugo, cwd=/home/treacy998/dev/blog/irish-energy-blog/site)
+2026-05-20 19:29:00  INFO      preview_site: stopped by user (Ctrl+C)
+2026-05-20 19:29:04  INFO      Menu selection: preview
+2026-05-20 19:29:04  INFO      preview_site: starting Hugo server (hugo=/home/treacy998/.local/bin/hugo, cwd=/home/treacy998/dev/blog/irish-energy-blog/site)
+2026-05-20 19:31:07  INFO      preview_site: stopped by user (Ctrl+C)
+2026-05-20 19:31:10  INFO      Menu selection: quit
+2026-05-20 19:31:13  INFO      ============================================================
+2026-05-20 19:31:13  INFO      blog TUI started
+2026-05-20 19:31:13  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-20 19:31:13  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-20 19:31:13  INFO      HUGO exists: True
+2026-05-20 19:31:13  INFO      Entering main menu
+2026-05-20 19:31:15  INFO      Menu selection: preview
+2026-05-20 19:31:15  INFO      preview_site: starting Hugo server (hugo=/home/treacy998/.local/bin/hugo, cwd=/home/treacy998/dev/blog/irish-energy-blog/site)
+2026-05-20 19:33:35  INFO      preview_site: stopped by user (Ctrl+C)
+2026-05-20 19:33:43  INFO      Menu selection: preview
+2026-05-20 19:33:43  INFO      preview_site: starting Hugo server (hugo=/home/treacy998/.local/bin/hugo, cwd=/home/treacy998/dev/blog/irish-energy-blog/site)
+2026-05-20 19:34:03  INFO      preview_site: stopped by user (Ctrl+C)
+2026-05-20 19:34:05  INFO      Menu selection: charts
+2026-05-20 19:34:05  INFO      open_charts: started
+2026-05-20 19:34:08  INFO      open_charts: opening 6 charts for 2026-05-04
+2026-05-20 19:37:46  INFO      Menu selection: charts
+2026-05-20 19:37:46  INFO      open_charts: started
+2026-05-20 19:37:49  INFO      open_charts: opening 6 charts for 2026-05-04
+2026-05-20 19:38:30  INFO      Menu selection: charts
+2026-05-20 19:38:30  INFO      open_charts: started
+2026-05-20 19:38:31  INFO      open_charts: opening 6 charts for 2026-05-04
+2026-05-21 15:59:52  INFO      Menu selection: charts
+2026-05-21 15:59:52  INFO      open_charts: started
+2026-05-21 15:59:54  INFO      open_charts: opening 6 charts for 2026-05-04
+2026-05-22 13:43:47  INFO      Menu selection: charts
+2026-05-22 13:43:47  INFO      open_charts: started
+2026-05-22 13:43:49  INFO      open_charts: opening 6 charts for 2026-05-05
+2026-05-22 16:36:03  INFO      Menu selection: quit
+2026-05-22 16:36:08  INFO      ============================================================
+2026-05-22 16:36:08  INFO      blog TUI started
+2026-05-22 16:36:08  INFO      Python 3.13.7, sys.executable=/home/treacy998/dev/blog/irish-energy-blog/venv/bin/python
+2026-05-22 16:36:08  INFO      ROOT=/home/treacy998/dev/blog/irish-energy-blog, HUGO=/home/treacy998/.local/bin/hugo
+2026-05-22 16:36:08  INFO      HUGO exists: True
+2026-05-22 16:36:08  INFO      Entering main menu
+2026-05-23 14:30:49  INFO      Menu selection: manage
+2026-05-23 14:31:42  INFO      Menu selection: quit

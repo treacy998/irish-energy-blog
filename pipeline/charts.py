@@ -71,7 +71,7 @@ def _format_time_axis(ax):
     ax.set_xlabel("")
     ax.set_xticks(range(0, 48, 4))
     ax.set_xticklabels(
-        [f"{(i // 2):02d}:{(i % 2) * 30:02d}" for i in range(0, 48, 4)],
+        [f"{((23*60 + i*30) % 1440) // 60:02d}:{((23*60 + i*30) % 1440) % 60:02d}" for i in range(0, 48, 4)],
         rotation=45, ha="right", color=TEXT_SEC, fontsize=8,
     )
 
@@ -442,8 +442,12 @@ def _load_all_dam_data() -> pd.DataFrame:
     ).sort_values(["DeliveryDate", "Period"])
 
 
-def generate_daily_charts(data_filepath: Path, target_date: date, eirgrid_df=None, bess_result=None):
-    """Generate all charts for a given day. Returns the daily summary dict."""
+def generate_daily_charts(data_filepath: Path, target_date: date, eirgrid_df=None, bess_result=None, force=False):
+    """Generate all charts for a given day. Returns the daily summary dict.
+
+    Existing charts are preserved unless force=True, so that commentary
+    written against a specific chart scale is never invalidated by a re-run.
+    """
     date_str = target_date.isoformat()
     chart_day_dir = CHART_DIR / date_str
     chart_day_dir.mkdir(parents=True, exist_ok=True)
@@ -465,33 +469,47 @@ def generate_daily_charts(data_filepath: Path, target_date: date, eirgrid_df=Non
 
     print(f"\nGenerating charts for {date_str}...")
 
-    chart_dam_price_profile(
-        day_df, summary,
-        chart_day_dir / f"dam-{date_str}.png",
-    )
-    chart_price_vs_wind(
-        day_df, summary,
-        chart_day_dir / f"price-wind-{date_str}.png",
-    )
+    def _skip(path: Path) -> bool:
+        if not force and path.exists():
+            print(f"  Skipped (exists): {path}")
+            return True
+        return False
+
+    dam_path = chart_day_dir / f"dam-{date_str}.png"
+    if not _skip(dam_path):
+        chart_dam_price_profile(day_df, summary, dam_path)
+
+    pw_path = chart_day_dir / f"price-wind-{date_str}.png"
+    if not _skip(pw_path):
+        chart_price_vs_wind(day_df, summary, pw_path)
 
     # Combine all available data files so the week-compare has history
     combined = _load_all_dam_data()
-    chart_week_comparison(
-        combined if not combined.empty else df,
-        target_date,
-        chart_day_dir / f"week-compare-{date_str}.png",
-    )
 
-    chart_price_duration(day_df, date_str, chart_day_dir)
-    chart_spread_tracker(day_df, date_str, chart_day_dir)
+    wc_path = chart_day_dir / f"week-compare-{date_str}.png"
+    if not _skip(wc_path):
+        chart_week_comparison(
+            combined if not combined.empty else df,
+            target_date,
+            wc_path,
+        )
+
+    if not _skip(chart_day_dir / f"pdc-{date_str}.png"):
+        chart_price_duration(day_df, date_str, chart_day_dir)
+
+    if not _skip(chart_day_dir / f"spread-{date_str}.png"):
+        chart_spread_tracker(day_df, date_str, chart_day_dir)
 
     if bess_result is not None:
-        chart_bess_dispatch(day_df, bess_result, date_str, chart_day_dir)
+        if not _skip(chart_day_dir / f"bess-{date_str}.png"):
+            chart_bess_dispatch(day_df, bess_result, date_str, chart_day_dir)
 
-    generate_interactive_charts(
-        day_df, combined if not combined.empty else df,
-        summary, bess_result, target_date, chart_day_dir,
-    )
+    # Interactive charts: skip if the main one already exists
+    if not _skip(chart_day_dir / f"dam-{date_str}.html"):
+        generate_interactive_charts(
+            day_df, combined if not combined.empty else df,
+            summary, bess_result, target_date, chart_day_dir,
+        )
 
     return summary
 

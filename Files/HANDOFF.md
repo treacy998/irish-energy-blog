@@ -228,7 +228,7 @@ cd ~/dev/blog/irish-energy-blog
 
 ```bash
 cd ~/dev/blog/irish-energy-blog
-venv/bin/python pipeline/run_daily.py --date 2026-05-04
+pipeline/run_daily.py --date 2026-05-04
 ```
 
 **Backfill a range of dates:**
@@ -236,7 +236,7 @@ venv/bin/python pipeline/run_daily.py --date 2026-05-04
 ```bash
 cd ~/dev/blog/irish-energy-blog
 for d in 2026-05-04 2026-05-05 2026-05-06 2026-05-07 2026-05-08; do
-    venv/bin/python pipeline/run_daily.py --date $d
+    pipeline/run_daily.py --date $d
 done
 ```
 
@@ -250,7 +250,7 @@ done
 
 ```bash
 cd ~/dev/blog/irish-energy-blog
-venv/bin/python pipeline/run_daily.py --date 2026-05-04
+pipeline/run_daily.py --date 2026-05-04
 ```
 
 ---

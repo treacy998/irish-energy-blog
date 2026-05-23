@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 run_daily.py — One-command daily workflow.
 
@@ -64,6 +65,11 @@ def parse_args():
         metavar="CSV_FILE",
         help="Path to a local SEM-DA CSV file to use instead of fetching.",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite an existing post. By default the post is preserved if it already exists.",
+    )
     return parser.parse_args()
 
 
@@ -126,7 +132,7 @@ def main():
     if bess_result:
         print(f"  ✓ BESS simulation: €{bess_result['gross_profit']:.0f} gross profit")
 
-    scaffold_daily(delivery_date, explicit_file=filepath, title=title, eirgrid_df=eirgrid_df, bess_result=bess_result)
+    scaffold_daily(delivery_date, explicit_file=filepath, title=title, eirgrid_df=eirgrid_df, bess_result=bess_result, force=args.force)
 
     # ── Upload charts to Vercel Blob (no-op if BLOB_READ_WRITE_TOKEN not set) ─
     chart_day_dir = CHART_DIR / date_str

@@ -1,31 +1,31 @@
 /* ── Google Fonts ─────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&display=swap');
 
-/* ── Typography — Inconsolata throughout ──────────────────── */
+/* ── Typography — Oswald throughout ──────────────────────── */
 
 body,
 h1, h2, h3, h4, h5, h6,
 .article-title, .list-item-title, .not-found-title,
 .home-title, header h1, .logo-name, .site-name,
 .article-content p, .article-content li, .article-content blockquote {
-  font-family: 'Inconsolata', 'JetBrains Mono', monospace;
+  font-family: 'Oswald', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, h4, h5, h6,
 .article-title, .list-item-title {
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .logo-name, .site-name {
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0.06em;
   color: #f5f4f2 !important;
 }
 
 code, kbd, pre, .highlight {
-  font-family: 'Inconsolata', 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'Fira Mono', monospace;
   font-size: 0.9em;
 }
 
@@ -82,7 +82,7 @@ html.dark a:hover {
   background-color: #f0ede8 !important;
   color: #575049 !important;
   border: 1px solid #dbd6cf !important;
-  font-family: 'Inconsolata', monospace;
+  font-family: 'Oswald', sans-serif;
   font-size: 0.76em;
   font-weight: 500;
   letter-spacing: 0.05em;
@@ -120,7 +120,7 @@ html.dark .list-tags a:hover {
 }
 
 .article-content table {
-  font-family: 'Inconsolata', monospace;
+  font-family: 'Oswald', sans-serif;
   font-size: 0.9em;
 }
 
@@ -136,6 +136,13 @@ article > section.prose {
   justify-content: center;
 }
 
+/* Widen the main article body */
 article section.prose div.min-w-0 {
-  max-width: 78ch;
+  max-width: 96ch;
+}
+
+/* Shrink the TOC sidebar */
+article section.prose div.order-first {
+  max-width: 13rem !important;
+  min-width: 11rem;
 }

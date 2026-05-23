@@ -138,7 +138,7 @@ def _fetch_area(area: str, date_str: str) -> pd.DataFrame | None:
             EIRGRID_BASE,
             params={
                 "region":    "ROI",
-                "chartType": area,
+                "chartType": "generation" if area == "demand" else area,
                 "dateRange": "day",
                 "dateFrom":  date_str,
                 "dateTo":    date_str,

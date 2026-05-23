@@ -34,6 +34,10 @@ draft: false
 
 **Std dev** €30.91/MWh  ·  **Median** €172.77/MWh  ·  **Periods above €150:** 45 of 48 (94%)
 
+## Price vs Wind
+
+![Price vs Wind Generation](/charts/2026-05-06/price-wind-2026-05-06.png)
+
 ## Week in Context
 
 ![7-Day Price Comparison](/charts/2026-05-06/week-compare-2026-05-06.png)
@@ -50,15 +54,28 @@ draft: false
 
 **Peak avg (07:00–22:00):** €199.42/MWh  ·  **Off-peak avg:** €162.27/MWh  ·  **Spread:** €37.15/MWh
 
+## BESS Dispatch Signal
+
+| | Price | Time | Energy | Value |
+|--|--|--|--|--|
+| **Charge** | €147/MWh | 03:30 | 2 MWh | −€294 |
+| **Discharge** | €236/MWh | 20:30 | 1.7 MWh (85% RTE) | +€402 |
+| **Gross profit** | | | | **€108** |
+| **Price spread** | €89/MWh | | | **ROI: 36.5%** |
+
+*Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
+![BESS Dispatch](/charts/2026-05-06/bess-2026-05-06.png)
+
+€108 gross, and better than the spread alone implies. Charged at €147 (03:30), discharged at €236 (20:30): €89 of captured spread. The dual-peak shape — €231 morning, €250 evening — gave two viable discharge windows. The evening was taken. Unlike Monday and Tuesday, both would have worked.
+
 ## Commentary
 
-<!--
-Write 2-3 paragraphs here:
-- What drove the price shape today?
-- How does wind/demand explain the peak and trough?
-- Anything unusual compared to the week?
-- Market context: outages, interconnector, weather forecast?
--->
+The wind drought peaked on Wednesday. Mean wind fell to 3.8% — a number so low it barely registers — and held there through the entire working day. Six hours of sub-1% wind during peak demand hours, gas marginal in every period.
+
+Mean price hit €185.49/MWh, the week's highest. Two peaks cleared above €230 — a morning ramp (€231 at 07:30) and an evening peak (€250 at 21:00). The first day of the run to produce a proper dual-peak shape, with both windows genuinely expensive.
+
+The comparison that tells the week's story so far is Monday to Wednesday. Bank holiday Monday, 13% wind, suppressed demand: €152 mean. Working Wednesday, 3.8% wind, full commercial load: €185 mean. €33 of difference, almost entirely attributable to losing nine wind percentage points. That's as close to a marginal cost of wind as a single-day comparison will give you.
 
 
 <details>

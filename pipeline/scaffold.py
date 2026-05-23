@@ -84,7 +84,7 @@ def _build_data_table(day_df, eirgrid_df, date_str: str) -> str:
 """
 
 
-def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = None, eirgrid_df=None, bess_result=None):
+def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = None, eirgrid_df=None, bess_result=None, force: bool = False):
     """Generate a daily briefing post with charts and pre-filled metrics."""
     data_file = find_data_file(target_date, explicit=explicit_file)
     if title is None:
@@ -92,7 +92,7 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     date_str = target_date.isoformat()
 
     # Generate charts and get summary stats
-    summary = generate_daily_charts(data_file, target_date, eirgrid_df=eirgrid_df, bess_result=bess_result)
+    summary = generate_daily_charts(data_file, target_date, eirgrid_df=eirgrid_df, bess_result=bess_result, force=force)
 
     # Load day-level data for the table (same data used by charts)
     day_df = get_day_data(data_file, target_date)
@@ -264,6 +264,12 @@ Write 2-3 paragraphs here:
     outdir = CONTENT_DIR / "daily" / date_str
     outdir.mkdir(parents=True, exist_ok=True)
     outpath = outdir / "index.md"
+
+    if outpath.exists() and not force:
+        print(f"\nPost already exists — skipping scaffold to preserve your edits: {outpath}")
+        print(f"Charts were regenerated. Use --force to overwrite the post.")
+        return
+
     outpath.write_text(md)
     print(f"\nPost scaffolded: {outpath}")
     print(f"Next: open the file, write your commentary, push to git.")

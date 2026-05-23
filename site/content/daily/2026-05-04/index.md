@@ -27,37 +27,28 @@ draft: false
 
 ![DAM Price Profile](/charts/2026-05-04/dam-2026-05-04.png)
 
-<!-- DAM Commentary
 The effect of the bank holiday Monday is clear from the lack of a morning ramp that you'd expect from a typical weekday. Usually the commercial/industrial cycles waking up would create a thermal ramp that is not seen here. Our ramp today is high, and flat (€133/MWh at 06:00 up to €150/MWh at 09:00).
-It's a high & flat overnight slope (€166 at 24:00 down to €135/MWh at 04:00), with a small residential peak (€214) at 21:00, and an average price of €153/MWh.
-
-
- -->
+It's a high & flat overnight slope (€166 at 22:30 down to €135/MWh at 04:00), with a small residential peak (€214) at 21:00, and an average price of €153/MWh.
 
 ## Price vs Wind
 
 ![Price vs Wind Generation](/charts/2026-05-04/price-wind-2026-05-04.png)
 
-<!-- Price vs Wind
 The Price vs Wind chart show a typical inverse of prices falling when the wind rises.
 Cannibalisation is not seen here with wind this low, as renewables did nothign to discipline price, so the system fell back on gas causing our high €125/MWh floor.
 
 Worth nothing that since the wind fell so low, the few wind MWh that did generate, captured a high price. The opposite of cannibalisation.
- -->
 
 ## Week in Context
 
 ![7-Day Price Comparison](/charts/2026-05-04/week-compare-2026-05-04.png)
 
-<!-- WIC commentary
 This is the blog's first post, baseline starts here. Week in context will come later.
- -->
 
 ## Price Duration Curve
 
 ![Price Duration Curve](/charts/2026-05-04/pdc-2026-05-04.png)
 
-<!-- PDC Commentary
 The PDC (Price Duration Curve) ranks oour 48 half-hour periods from high to low.
 Our curve here is high & flat, meaning Monday was expensive, stable, and provided little intra-day volatility.
 
@@ -65,21 +56,18 @@ There are modest to few scarcity hours, with only 4 periods barely breaking €2
 What's most important about this curve is it's floor being lifted to €125. A well supplied market would be flat and low, whereas this is flat and expensive -> Little wind induces a gas-set day.
 
 Our full range is €88/MWh
- -->
 
 ## Peak / Off-Peak Spread
 
 ![Peak / Off-Peak Spread](/charts/2026-05-04/spread-2026-05-04.png)
 
-<!-- Peak / Off-Peak Spread
-€Peak Avg: €161/MWh    |   €Off-Peak Avg: €138/MWh
+€Peak Avg: €161/MWh | €Off-Peak Avg: €138/MWh
 
-This has a moderate spread that is being compressed from below. It's brought up to a moderate spread due to the residential peak at 21:00 (€214) which  lifts the peak-period average. The Off-Peak average is dragged up by the €125+ /MWh floor.
+This has a moderate spread that is being compressed from below. It's brought up to a moderate spread due to the residential peak at 21:00 (€214) which lifts the peak-period average. The Off-Peak average is dragged up by the €125+ /MWh floor.
 This gave up no cheap off-peak window.
 
 When the spread is compressed from below, there's no cheap charge window for storage/BESS (Battery Energy Storage Systems).
 Despite the elevated price level, this is a poor day for flexibility.
- -->
 
 ## BESS Dispatch Signal
 
@@ -93,7 +81,6 @@ _Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges
 
 ![BESS Dispatch](/charts/2026-05-04/bess-2026-05-04.png)
 
-<!--
 A €93 gross on a 1MW/2MWh cycle is mediocre, and the reason why is entirely due to the charge price.
 
 [A 1MW/2MWh battery cycles means the battery can discarge for 1MW of power, and it can do that for 2hours before it's empty.
@@ -106,18 +93,16 @@ A €127 charge is barely above the €125 minimum, along with a lack of a scarc
 Due to heat and internal losses, you never get back what you put in.
 When I mention '85% rte', I'm referring to a battery's 85% round-trip efficiency, meaning when you put in 100 units, you only get back about 85 units.
 So for us, our already thin spread loses another chunk to the loss from the 85% rte that the battery goes through:
-€205 x 2 x 0.85  =  €348 revenue
-€127 x 2  =  €255 cost
-->  €93 net
+€205 x 2 x 0.85 = €348 revenue
+€127 x 2 = €255 cost
+-> €93 net
 
 The same low wind that kept prices high (good for generators), destroyed the volatility that batteries live on.
 Storage revenue comes from volatility, not from price level.
 High prices with no spread are worthless to a battery.
--->
 
 ## Summary
 
-<!--
 This May Bank Holiday Monday should have made cheap power. It didn't.
 DAM prices averaged €152/MWh - high for a spring day - and never dropped below €125.
 The holiday demand was there (mean of 3,633MW, no morning ramp), but the supply side overruled it.
@@ -135,7 +120,6 @@ A simulated 1MW/2MWh battery earned just €93 gross - squeezed at both ends, wi
 
 Low wind raises the floor for generators, and flattens the curve for batteries.
 It'll be interesting to see if tomorrow, May 5th, inverts this.
--->
 
 <details>
 <summary>Half-hourly data — 2026-05-04</summary>
