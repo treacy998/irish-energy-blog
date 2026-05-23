@@ -37,15 +37,31 @@ draft: false
 
 **Std dev** €23.63/MWh  ·  **Median** €108.58/MWh  ·  **Periods above €150:** 3 of 48 (6%)
 
+Std dev €23.63 — 41% higher than Saturday's €16.77, on a mean €2 lower. The number that separates the two weekend days isn't the mean; it's the distribution.
+
+No morning ramp for the second straight day. 06:00 (€99.48) to 07:30 (€96.91): flat, barely moving. Weekend demand is absent again.
+
+The shape splits into two halves. The first half (00:00–14:30) is all decline: wind at 67–74% overnight with minimal demand, prices drifting from €118 to €81 — a broad soft floor with nothing to lift it. The second half (14:30–21:00) is all recovery: wind decaying from 28% to 25%, demand climbing, prices stepping from €81 to €172 in six and a half hours. The evening build is €98 → €115 → €130 → €148 → €172 — a ramp, not a step.
+
+Unlike any weekday this run, the day's entire price range lives in the second half.
+
 ## Price vs Wind
 
 ![Price vs Wind Generation](/charts/2026-05-10/price-wind-2026-05-10.png)
 
 **Mean wind:** 42.6%  ·  **Range:** 24.0%–73.9%
 
+Range 24.0%–73.9% — the widest of the run. Two distinct wind regimes: overnight (67–74% at €115–125) and evening (24–28% at €148–172). The decay between them is steady and one-directional, and the price chart mirrors it exactly.
+
+The inverse correlation here is as clean as May 7's cannibalisation story, but running in the opposite temporal direction. On May 7, wind climbed during the day and prices fell. Today, wind fell during the day and prices rose. Same merit-order mechanic — as renewable supply contracts, the marginal plant moves up the curve. Same physics, different direction of travel.
+
+For wind generators, today is the structural problem in its most legible form. Wind generated heavily at 67–74% when prices cleared at €115–125. Wind generated minimally at 24–28% when prices cleared at €148–172. Capture price today will sit well below the daily mean. Not because the market is broken — because the wind blew at the wrong time.
+
 ## Week in Context
 
 ![7-Day Price Comparison](/charts/2026-05-10/week-compare-2026-05-10.png)
+
+The second consecutive weekend day below €120 mean. The working week band (Mon–Fri, €113–185) and the weekend band (€81–172) are now both visible on the chart — the step-down from Friday is clear. Today's range is wider than Saturday's despite the similar mean; the evening recovery pulls the top end up while the midday trough holds the bottom down.
 
 ## Price Duration Curve
 
@@ -53,11 +69,21 @@ draft: false
 
 **Periods above €150:** 3 (6% of day)  ·  **Above €200:** 0 (0% of day)
 
+3 above €150 (the 21:00–22:00 evening cluster), 0 above €200. The curve has a top shoulder Saturday's didn't — three genuine evening-peak periods sitting above the main distribution.
+
+Below that, a broad cheap belly: 18 half-hours below €100, spanning the morning and midday. Range €91 against Saturday's €54, on a mean €2 lower. The same low average but a much wider spread — this is what the std dev difference (€16.77 → €23.63) looks like on a PDC.
+
 ## Peak / Off-Peak Spread
 
 ![Peak / Off-Peak Spread](/charts/2026-05-10/spread-2026-05-10.png)
 
 **Peak avg (07:00–22:00):** €107.94/MWh  ·  **Off-peak avg:** €117.75/MWh  ·  **Spread:** €-9.81/MWh
+
+Second straight negative spread: peak €107.94, off-peak €117.75. The mechanics repeat from Saturday — the peak window catches the cheap morning and midday belly, the off-peak overnight holds at gas-marginal.
+
+The margin is narrower than yesterday (€-9.81 vs €-13.42). The reason: three periods above €150 in the 21:00–22:00 window all sit inside the peak band and partly rescue the peak average. Without those three, today's spread would have been more negative than Saturday's.
+
+Two consecutive negative spreads are a weekend pattern. A commercial product banded on peak/off-peak timing would have mispriced both days.
 
 ## BESS Dispatch Signal
 
@@ -72,17 +98,23 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-05-10/bess-2026-05-10.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
+€110 gross — second best of the run, and the wind ramp-down built it. Charged at 13:30 in the midday trough (€83), discharged at 20:30 into the evening peak (€162). Same charge window as Saturday, later discharge to catch the deeper evening build. Captured spread €79. Yesterday's mean was €2 higher than today's; yesterday's BESS gross was €47 lower. That's the storage lesson in one line.
 
 ## Commentary
 
-<!--
-Write 2-3 paragraphs here:
-- What drove the price shape today?
-- How does wind/demand explain the peak and trough?
-- Anything unusual compared to the week?
-- Market context: outages, interconnector, weather forecast?
--->
+Sunday's mean of €111.62/MWh was within €2 of Saturday's — but it was a completely different market.
+Wind decayed from 73.9% at 01:30 to 24.0% by 21:30, and as it disappeared through the evening the peak rebuilt itself to €172 at 21:00.
+Range doubled to €91, std dev rose 41%, and a simulated battery earned €110 gross — 75% more than Saturday on a nearly identical mean.
+
+Wind is the entire story, only the direction changed.
+Overnight, 67–74% wind with minimal demand kept prices at €115–125 — gas still marginal even with abundant renewables, because there wasn't enough demand to move the clearing price up the curve. By 14:30 wind had fallen to 28% and the daily minimum landed at €81.09. From there, wind continued to decay exactly as residential demand climbed.
+The €97 → €172 evening ramp between 07:30 and 21:00 is the mirror of a weekday morning ramp, but driven by disappearing supply rather than rising demand. Same chart shape, different physics. A morning ramp is predictable from the calendar; an evening wind-ramp comes from the numerical weather prediction.
+For wind generators, cannibalisation at maximum bite — heavy generation at €115–125 overnight, minimal generation into the €150–172 evening peak. Capture price well below the daily mean.
+
+For storage, the best day since Thursday.
+A simulated 1MW/2MWh battery earned €110 gross by exploiting exactly the trough-to-peak shape that wind's misaligned output built — charged at 13:30 (€83), discharged at 20:30 (€162).
+Yesterday's mean was €2 higher. Yesterday's BESS gross was €47 lower.
+Storage doesn't reward price levels; it rewards price shape.
 
 
 <details>

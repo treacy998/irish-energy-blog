@@ -37,15 +37,29 @@ draft: false
 
 **Std dev** €17.33/MWh  ·  **Median** €103.81/MWh  ·  **Periods above €150:** 0 of 48 (0%)
 
+Three numbers define the day before the chart does: std dev €17.33, range €54.50, zero periods above €150.
+
+Overnight ran €93–108 (wind 65–71%, gas at the low end of mid-merit). Morning ramp: 05:00 (€105) → 07:30 (€128), +€23 in 2.5 hours — the gentlest working-day ramp of the run. Then the midday belly: €92–99 from 10:00 to 16:00, wind holding 54–58% all the way through. Six consecutive hours where the market couldn't clear above €100. Evening climbed from 16:30 (€106) to 19:30 (€145), then faded to €126 by 22:30.
+
+€145 is the lowest evening peak of the working week. May 5: €232. May 11: €195. May 12 (actual evening): €137. Today: €145. The working-week evening peak has been compressed in lockstep with wind penetration. €91 floor, €145 ceiling, 48 periods, no exceptions. The shape exists but the amplitude is gone.
+
 ## Price vs Wind
 
 ![Price vs Wind Generation](/charts/2026-05-13/price-wind-2026-05-13.png)
 
 **Mean wind:** 60.1%  ·  **Range:** 50.4%–71.9%
 
+Wind 50.4%–71.9%, mean 60.1%. The narrowness matters more than the level — a 21-point band, wind above 50% for every single half-hour, above 60% for 30 of them. No sudden drops, no ramp events, no overnight drama.
+
+Intra-day cannibalisation is small: wind generated steadily across cheap midday and the slightly-more-expensive evening alike, putting capture price maybe €5/MWh below the daily mean. Normal, unremarkable.
+
+The bigger story is structural. Today's wind earned approximately €105/MWh across its output. May 4 (13% wind) earned close to €170/MWh. Same merit-order mechanics, very different revenue. Wind cannibalises itself by levelling the market, not just by capturing the cheap hours of a volatile day. At 60% penetration, wind owns the merit order end to end — and the entire price level comes down with it.
+
 ## Week in Context
 
 ![7-Day Price Comparison](/charts/2026-05-13/week-compare-2026-05-13.png)
+
+Three days of the working week visible. The Mon–Tue–Wed progression — 23%, 47%, 60% wind, €138/€112/€110 mean — shows the suppression steepening between Monday and Tuesday (€26 drop) then flattening between Tuesday and Wednesday (€2 drop). Above roughly 50% wind penetration in current Irish demand conditions, additional wind keeps finding mid-merit gas still on the system at similar cost. The suppression curve is flattening. Wednesday sits at the bottom of the run so far.
 
 ## Price Duration Curve
 
@@ -53,11 +67,19 @@ draft: false
 
 **Periods above €150:** 0 (0% of day)  ·  **Above €200:** 0 (0% of day)
 
+Zero above €150, zero above €200. Flat and low — the lowest of the run and the flattest working-day curve of the week.
+
+The reference pair: May 5 was high and flat (gas marginal everywhere, floor €147, ceiling €232, no surplus). Today is the inverse twin — wind marginal, floor €91, ceiling €145, no scarcity. Same PDC archetype: a single fuel type price-sets the whole day, no bimodal cheap-trough-and-expensive-peak structure. Flat-and-low is not the same market as flat-and-high; the mechanism differs entirely. The curve shape rhymes.
+
 ## Peak / Off-Peak Spread
 
 ![Peak / Off-Peak Spread](/charts/2026-05-13/spread-2026-05-13.png)
 
 **Peak avg (07:00–22:00):** €113.26/MWh  ·  **Off-peak avg:** €104.4/MWh  ·  **Spread:** €8.86/MWh
+
++€8.86. Technically back in positive territory after Tuesday's boundary-distorted inversion. Functionally below the battery break-even threshold.
+
+Round-trip efficiency on a 2MWh cycle requires roughly €13/MWh to cover the energy loss alone, before degradation, capacity costs, or forecast error. A mechanical peak/off-peak cycling strategy today — charging overnight, discharging into the peak window — would have been net-negative. The discretionary dispatch (picking the cheapest 4 half-hours in the day regardless of calendar window) captured €52 of actual spread while the peak/off-peak window only offered €8.86. The entire profit margin lived in the strategy, not the market.
 
 ## BESS Dispatch Signal
 
@@ -72,17 +94,17 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-05-13/bess-2026-05-13.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
+€61 gross — tied for worst working-day of the run. The model charged at 13:00 (€91, midday wind trough) and discharged at 19:00 (€143, early evening peak), capturing €52 of spread.
+
+€52 is the structural ceiling on a 60%-wind working day: midday at €91–96, evening peak capped at €145, nowhere higher with perfect foresight. A forecast-driven operator — running on estimates rather than actuals — would almost certainly do worse. Trough-timing error alone could halve the captured spread on a day this flat. The 10-day series: €93, €56, €108, €139, €78, €63, €110, €107, €77, €61. Mean €89, range €56–€139. Today ties for third-worst. Zero correlation to daily price level.
 
 ## Commentary
 
-<!--
-Write 2-3 paragraphs here:
-- What drove the price shape today?
-- How does wind/demand explain the peak and trough?
-- Anything unusual compared to the week?
-- Market context: outages, interconnector, weather forecast?
--->
+The calmest day of the run. Wednesday's mean of €109.94 is the lowest working-day mean of the series — std dev €17.33, range €54.50, zero periods above €150 all day. The first working day in this series without a single scarcity hour. Wind held at 60% across the entire day (range 50–72%) and the market compressed into a tight €91–145 band: overnight at €93–108, a morning ramp that added just €23 to reach €128, a long shallow midday trough at €91–99 from 10:00 to 16:00, an evening peak that topped at €145 and faded quietly.
+
+The structural read is cannibalisation in its inter-day form. Intra-day, wind's capture price sat maybe €5/MWh below the daily mean — a small effect, because wind generated steadily across both cheap and moderately-expensive hours. The bigger number: today's mean is €30 below the 11-day running average because wind owned the merit order from end to end. Today's wind earned approximately €105/MWh across its output. May 4 (13% wind) earned close to €170/MWh. Wind doesn't just cannibalise its own captured price within a volatile day — it cannibalises the entire price level when it dominates supply. Same market mechanics, very different revenue.
+
+For storage, €61 gross — tied for worst working-day of the run. The captured spread was €52; the peak/off-peak window only offered €8.86, below the round-trip efficiency break-even threshold. A blind mechanical cycling strategy today would have lost money. The discretionary dispatch (charge 13:00, discharge 19:00) is doing real work — and even with perfect foresight the ceiling was thin. The 10-day BESS series spans €56 to €139, mean €89, no correlation to daily price level. Storage lives on shape — and today the shape was flat.
 
 
 <details>

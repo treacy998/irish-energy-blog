@@ -37,15 +37,29 @@ draft: false
 
 **Std dev** €16.77/MWh  ·  **Median** €117.29/MWh  ·  **Periods above €150:** 0 of 48 (0%)
 
+No morning ramp. From 05:00 to 07:30, every working day this run added €60–85; today gave back €12 in the same window (€118.62 → €106.32). Weekend demand doesn't wake up — commercial and industrial load is absent, and the thermal ramp never fires.
+
+The shape is a U-curve: prices fell through the morning, bottomed in the early afternoon, and climbed through the evening. The day's minimum landed at 15:00 (€84.69) — the first midday trough of the run. With wind at 55–57% all afternoon and demand at its weekly low, the system was structurally long: 11 consecutive half-hours between 10:30 and 15:30 cleared below €100.
+
+The evening peak at 19:30 (€139) is real but contained. Residential demand returned and gas plants picked up, but with wind still at 60% through the evening the merit order never had to climb to scarcity. A capped peak on top of a collapsed floor.
+
 ## Price vs Wind
 
 ![Price vs Wind Generation](/charts/2026-05-09/price-wind-2026-05-09.png)
 
 **Mean wind:** 56.7%  ·  **Range:** 39.1%–67.4%
 
+Wind stayed high all day — never below 39%, rarely below 55% during working hours. The midday collapse (€84.69 at 15:00 with 55.5% wind) is the merit order functioning exactly as intended: ample cheap supply, insufficient demand to push the clearing price up the curve.
+
+The evening recovery to €139 with wind still at 60% illustrates the floor that always exists. Even at 60% renewable penetration, gas must run to cover residual demand — and that residual gas plant sets the clearing price. The midday-to-evening spread of €55 is what 60% wind allows: a soft peak, not a scarcity one.
+
+Today's capture price for wind will sit modestly below the daily mean. Wind generated steadily across all price bands — the high wind was present in cheap and modestly-priced hours alike. No dramatic cannibalisation, no unusual premium. A structurally normal high-wind day.
+
 ## Week in Context
 
 ![7-Day Price Comparison](/charts/2026-05-09/week-compare-2026-05-09.png)
+
+The first departure from the elevated band that defined Mon–Fri. All five working days cleared between €113 and €185; today's chart sits a clear step below them. The step-down is structural and immediate — weekend demand, not a gradual drift.
 
 ## Price Duration Curve
 
@@ -53,11 +67,23 @@ draft: false
 
 **Periods above €150:** 0 (0% of day)  ·  **Above €200:** 0 (0% of day)
 
+Zero above €150. Zero above €200. The flattest, lowest PDC of the run.
+
+The curve spans just €54 (€84.69–€139), compared to Wednesday's €106 range on a mean nearly double today's. There are no scarcity hours — a peaker plant that needed €200+ to run earned nothing today. The mid-merit gas clearing at €125 overnight was the expensive end of the market.
+
+Both the top and the bottom of the curve are contained. No cheap floor driven by renewables at zero, but no expensive ceiling either. A uniform, wind-suppressed band.
+
 ## Peak / Off-Peak Spread
 
 ![Peak / Off-Peak Spread](/charts/2026-05-09/spread-2026-05-09.png)
 
 **Peak avg (07:00–22:00):** €108.38/MWh  ·  **Off-peak avg:** €121.8/MWh  ·  **Spread:** €-13.42/MWh
+
+The peak window averaged €108.38; the off-peak window averaged €121.80. Peak cheaper than off-peak.
+
+The inversion is structural, not a data anomaly. The 07:00–22:00 peak window, on a Saturday with 57% wind and low demand, contains all the cheap midday hours — 11 half-hours below €100, sitting squarely inside the "peak" band. The 22:00–07:00 off-peak window holds the overnight gas-marginal periods, where wind was a shade lower and prices settled at €115–125.
+
+The peak/off-peak window is drawn on weekday logic. On a weekend, the market ignores it. A flat scheduling strategy — bid peak, avoid off-peak — would have mispriced both sides.
 
 ## BESS Dispatch Signal
 
@@ -72,17 +98,24 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-05-09/bess-2026-05-09.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
+€63 gross, but the charge window is the story. Charged at 13:30 in the midday trough (€85), discharged into the 19:00 evening peak (€138). Every working day this run has charged overnight; the first weekend day charged midday. With 55–57% wind and weak demand, the cheap window moved from 03:00 to 13:30 — and the optimiser followed it. That's not an anomaly; it's a grid-state signal.
 
 ## Commentary
 
-<!--
-Write 2-3 paragraphs here:
-- What drove the price shape today?
-- How does wind/demand explain the peak and trough?
-- Anything unusual compared to the week?
-- Market context: outages, interconnector, weather forecast?
--->
+The first weekend of the run and the floor fell out.
+Mean dropped €50 from Friday to €113.41/MWh, no period cleared above €150 all day, and the peak/off-peak spread went negative for the first time in this series.
+The inversion is structural: the peak window is a calendar convention, not a price detection algorithm. On a Saturday with 57% wind and low demand, 07:00–22:00 catches the cheap midday hours instead of the expensive working ones; the off-peak overnight stays gas-marginal at €115–125 and ends up pricier.
+
+Wind drove the price shape, as it has every day of this run.
+At 57% mean penetration and never below 39%, it was never going to be a working-week day. The morning ramp didn't fire. The day's minimum (€84.69) landed at 15:00 rather than at dawn — a midday trough rather than the overnight trough that has defined every weekday shape. With the system structurally long through the afternoon, 11 consecutive half-hours cleared below €100.
+This is the duck curve in preview: high renewable midday output, weak demand, a floor that simply gives way.
+
+For storage, a moderate day with an important signal.
+A simulated 1MW/2MWh battery earned €63 gross — charged at 13:30 (midday, not 03:00), discharged at 19:00 (€138). On every working day this run the optimiser has charged overnight; today it charged midday, because that's where the structurally long window moved to.
+As renewable share grows, that shift becomes the norm, not the exception.
+
+The evening peak held but was contained at €139 — a capped peak on top of a collapsed floor.
+Tomorrow brings the same mean on a completely different shape.
 
 
 <details>
