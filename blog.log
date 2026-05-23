@@ -401,3 +401,13 @@
 2026-05-23 20:25:32  INFO      Menu selection: deploy
 2026-05-23 20:25:32  INFO      deploy: started
 2026-05-23 20:25:43  INFO      deploy: running git add .
+2026-05-23 20:25:43  INFO      deploy: add exit code 0
+2026-05-23 20:25:43  INFO      deploy: running git commit -m Up the may 17th, about to redesign
+2026-05-23 20:25:43  INFO      deploy: commit exit code 0
+2026-05-23 20:25:43  INFO      deploy: running git push
+2026-05-23 20:25:44  INFO      deploy: push exit code 0
+2026-05-23 20:25:44  INFO      deploy: completed successfully
+2026-05-23 22:17:41  INFO      Menu selection: preview
+2026-05-23 22:17:41  INFO      preview_site: starting Hugo server (hugo=/home/treacy998/.local/bin/hugo, cwd=/home/treacy998/dev/blog/irish-energy-blog/site)
+2026-05-23 22:18:56  INFO      preview_site: stopped by user (Ctrl+C)
+2026-05-23 22:18:58  INFO      Menu selection: quit
