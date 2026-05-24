@@ -11,12 +11,6 @@
   weight = 20
 
 [[main]]
-  identifier = "tags"
-  name = "Topics"
-  url = "/tags/"
-  weight = 30
-
-[[main]]
   identifier = "about"
   name = "About"
   url = "/about/"

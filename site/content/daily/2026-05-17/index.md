@@ -37,15 +37,33 @@ draft: false
 
 **Std dev** €35.92/MWh  ·  **Median** €120.17/MWh  ·  **Periods above €150:** 11 of 48 (23%)
 
+Three blocks, and the build is the chart.
+
+Soft overnight and morning (23:00 → 14:00): €108–138. Wind held 36–50% across this entire window. The day's minimum (€108.35 at 13:30) sits here, with wind at 46.7% — a wind-rich midday on weekend demand. No meaningful morning ramp: the highest price before 17:00 was €120 at 06:30. With demand at weekend-low and wind providing 40%+ through the morning, the marginal plant stayed on mid-merit gas throughout.
+
+The transition (14:00 → 17:00): €113 → €144. Wind began decaying from 50% at 14:00 to 37–38% by 17:00, demand returning to its weekend evening level. €31 added across six half-hours — a modest slope, but the direction was clear. The next four hours would run the same gradient three times over.
+
+The wind-decay evening build (17:00 → 22:30): €144 → €151 → €161 → €170 → €184 → €186 → €201 → €204 → €220 → €224 → €227 → €227. Eleven consecutive half-hours rising without interruption. Wind fell from 38% at 17:00 to 20% at 22:30 — a 30-point drop over 8.5 hours — and price tracked that decline almost linearly. The peak arrived at 22:00 (€227.28), not the conventional 19:00–20:00 window. This is the structural tell: a demand-driven evening peak builds to its high when residential and commercial demand overlap, then fades as people go to bed. A wind-decay peak builds whenever wind is leaving, and Sunday's wind kept leaving until 22:30. Different driver, different shape, different timing.
+
 ## Price vs Wind
 
 ![Price vs Wind Generation](/charts/2026-05-17/price-wind-2026-05-17.png)
 
 **Mean wind:** 36.1%  ·  **Range:** 15.6%–50.0%
 
+Wind 15.6%–50.0%, mean 36.1%. The decay from 50% at 14:00 to 20% at 22:30 — a 30-point fall over eight and a half hours — should read as a near-linear downslope on the wind chart, with prices rising in near-lockstep. Each ~3 percentage points of wind lost added roughly €11/MWh to the clearing price. Same slope as May 10's evening decay.
+
+Wind's capture price was well below the daily mean. Wind generated heaviest in the cheap midday window (45–50% wind, €91–115) and minimally during the expensive late evening (20–28% wind, €201–227). Classic intra-day cannibalisation — the scarcity premium was generated exactly when wind had largely left. Capture rate roughly 80–85% of the daily mean.
+
 ## Week in Context
 
 ![7-Day Price Comparison](/charts/2026-05-17/week-compare-2026-05-17.png)
+
+The second expensive Sunday of the run, and the clean week-on-week comparison is the analytical frame.
+
+Sun May 10 vs Sun May 17: mean €111.62 → €136.77 (+€25), peak €172 → €227 (+€55), periods above €200 zero → six. Demand barely moved (3,444 → 3,634 MW). Wind mean dropped from 42.6% to 36.1% — but the mean hides the structural difference. May 10's wind ranged 24–74%, oscillating from a high morning to a low evening. May 17's wind ranged 15.6–50%, running a modest midday into a very low evening. May 17's wind floor was lower than May 10's evening floor. The high end was also lower. Same pattern — wind decay through the evening, residential demand building — but May 17's trough was structurally deeper, at the worst time.
+
+Same driver, deeper trough. Six scarcity periods from zero.
 
 ## Price Duration Curve
 
@@ -53,11 +71,21 @@ draft: false
 
 **Periods above €150:** 11 (23% of day)  ·  **Above €200:** 6 (12% of day)
 
+11 above €150, 6 above €200. Top plateau of 6 periods (€200–227, the 20:00 onwards block), a broad middle of roughly 25 periods clustered between €110–135, and a shallow tail that never gets below €108.
+
+The absence of a cheap tail is the structural feature. Wind-rich midday only compressed prices to €108 — compare the €80s on May 9 or May 10 when wind was running 65–74%. May 17's midday was moderately wind-rich (45–50%) on weekend demand, not surplus-wind. The floor is expensive relative to the peak. Expensive base, scarcity spike, no real cheap surplus — and that combination is what kills the peak/off-peak spread despite six periods above €200.
+
 ## Peak / Off-Peak Spread
 
 ![Peak / Off-Peak Spread](/charts/2026-05-17/spread-2026-05-17.png)
 
 **Peak avg (07:00–22:00):** €137.7/MWh  ·  **Off-peak avg:** €135.22/MWh  ·  **Spread:** €2.48/MWh
+
++€2.48. Six periods above €200, and the spread is sub-€3. The puzzle unwraps when you look at which periods fall on which side of 22:00.
+
+The SEM peak window runs 07:00–22:00. The 22:00 period (€227.28) and the 22:30 period (€226.73) — two of the six €200+ prints — land in the off-peak window by calendar convention. The off-peak window also picks up the Saturday tail at 23:00 and 23:30 (€138–137) and the entire wind-rich overnight and morning (€108–133). Two expensive half-hours and a cheap overnight dragging the off-peak average up; four expensive half-hours diluted by a wind-rich midday pulling the peak average down. The two windows collide.
+
+The SEM peak window was defined to capture weekday demand peaks. On a Sunday where the scarcity was wind-driven, the price peaked at 22:00 — after the window closes. The metric measured what its definition told it to. The day didn't behave the way the metric was designed for.
 
 ## BESS Dispatch Signal
 
@@ -72,17 +100,17 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-05-17/bess-2026-05-17.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
+€161 gross — the highest of the run at the point of dispatch. Charged at 10:00 (€111, the late-morning fold where wind was rising and weekend demand hadn't yet reached its afternoon level) and discharged into the 20:30–22:00 scarcity block (€225 average). Captured spread €114 — wider than May 15's €112.
+
+The charge time is the operational note. 10:00 isn't the conventional midday slot (most days in the run used 13:00–14:30). The model found the day's cheapest window in the late-morning fold rather than the standard early-afternoon trough. A real operator forecasting today's shape would need to identify that late-morning cheapness rather than defaulting to the 13:30 charge that works on most days. Running 15-day cumulative: €1,350 across two prior weeks, daily revenue spanning €56 to €161. No correlation to mean daily price; strong correlation to within-day wind variability.
 
 ## Commentary
 
-<!--
-Write 2-3 paragraphs here:
-- What drove the price shape today?
-- How does wind/demand explain the peak and trough?
-- Anything unusual compared to the week?
-- Market context: outages, interconnector, weather forecast?
--->
+A Sunday with €200+ prints. Mean €136.77/MWh, peak €227.28 at 22:00, six consecutive half-hours above €200 from 20:00 to 22:30. The most expensive Sunday of the run — and it ran on weekend demand of 3,634 MW. The driver was pure wind decay: wind held 45–50% through midday, then fell steadily from 50% at 14:00 to 20% by 22:30. Prices climbed in lockstep — an eleven-half-hour continuous build from €144 at 17:00 to €227 by 22:00, each ~3 percentage points of wind lost adding roughly €11/MWh to the clearing price.
+
+The peak arrived at 22:00, not the conventional 19:00–20:00. That's the structural tell. A demand-driven evening peak builds to its high when residential and commercial demand overlap, then fades as people go to bed. A wind-decay peak builds whenever wind is leaving — and Sunday's wind kept leaving until 22:30. Different driver, different shape, different timing. The PDC shows it: a top plateau of 6 periods above €200, a broad middle in the €110–135 band, a shallow tail that never got below €108. Expensive base, scarcity spike, no real cheap surplus — and that absence of a cheap tail is why the peak/off-peak spread came in at just +€2.48 despite six scarcity periods. The SEM peak window closes at 22:00; two of the six €200+ prints are off-peak by calendar convention. The metric measured what its definition told it to.
+
+For storage, the best day of the run at the point of dispatch. A simulated 1MW/2MWh battery charged in the late-morning fold (€111 at 10:00 — earlier than the conventional midday slot) and discharged into the 20:30–22:00 scarcity block (€225 average). Captured spread €114, gross €161, ROI 72.8%. The unusual charge time is the operational footnote: the cheapest window was late morning, not early afternoon, and a real operator would need to spot it rather than default to the conventional 13:30 charge.
 
 
 <details>
@@ -140,4 +168,3 @@ Write 2-3 paragraphs here:
 | 48 | 22:30 | 226.73 | 20.3% |
 
 </details>
-
