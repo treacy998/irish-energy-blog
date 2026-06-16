@@ -38,6 +38,11 @@ FIG_W = 12
 FIG_H = 4.8
 DPI   = 150
 
+# Social card: 1200x627 (standard OG image size)
+CARD_W_IN = 12.0
+CARD_H_IN = 6.27
+CARD_DPI  = 100
+
 CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
 DATA_DIR  = Path(__file__).parent.parent / "data"
 
@@ -425,6 +430,33 @@ def chart_bess_dispatch(df: pd.DataFrame, bess_result: dict, date_str: str, outp
         return None
 
 
+# ── Chart 7 — Social card (OG image) ──────────────────────────────────────
+
+def chart_social_card(summary: dict, date_str: str, outpath: Path):
+    """1200x627 social share card: title, headline mean price, INIS wordmark."""
+    fig = plt.figure(figsize=(CARD_W_IN, CARD_H_IN))
+    fig.patch.set_facecolor(PRICE_LINE)
+
+    pretty_date = date.fromisoformat(date_str).strftime("%-d %B %Y")
+
+    fig.text(0.06, 0.84, "I-SEM Daily Briefing", color="#FFFFFF",
+             fontsize=30, fontweight="bold", va="top")
+    fig.text(0.06, 0.70, pretty_date, color="#D8E0CC",
+             fontsize=18, va="top")
+
+    fig.text(0.06, 0.46, f"€{summary['mean_price']:.2f}", color="#FFFFFF",
+             fontsize=72, fontweight="bold", va="top")
+    fig.text(0.06, 0.16, "Mean DAM Price / MWh", color="#D8E0CC",
+             fontsize=16, va="top")
+
+    fig.text(0.94, 0.06, "inis.energy", color="#FFFFFF",
+             fontsize=16, fontweight="bold", va="bottom", ha="right", alpha=0.85)
+
+    fig.savefig(outpath, dpi=CARD_DPI, facecolor=PRICE_LINE)
+    plt.close(fig)
+    print(f"  Saved: {outpath}")
+
+
 # ── Master function (called by scaffold.py) ────────────────────────────────
 
 def _load_all_dam_data() -> pd.DataFrame:
@@ -503,6 +535,10 @@ def generate_daily_charts(data_filepath: Path, target_date: date, eirgrid_df=Non
     if bess_result is not None:
         if not _skip(chart_day_dir / f"bess-{date_str}.png"):
             chart_bess_dispatch(day_df, bess_result, date_str, chart_day_dir)
+
+    card_path = chart_day_dir / f"card-{date_str}.png"
+    if not _skip(card_path):
+        chart_social_card(summary, date_str, card_path)
 
     # Interactive charts: skip if the main one already exists
     if not _skip(chart_day_dir / f"dam-{date_str}.html"):

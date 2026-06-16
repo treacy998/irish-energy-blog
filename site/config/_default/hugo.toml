@@ -1,4 +1,4 @@
-baseURL = "https://irish-energy-blog.vercel.app/"
+baseURL = "https://www.inisenergy.com/insights/"
 languageCode = "en-ie"
 title = "Irish Energy Markets"
 theme = "congo"
@@ -7,7 +7,7 @@ theme = "congo"
   pagerSize = 10
 
 [permalinks]
-  daily = "/daily/:year/:month/:slug/"
+  daily = "/daily/:year/:month/:day/"
   weekly = "/weekly/:year/:month/:slug/"
 
 [taxonomies]

@@ -221,6 +221,7 @@ date: {date_str}
 authors: ["Eoin"]
 tags: ["daily-briefing", "DAM", "I-SEM"]
 summary: "DAM prices averaged €{summary['mean_price']}/MWh, peaking at €{summary['peak_price']}/MWh at {summary['peak_time']}."
+images: ["charts/{date_str}/card-{date_str}.png"]
 draft: false
 ---
 

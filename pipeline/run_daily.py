@@ -13,7 +13,7 @@ Usage:
 import argparse
 import subprocess
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from process import load_dam_data
@@ -116,6 +116,14 @@ def main():
     date_str = delivery_date.isoformat()
     print(f"  Delivery date: {delivery_date.strftime('%-d %B %Y')} ({date_str})")
     print(f"  Periods loaded: {len(df)}")
+
+    # ── Validation gate: refuse to publish stale data from a cache fallback ──
+    expected_date = target_date or (date.today() + timedelta(days=1))
+    if delivery_date != expected_date:
+        print(f"\n  ERROR: stale data — got delivery date {delivery_date.isoformat()}, "
+              f"expected {expected_date.isoformat()}.")
+        print("  This looks like a silent fallback to a cached file. Aborting before publish.")
+        sys.exit(1)
 
     title = f"I-SEM Daily Briefing — {delivery_date.strftime('%-d %B %Y')}"
 

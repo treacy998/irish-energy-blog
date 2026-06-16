@@ -7,12 +7,13 @@ weight = 1
   isoCode = "en"
   rtl = false
   dateFormat = "2 January 2006"
-  [params.header]
-    logo = ""
   description = "Daily data-driven analysis of Ireland's electricity markets — I-SEM, SEMO, EirGrid"
   author.name = "Eoin Treacy"
   author.headline = "Irish energy market analyst"
+  author.bio = "Founder of INIS Energy Brokers, a Cork-based commercial energy brokerage.\nWrites daily I-SEM and wholesale market analysis covering DAM pricing, wind generation, and BESS activity."
   author.links = [
     {linkedin = "https://www.linkedin.com/in/eoin-treacy-3aa62115b"},
-    {github = "https://github.com/treacy998/irish-energy-blog"},
+    {globe = "https://www.inisenergy.com"},
   ]
+  [params.header]
+    logo = ""

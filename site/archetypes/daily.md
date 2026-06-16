@@ -4,6 +4,7 @@ date: {{ .Date }}
 authors: ["Eoin"]
 tags: ["daily-briefing", "DAM"]
 summary: ""
+images: ["charts/{{ .Date.Format \"2006-01-02\" }}/card-{{ .Date.Format \"2006-01-02\" }}.png"]
 draft: false
 ---
 

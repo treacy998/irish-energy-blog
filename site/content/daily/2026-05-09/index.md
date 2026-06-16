@@ -4,6 +4,7 @@ date: 2026-05-09
 authors: ["Eoin"]
 tags: ["daily-briefing", "DAM", "I-SEM"]
 summary: "DAM prices averaged €113.41/MWh, peaking at €139.0/MWh at 19:30."
+images: ["charts/2026-05-09/card-2026-05-09.png"]
 draft: false
 ---
 

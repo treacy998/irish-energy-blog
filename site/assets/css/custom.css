@@ -431,6 +431,65 @@ html.dark .article-content hr {
   border-top-color: rgba(255, 255, 255, 0.06);
 }
 
+/* ── INIS CTA ──────────────────────────────────────────────── */
+
+.inis-cta {
+  margin: 3rem 0 1rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 6px;
+  border-left: 3px solid #48721c;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+html:not(.dark) .inis-cta {
+  background: #f0f5e8;
+  color: #243010;
+}
+
+html.dark .inis-cta {
+  background: #0b1608;
+  border-color: #4a7820;
+  color: #aecb8a;
+}
+
+.inis-cta-text {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.inis-cta-button {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 4px;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none !important;
+  background-color: #48721c;
+  color: #f5f4f2 !important;
+  transition: background-color 0.15s;
+}
+
+.inis-cta-button:hover {
+  background-color: #395e16;
+}
+
+html.dark .inis-cta-button {
+  background-color: #4a7820;
+  color: #f5f4f2 !important;
+}
+
+html.dark .inis-cta-button:hover {
+  background-color: #5c9128;
+}
+
 /* ── List page ─────────────────────────────────────────────── */
 
 .list-item-title {
