@@ -192,6 +192,13 @@ Handles upload and download of chart PNGs to/from Vercel Blob. All functions are
 ### `site/layouts/shortcodes/statbar.html`
 Named params: `mean`, `peak`, `min`, `spread`. Renders 4 dark navy metric chips with teal values.
 
+### `site/layouts/_partials/schema.html`
+Forked copy of Congo's `_partials/schema.html` (the theme has no override hook for this, so the whole file is duplicated). Carries two diffs from upstream:
+- Article `image` — same absolute URL as `og:image` (page image resources, else `images` front matter, made absolute via `absURL`). Empty/no front-matter image emits no field.
+- author `Person.url` — absolute URL of the post's `authors` taxonomy term page (e.g. `/insights/authors/eoin/`). Empty if the post has no `authors` term.
+
+**Re-diff this file against `site/themes/congo/layouts/_partials/schema.html` on every Congo submodule bump** — upstream changes here won't propagate automatically since this is a full-file override, not an extension.
+
 ### `site/assets/css/custom.css`
 IBM Plex Serif headings, JetBrains Mono numbers, teal accent `#2EC4B6`, tag pills navy/teal.
 
