@@ -24,3 +24,7 @@ theme = "congo"
 [outputFormats.RSS]
   mediatype = "application/rss+xml"
   baseName = "feed"
+
+[security]
+  [security.funcs]
+    getenv = ['^HUGO_', '^CI$', '^VERCEL_']
