@@ -38,11 +38,15 @@ draft: false
 
 **Std dev** €32.29/MWh  ·  **Median** €167.18/MWh  ·  **Periods above €150:** 27 of 48 (56%)
 
+The headline is range — €99.88, the biggest spread of the week. The median (€167.18) sitting above the mean (€158.27) tells you the distribution is skewed left; a deep cheap overnight dragging the average down. That overnight trough (€106.22 at 04:00) was wind-driven — 44% of demand covered at that moment. The rest of the day was expensive. High std dev of €32.29 reflects a day with genuine shape rather than the monotonous gas-set plateau.
+
 ## Price vs Wind
 
 ![Price vs Wind Generation](/charts/2026-06-19/price-wind-2026-06-19.png)
 
 **Mean wind:** 20.4%  ·  **Range:** 10.0%–50.7%
+
+Wind peaked at 50.7% at 01:30 and held above 40% through to 04:00 — a genuine overnight wind event, and prices showed it (€106-121 floor). Then it fell apart fast: 35% at 05:00 → 12.3% by 07:30, a two-hour collapse that pushed prices from €111 to €199.98. Wind never returned above 16% for the rest of the day. The inverse is textbook — where wind went, price followed in mirror image.
 
 ## Week in Context
 
@@ -54,11 +58,15 @@ draft: false
 
 **Periods above €150:** 27 (56% of day)  ·  **Above €200:** 1 (2% of day)
 
+Only 1 period above €200, but 27 of 48 above €150. The shape of the curve is a two-population day — a cluster of cheap overnight periods pulled by the wind event (roughly €106-125), and the rest of the day firmly expensive (€160-206). The curve isn't smooth; there's a visible step change between those two regimes.
+
 ## Peak / Off-Peak Spread
 
 ![Peak / Off-Peak Spread](/charts/2026-06-19/spread-2026-06-19.png)
 
 **Peak avg (07:00–22:00):** €177.46/MWh  ·  **Off-peak avg:** €126.29/MWh  ·  **Spread:** €51.17/MWh
+
+A €51.17 peak/off-peak spread is healthy — back to a normal daytime-premium structure. The off-peak average (€126.29) was depressed by the overnight wind glut, and the peak average (€177.46) reflects the gas-set afternoon. That overnight trough was a genuine cheap charge window; the spread says storage had something to work with today.
 
 ## BESS Dispatch Signal
 
@@ -73,7 +81,7 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-06-19/bess-2026-06-19.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
+The battery played this perfectly. Charged at €110 at 03:30 — right in the heart of the overnight wind glut, wind at 46.5% — and discharged at €195 at 07:30, catching the morning ramp just as wind collapsed through 12%. €112 gross. The spread came from wind timing: overnight charge into a wind surplus, morning discharge into a gas-ramp spike. This is the textbook BESS play. Best gross of the week so far.
 
 ## Commentary
 
