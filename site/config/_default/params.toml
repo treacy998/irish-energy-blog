@@ -47,3 +47,6 @@ showRecentItems = 5
 [taxonomy]
   showTermCount = true
   cardView = false
+
+[footer]
+  showScrollToTop = false
