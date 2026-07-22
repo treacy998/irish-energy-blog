@@ -1,5 +1,5 @@
 ---
-title: "Daily Briefings"
+title: "Authors"
 cascade:
   - params:
       robots: "noindex, follow"

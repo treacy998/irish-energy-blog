@@ -1,5 +1,5 @@
 ---
-title: "Daily Briefings"
+title: "Tags"
 cascade:
   - params:
       robots: "noindex, follow"
