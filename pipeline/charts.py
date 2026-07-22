@@ -457,6 +457,46 @@ def chart_social_card(summary: dict, date_str: str, outpath: Path):
     print(f"  Saved: {outpath}")
 
 
+# ── Chart — Weekly overview (called by weekly.py) ──────────────────────────
+
+def chart_weekly_overview(day_summaries: list, week_start: date, week_end: date, outpath: Path):
+    """Bar chart of daily mean price for the week, with wind % overlaid on a secondary axis."""
+    fig, ax = plt.subplots(figsize=(FIG_W, FIG_H))
+    _style(ax, fig)
+
+    labels = [pd.Timestamp(d["date"]).strftime("%a %d") for d in day_summaries]
+    means  = [d["mean_price"] for d in day_summaries]
+    x      = range(len(day_summaries))
+
+    ax.bar(x, means, color=PRICE_LINE, alpha=0.85, width=0.6, zorder=3)
+    ax.set_ylabel("Mean price € / MWh", color=TEXT_SEC, fontsize=8.5)
+    ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"€{v:.0f}"))
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(labels, color=TEXT_SEC, fontsize=8.5)
+
+    has_wind = all("wind_pct_mean" in d for d in day_summaries)
+    if has_wind:
+        ax2 = ax.twinx()
+        ax2.plot(x, [d["wind_pct_mean"] for d in day_summaries],
+                 color=WIND_LINE, linewidth=2.2, marker="o", markersize=4, zorder=5)
+        ax2.set_ylabel("Wind % of demand", color=WIND_LINE, fontsize=8.5)
+        ax2.tick_params(colors=WIND_LINE, labelsize=8.5)
+        ax2.spines["right"].set_edgecolor(BORDER)
+        for spine in ["top", "left", "bottom"]:
+            ax2.spines[spine].set_visible(False)
+
+    _header(
+        fig,
+        f"Week in Review — {week_start.strftime('%-d %b')}–{week_end.strftime('%-d %b %Y')}",
+        "Daily mean DAM price (bars)" + ("  ·  wind % of demand (line)" if has_wind else ""),
+    )
+
+    plt.tight_layout(rect=[0, 0, 1, 0.86])
+    fig.savefig(outpath, dpi=DPI, bbox_inches="tight", facecolor=BG)
+    plt.close(fig)
+    print(f"  Saved: {outpath}")
+
+
 # ── Master function (called by scaffold.py) ────────────────────────────────
 
 def _load_all_dam_data() -> pd.DataFrame:

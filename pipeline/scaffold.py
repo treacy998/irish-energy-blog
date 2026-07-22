@@ -277,46 +277,15 @@ Write 2-3 paragraphs here:
 
 
 def scaffold_weekly(target_date: date):
-    """Generate a weekly deep-dive post template."""
-    date_str = target_date.isoformat()
-    week_start = target_date - timedelta(days=6)
+    """Generate a weekly deep-dive post, pre-filled from the ISO week's daily data.
 
-    md = f"""---
-title: "Weekly Analysis — {week_start.strftime('%-d')}–{target_date.strftime('%-d %B %Y')}"
-date: {date_str}
-authors: ["Eoin"]
-tags: ["weekly-analysis", "I-SEM"]
-summary: ""
-draft: true
-ShowToc: true
----
-
-## Key Takeaways
-
--
--
--
-
-## Weekly Price Overview
-
-<!-- Embed weekly charts here -->
-
-## Analysis
-
-<!-- 800-1200 words of data-driven analysis -->
-
-## Methodology
-
-Data sourced from SEMO Day-Ahead Market results and EirGrid generation reports.
-Analysis performed in Python using pandas and matplotlib.
-
-"""
-
-    outdir = CONTENT_DIR / "weekly"
-    outdir.mkdir(parents=True, exist_ok=True)
-    outpath = outdir / f"{date_str}.md"
-    outpath.write_text(md)
-    print(f"\nWeekly post scaffolded: {outpath}")
+    Delegates to weekly.py, which aggregates the 7 days of DAM/wind data
+    (Mon-Sun containing target_date) into stats, a chart, and templated
+    takeaway bullets — still draft: true, still needs the Analysis section
+    written by hand.
+    """
+    from weekly import build_weekly_draft
+    build_weekly_draft(target_date)
 
 
 if __name__ == "__main__":
