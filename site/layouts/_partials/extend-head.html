@@ -1,5 +1,121 @@
+<!-- ATTRIBUTION-SYNC: mirrored by hand in inis-energy's lib/attribution/capture.ts
+     (full path: /home/treacy998/inis/inis-energy/lib/attribution/capture.ts).
+     Keep both copies in sync — there is no shared package between the two repos.
+     Deliberate exception: the landing_page path guard (must start with '/') lives only
+     in inis-energy's lib/attribution/parse.ts. It's a server-side boundary check against
+     a direct POST bypassing capture.ts; this script can only ever produce a real
+     pathname, so there's nothing to guard here. Don't "fix" this file to match. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400&display=swap" rel="stylesheet">
 <!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8fe31050c9a64fa3a30188a1a7a57578"}'></script><!-- End Cloudflare Web Analytics -->
 {{ with os.Getenv "VERCEL_GIT_COMMIT_SHA" }}<meta name="build-commit" content="{{ . }}">{{ end }}
+<!-- First-touch acquisition attribution: session-scoped, no persistent identifier.
+     Mirrors the capture logic in inis-energy's lib/attribution/capture.ts — keep the
+     two in sync by hand, there is no shared package between these repos. Writes only
+     to sessionStorage (cleared when the tab closes); read back by /compare on submit
+     since /insights/* and /compare are same-origin (Vercel rewrite, not a subdomain). -->
+<script>
+(function () {
+  var STORAGE_KEY = 'inis_attribution';
+  var MAX_LEN = 512;
+  var UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+  // Low-cardinality reporting labels — matches what a real utm_source=<name> tag would
+  // write, so tagged and derived rows group together instead of splitting by raw host
+  // (www.google.com vs google.ie). Hosts matched via host === entry ||
+  // host.endsWith('.' + entry), never substring, so a referrer host can't smuggle a
+  // known name as a fragment (e.g. "google.com.example.io" must not read as Google).
+  var ORGANIC_REFERRERS = [
+    { name: 'google', hosts: ['google.com', 'google.ie', 'google.co.uk'] },
+    { name: 'bing', hosts: ['bing.com'] },
+    { name: 'duckduckgo', hosts: ['duckduckgo.com'] },
+    { name: 'yahoo', hosts: ['yahoo.com'] },
+    { name: 'ecosia', hosts: ['ecosia.org'] }
+  ];
+  var SOCIAL_REFERRERS = [
+    { name: 'linkedin', hosts: ['linkedin.com'] },
+    { name: 'facebook', hosts: ['facebook.com'] },
+    { name: 'x', hosts: ['x.com', 'twitter.com'] },
+    { name: 'instagram', hosts: ['instagram.com'] }
+  ];
+
+  function truncate(value) {
+    return value ? value.slice(0, MAX_LEN) : null;
+  }
+
+  function matchesHost(referrerHost, entry) {
+    return referrerHost === entry || referrerHost.endsWith('.' + entry);
+  }
+
+  function findGroup(referrerHost, groups) {
+    for (var i = 0; i < groups.length; i++) {
+      for (var j = 0; j < groups[i].hosts.length; j++) {
+        if (matchesHost(referrerHost, groups[i].hosts[j])) return groups[i];
+      }
+    }
+    return null;
+  }
+
+  function classifyReferrer(referrerHost, currentHost) {
+    if (!referrerHost) return { source: 'direct', medium: 'none' };
+    // Same-host referrer (capture script hadn't run on the earlier page yet) is not an
+    // acquisition channel — medium stays 'none' like true direct, but the source label
+    // keeps the two distinguishable for diagnostics rather than overloading medium.
+    if (referrerHost === currentHost) return { source: 'internal-uncaptured', medium: 'none' };
+    var organic = findGroup(referrerHost, ORGANIC_REFERRERS);
+    if (organic) return { source: organic.name, medium: 'organic' };
+    var social = findGroup(referrerHost, SOCIAL_REFERRERS);
+    if (social) return { source: social.name, medium: 'social' };
+    return { source: referrerHost, medium: 'referral' };
+  }
+
+  try {
+    if (sessionStorage.getItem(STORAGE_KEY)) return;
+
+    var params = new URLSearchParams(window.location.search);
+
+    var utmSource = params.get('utm_source');
+    var utmMedium = params.get('utm_medium');
+    var utmCampaign = params.get('utm_campaign');
+
+    // Gate on the outcome (did utm_source/utm_medium actually come through?), not on
+    // whether any of the 5 UTM keys appeared — a link tagged with only utm_content
+    // must still fall through to referrer-derived classification.
+    var hasUtm = Boolean(utmSource) || Boolean(utmMedium);
+
+    var referrer = document.referrer || null;
+    var referrerHost = null;
+    try {
+      referrerHost = referrer ? new URL(referrer).host : null;
+    } catch (e) {
+      referrerHost = null;
+    }
+
+    if (!hasUtm) {
+      var derived = classifyReferrer(referrerHost, window.location.host);
+      utmSource = derived.source;
+      utmMedium = derived.medium;
+    }
+
+    var keptParams = new URLSearchParams();
+    UTM_KEYS.forEach(function (k) {
+      var v = params.get(k);
+      if (v) keptParams.set(k, v);
+    });
+    var qs = keptParams.toString();
+    var landingPage = window.location.pathname + (qs ? '?' + qs : '');
+
+    var payload = {
+      utm_source: truncate(utmSource),
+      utm_medium: truncate(utmMedium),
+      utm_campaign: truncate(utmCampaign),
+      referrer: truncate(referrer),
+      landing_page: truncate(landingPage)
+    };
+
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch (e) {
+    // sessionStorage unavailable (private mode, disabled storage) — fail silently, never block navigation
+  }
+})();
+</script>
