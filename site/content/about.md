@@ -14,7 +14,7 @@ A daily, data-driven blog covering Ireland's wholesale electricity markets. Ever
 
 ## Who We Are
 
-**Eoin** — Energy broker and founder of INIS Energy, a brokerage based in Cork. Background in software development with a focus on the intersection of energy markets and data analysis. Building expertise in wholesale market mechanics, flexibility services, and grid operations.
+**Eoin** — Energy broker and founder of INIS Energy, a brokerage based in Dublin. Background in software development with a focus on the intersection of energy markets and data analysis. Building expertise in wholesale market mechanics, flexibility services, and grid operations.
 
 <!-- Add your brother's bio here when he joins -->
 
