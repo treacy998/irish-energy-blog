@@ -240,9 +240,9 @@ Data sourced from SEMO Day-Ahead Market results and EirGrid generation reports.
 Analysis performed in Python using pandas and matplotlib.
 """
 
-    outdir = CONTENT_DIR / "weekly"
+    outdir = CONTENT_DIR / "weekly" / sunday.isoformat()
     outdir.mkdir(parents=True, exist_ok=True)
-    outpath = outdir / f"{sunday.isoformat()}.md"
+    outpath = outdir / "index.md"
     outpath.write_text(md)
     print(f"\nWeekly draft scaffolded: {outpath}")
     print(f"Covered {agg['days_covered']}/7 days. Chart: {chart_path}")
