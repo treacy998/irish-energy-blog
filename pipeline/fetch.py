@@ -13,6 +13,8 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 from pathlib import Path
 
+DEFAULT_DATA_DIR = Path(__file__).parent.parent / "data"
+
 
 EIRGRID_BASE  = "https://www.smartgriddashboard.com/api/chart/"
 SEMOPX_BASE   = "https://reports.semopx.com"
@@ -92,7 +94,9 @@ def fetch_semo(delivery_date: date | str | None = None, out_dir: Path | str = "d
     return out_path
 
 
-def fetch_wind_and_demand(delivery_date: date) -> pd.DataFrame | None:
+def fetch_wind_and_demand(
+    delivery_date: date, out_dir: Path | str = DEFAULT_DATA_DIR
+) -> pd.DataFrame | None:
     """
     Fetch wind generation and demand for delivery_date from EirGrid.
 
@@ -104,11 +108,17 @@ def fetch_wind_and_demand(delivery_date: date) -> pd.DataFrame | None:
 
     Returns None if the fetch fails for any reason.
     The pipeline continues without wind data if None is returned.
+
+    The raw EirGrid JSON response for each area is archived to
+    out_dir/eirgrid_raw/<delivery_date>/<area>.json before parsing, so the
+    published figures stay reproducible from disk even if EirGrid's
+    historical window later ages the live query out.
     """
     date_str = delivery_date.strftime("%d-%b-%Y")   # e.g. "17-May-2026"
+    raw_dir = Path(out_dir) / "eirgrid_raw" / delivery_date.isoformat()
 
-    wind   = _fetch_area("wind",   date_str)
-    demand = _fetch_area("demand", date_str)
+    wind   = _fetch_area("wind",   date_str, raw_dir=raw_dir)
+    demand = _fetch_area("demand", date_str, raw_dir=raw_dir)
 
     if wind is None or demand is None:
         return None
@@ -131,7 +141,7 @@ def fetch_wind_and_demand(delivery_date: date) -> pd.DataFrame | None:
     return df
 
 
-def _fetch_area(area: str, date_str: str) -> pd.DataFrame | None:
+def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None) -> pd.DataFrame | None:
     """Fetch a single area (wind or demand) from EirGrid API."""
     try:
         resp = requests.get(
@@ -147,6 +157,11 @@ def _fetch_area(area: str, date_str: str) -> pd.DataFrame | None:
             timeout=TIMEOUT,
         )
         resp.raise_for_status()
+
+        if raw_dir is not None:
+            raw_dir.mkdir(parents=True, exist_ok=True)
+            (raw_dir / f"{area}.json").write_text(resp.text)
+
         data = resp.json()
 
         rows = data.get("Rows") or data.get("rows") or []

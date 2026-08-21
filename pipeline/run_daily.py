@@ -130,7 +130,7 @@ def main():
     # ── Step 3: generate charts + scaffold post ──────────────────────────────
     step(3, TOTAL_STEPS, "Generating charts and scaffolding post...")
     print("  Fetching EirGrid wind and demand data…")
-    eirgrid_df = fetch_wind_and_demand(delivery_date)
+    eirgrid_df = fetch_wind_and_demand(delivery_date, out_dir=DATA_DIR)
     if eirgrid_df is not None:
         print(f"  ✓ EirGrid data fetched — {eirgrid_df['WindGeneration_pct'].mean():.1f}% avg wind")
     else:

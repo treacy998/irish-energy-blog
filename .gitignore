@@ -1,6 +1,7 @@
 # Data files (keep repo lean — raw data stays local)
 data/*.csv
 data/*.xlsx
+data/eirgrid_raw/
 !data/.gitkeep
 
 # Python
