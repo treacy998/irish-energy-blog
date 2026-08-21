@@ -1,6 +1,8 @@
 ---
 title: "Daily Briefings"
 cascade:
-  - params:
+  - _target:
+      kind: page
+    params:
       robots: "noindex, follow"
 ---
