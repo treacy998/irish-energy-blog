@@ -8,7 +8,7 @@ theme = "congo"
 
 [permalinks]
   daily = "/daily/:year/:month/:day/"
-  weekly = "/weekly/:year/:month/:slug/"
+  weekly = "/weekly/:year/:month/:day/"
 
 [taxonomies]
   tag = "tags"

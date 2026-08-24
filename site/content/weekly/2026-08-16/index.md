@@ -6,6 +6,7 @@ authors: ["Eoin"]
 tags: ["weekly-analysis", "I-SEM"]
 summary: "DAM prices averaged €172.61/MWh this week, up 20.0% week-on-week, ranging from €119.52 to €312.1/MWh."
 images: ["charts/weekly/2026-08-16/weekly-overview-2026-08-16.png"]
+aliases: ["/weekly/2026/08/2026-08-16/"]
 draft: false
 ShowToc: true
 ---
