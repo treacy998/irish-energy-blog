@@ -84,6 +84,23 @@ def _build_data_table(day_df, eirgrid_df, date_str: str) -> str:
 """
 
 
+def classify_day_type(summary: dict) -> str:
+    """Classify the day for the broker-takeaway section. Checked in priority order
+    so an extreme day is never miscategorized as merely 'wide-spread'. wind-cheap
+    is the only label that makes a causal claim (cheap *because of* wind), so it's
+    the only one gated on wind data actually being present."""
+    peak_offpeak_spread = summary.get("peak_offpeak_spread")
+    wind_pct = summary.get("wind_pct_mean")
+
+    if summary["peak_price"] >= 250 or summary["periods_above_200"] >= 4:
+        return "spike"
+    if summary["price_range"] >= 150 or (peak_offpeak_spread is not None and peak_offpeak_spread >= 100):
+        return "wide-spread"
+    if wind_pct is not None and wind_pct >= 55 and summary["mean_price"] <= 55:
+        return "wind-cheap"
+    return "flat"
+
+
 def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = None, eirgrid_df=None, bess_result=None, force: bool = False):
     """Generate a daily briefing post with charts and pre-filled metrics."""
     data_file = find_data_file(target_date, explicit=explicit_file)
@@ -209,10 +226,37 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
 {"" if not has_bess_chart else f"""
 ![BESS Dispatch](/charts/{date_str}/bess-{date_str}.png)
 """}
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
 """
     else:
         bess_section = ""
+
+    day_type = classify_day_type(summary)
+    guardrail = "spot ≠ forward, educate don't signal"
+    if day_type == "wide-spread":
+        spread_value = summary.get("peak_offpeak_spread")
+        spread_label = "Peak/off-peak spread" if spread_value is not None else "Price range"
+        if spread_value is None:
+            spread_value = summary["price_range"]
+        cue = f"{spread_label} hit €{spread_value:.0f}/MWh today — good context for demand flexibility and storage conversations — {guardrail}."
+    elif day_type == "spike":
+        cue = f"Price spiked to €{summary['peak_price']:.0f}/MWh at {summary['peak_time']} — useful for explaining exposure on variable-rate contracts — {guardrail}."
+    elif day_type == "wind-cheap":
+        cue = f"Wind at {summary['wind_pct_mean']:.0f}% pushed the average down to €{summary['mean_price']:.0f}/MWh — good example of renewables lowering average cost — {guardrail}."
+
+    if day_type == "flat":
+        broker_section = ""
+    else:
+        broker_section = f"""
+## Broker Takeaway
+
+<!-- {cue} -->
+
+**Renewing:**
+
+**On variable:**
+
+**Already fixed:**
+"""
 
     # Generate markdown
     md = f"""---
@@ -247,12 +291,12 @@ draft: false
 ## Week in Context
 
 ![7-Day Price Comparison](/charts/{date_str}/week-compare-{date_str}.png)
-{pdc_section}{spread_section}{bess_section}
+{pdc_section}{spread_section}{bess_section}{broker_section}
 ## Commentary
 
 <!--
 Write 2-3 paragraphs here:
-- What drove the price shape today?
+- What drove the price shape today, and was it a good day for storage?
 - How does wind/demand explain the peak and trough?
 - Anything unusual compared to the week?
 - Market context: outages, interconnector, weather forecast?
