@@ -64,8 +64,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-07-31/bess-2026-07-31.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Today flipped the usual script: the single highest price of the day, €223.14, landed at 23:00 — the very first half-hour on the clock — before sliding steadily through the small hours into a long, shallow trough across the early afternoon. By 14:30 price had fallen to €124.63, roughly half the overnight peak, before demand pulled it straight back up: €181.53 by 18:00, past €200 by 20:00, and a second high plateau — €206 to €223 — running from 20:00 clean through to the following midnight.

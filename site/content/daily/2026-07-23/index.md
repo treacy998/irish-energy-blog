@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-07-23/bess-2026-07-23.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Wind sat at 10.0% of demand all day and never got above 21%. That's a thin margin for the system to work with, and it showed: every single half-hour period cleared above €150, and the morning ramp from 6am to 8:30am pushed straight through €240 as wind fell to 5.1% right when demand was climbing hardest. Flat and high, with the ceiling breached at the worst possible moment for consumers.

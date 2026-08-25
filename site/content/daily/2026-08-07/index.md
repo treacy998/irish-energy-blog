@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-07/bess-2026-08-07.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Friday backed off from Thursday's extremes on both ends. Wind steadied into a moderate 19.3% band (13.9–26.3%), and the price curve reflects that mid-table calm: no period broke €200 for the first time since Monday, and the trough spent nearly two and a half hours pinned dead flat at €109.16 from 11:00 to 15:30 — about as featureless a midday plateau as this market produces.

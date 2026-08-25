@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-13/bess-2026-08-13.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Thursday delivered the week's clearest scarcity signal. Wind collapsed to 9.9% (5.8–17.2%, never breaking out of single digits-to-teens all day) and the market priced it accordingly: mean €196.14, the week's highest, on a peak of €312.1 at 19:30 — also the week's highest. Forty of forty-eight periods cleared above €150 (83%) and nineteen above €200 (40%), the most scarce day so far. Low wind alone doesn't set the ceiling — it removes the buffer, and thermal plant does the rest once evening demand arrives.

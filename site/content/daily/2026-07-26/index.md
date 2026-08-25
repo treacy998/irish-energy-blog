@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-07-26/bess-2026-07-26.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 The windiest day of the week by far — 52.8% average, up to 69.1% — and the price curve tells you everything about what high wind does to this market. From 11:00 to 15:30, wind sat above 43% and price cratered to single digits, bottoming at €10.0/MWh at 15:30. That's five straight hours under €20. The system was, for long stretches of the early afternoon, essentially giving power away.

@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-12/bess-2026-08-12.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Wednesday broke Tuesday's flatness wide open. Std dev jumped to €47.26 as a moderate 19.2% wind day (6.8–36.8% range) gave way to a classic evening scarcity ramp: a soft €128.17 trough at 15:00 running into a €276.75 peak just four hours later at 19:00, a €148.58 top-to-bottom range. Eleven of forty-eight periods cleared above €200 — the floor stayed gas-set through the afternoon, the ceiling opened up once wind eased into the evening squeeze.

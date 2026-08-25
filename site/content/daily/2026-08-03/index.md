@@ -64,8 +64,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-03/bess-2026-08-03.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Sunday gave the market its cleanest single-cycle day in over a week: one trough, one peak, no double humps. Price eased from €160 at 23:00 down to €144 by 03:30, ticked up briefly around the 05:00–06:30 morning ramp, then settled into a proper trough from 10:00 to 14:30 — €127.56 the low, held for a full hour either side of 13:00. From there it built steadily through the afternoon into a single evening peak, €206.00 at 19:30, before easing back to €174.40 by close.

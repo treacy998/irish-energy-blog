@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-22/bess-2026-08-22.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Saturday's wind fell off a cliff — from around 19% at midnight down to under 5% by 08:30, and it never really recovered, bottoming at 3.6% right at 20:00. Weekend demand kept the midday trough shallow regardless (€146.88 at 09:30, still low-wind territory), but by evening the no-wind, low-relief combination pushed price into a sharp spike: €240.00 at 19:00, the single highest print of the run, and the widest spread of the four days at €29.57 std dev.

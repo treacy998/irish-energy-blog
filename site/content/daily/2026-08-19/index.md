@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-19/bess-2026-08-19.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Wednesday held wind high for a second straight day — 32.5% (23.0–42.0%) — and the week's now-familiar flat, moderate profile continued: mean €173.6, std dev €24.62, only 19% of periods above €200. The peak/off-peak spread returned to normal, small and positive at €8.44, undoing Sunday's inversion now that weekday demand was back: evening peak-hour demand only needed to nudge above overnight levels, not fight through near-zero wind, to hold the usual shape.

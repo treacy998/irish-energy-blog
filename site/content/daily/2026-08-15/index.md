@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-15/bess-2026-08-15.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Saturday broke the pattern the week had been building. Wind fell to its lowest point yet — 4.1%, ranging just 1.2–9.1% — which on Thursday and Friday would have meant a sharp evening squeeze. Instead the day went flat: std dev dropped to €27.44, the peak eased to €225.18 at 21:00 (later than the week's usual 19:00 ramp), and the peak/off-peak spread compressed to essentially nothing at €0.99. Eighty-five percent of periods cleared above €150 — the highest share of the week — but only 21% broke €200. The floor rose while the ceiling came down.

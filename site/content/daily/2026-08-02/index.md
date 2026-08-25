@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-02/bess-2026-08-02.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 The day opened already elevated — €220.53 at 23:00, €206.62 by 23:30, the tail end of Saturday evening demand — before wind reasserted itself just after midnight, collapsing from 29.6% to 1.7% in a single half-hour and dragging price down through the €200s and €190s as it went. From there the pattern turned clean: wind climbed steadily through the morning, reaching 19.4% by 14:00, and price sank in step, bottoming at €140.77 at 11:30 in a shallow trough that ran from 09:30 clean through to 15:30.

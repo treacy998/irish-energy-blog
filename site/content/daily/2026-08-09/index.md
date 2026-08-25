@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-09/bess-2026-08-09.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Sunday reset back toward a single-cycle shape, much like the 3rd. Price drifted down from an overnight €150-ish band into a flat trough — pinned at exactly €115.40 for most of 11:30 to 15:00 — then built steadily through the afternoon into one clean evening peak, €203.07 at 21:30, with 4 of 48 periods clearing €200. Wind held a moderate, fairly stable 21.5% through the day, doing little to disturb the shape either way.

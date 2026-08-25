@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-07-25/bess-2026-07-25.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Wind stepped up again — 37.5% average, peaking at 60.6% overnight — and the price curve caved in the middle of the day. From 07:00 through 09:30, wind held in the 26–44% band and price fell through the floor, bottoming at €20.86 at 09:00. Three consecutive hours under €40/MWh in the middle of a weekday morning is not something low-wind days ever produce.

@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-18/bess-2026-08-18.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Tuesday reset the week. Wind surged overnight — 47–52% from midnight through the small hours — and drove the day's mean down to €168.19, the run's lowest std dev (€22.06), and just 15% of periods above €200, the quietest ceiling of the run. The €142.00 trough landed at 03:30, in the middle of that overnight wind glut, not the usual midday dip — a reminder that "trough" moves with wherever the wind actually is, not with the clock.

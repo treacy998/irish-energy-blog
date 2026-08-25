@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-07-28/bess-2026-07-28.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Wind climbed back to 38.3%, its highest since Sunday, and the peak/off-peak spread slipped just barely negative again at -€6.72 — essentially flat between day and night rather than sharply inverted. The overnight hours actually carried the higher average this time, as wind above 40% between 01:00 and 06:00 kept a lid on prices while the daytime trough (€106.95 at 13:30) came from a more modest wind level in the mid-30s.

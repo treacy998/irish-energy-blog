@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-06/bess-2026-08-06.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Wind collapsed overnight — from 61% on Wednesday to a mean of 13.2%, dipping as low as 4.0% through the mid-morning — and gas took the market straight back. This was the inverse of yesterday almost hour for hour: where Wednesday cannibalised itself into single digits, Thursday built into a €226.11 evening peak, the highest of the week, with 7 of 48 periods clearing €200.

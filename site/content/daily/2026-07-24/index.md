@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-07-24/bess-2026-07-24.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Wind nearly doubled on yesterday, averaging 18.2% and touching 30.3% through the evening, and the price shape responded by inverting. Peak/off-peak spread went negative (-€25.39) — the cheapest hours weren't overnight, they were the early afternoon trough between 11:00 and 16:30, when wind held above 16% and prices sat pinned near €129, briefly touching €127.17. That's the cannibalisation signature: wind supplying the middle of the day pushes clearing price down exactly when it's generating most.

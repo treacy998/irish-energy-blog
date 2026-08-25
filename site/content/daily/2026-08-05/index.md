@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-05/bess-2026-08-05.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Wednesday is the week's outlier, and it isn't close. Wind averaged 42.3% of demand and peaked at 61.1%, and the merit order showed it: price fell off a cliff from a €150 mid-morning level down to single digits by 10:00, bottoming at €8.12 at 13:30 and holding under €15 for nearly two hours either side of it. That's cannibalisation working exactly as advertised — once wind is deep enough into the stack, every extra MWh of it pushes gas out and the clearing price collapses toward zero.

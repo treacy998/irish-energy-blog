@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-23/bess-2026-08-23.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Sunday pushed the wind drought to its most extreme point yet — 0.1% of demand at 09:00, essentially becalmed, staying in low single digits until a late recovery to near 12% by 23:00. Demand was Sunday-light, so the midday trough held at €146.20 (10:30), but with almost nothing coming from wind, both the evening peak (€229.16 at 21:00) and the tail of the previous night stayed high enough that the peak/off-peak spread compressed to almost nothing (€0.74) — there was no real overnight relief to speak of.

@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-07-29/bess-2026-07-29.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Wind dropped back to 14.5%, the second-lowest reading of the week, and the market responded exactly as it did on Thursday: flat and high, with 38 of 48 periods clearing above €150 and a full quarter of the day above €200. The morning ramp from 06:30 to 09:00 pushed price from €174.40 to a €215+ plateau as wind sat under 12%, and the evening did the same thing again — wind falling from 13% at 17:00 to 9.3% by 20:30 drove price to the day's €223.09 peak.

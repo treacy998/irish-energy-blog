@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-08/bess-2026-08-08.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Saturday's lower weekend demand (mean 3,529 MW) combined with decent wind (21.0%, up to 28.6%) to carve out a long, deep midday trough — price sank under €100 by 10:00 and stayed there for six hours, bottoming at €47.51 at 15:00. The day opened high, tailing off Friday evening's peak at €184.99, then fell almost the whole morning before the familiar evening ramp rebuilt it back to the high €170s by 20:30.

@@ -64,8 +64,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-04/bess-2026-08-04.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Tuesday's shape flipped the usual script: the day's high, €201.03, landed at 09:00, not in the evening. Price built steadily from a €146 overnight floor into a sharp commuter-hour ramp, then cracked €200 before 09:30 and spent the rest of the day unwinding — down to a €129.44 trough at 14:30, then a second, smaller climb into a 183-ish evening plateau (18:30–20:30) that never troubled the morning's peak.

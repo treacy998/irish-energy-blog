@@ -64,8 +64,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-10/bess-2026-08-10.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Monday brought the week's most expensive day by every measure: mean €165.78, and a €228.21 peak at 20:00 — the highest single price of the week, edging out Thursday's €226.11. The shape echoes the 4th's double-hump — a steep pre-dawn ramp into a morning shoulder at €203.24 (07:30), a modest €130.99 midday trough at 11:30, then a hard afternoon build into the evening peak, holding above €200 from 18:00 clean through to 21:00.

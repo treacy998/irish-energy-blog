@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-07-27/bess-2026-07-27.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Wind pulled back to 26.1% after the weekend's extremes, and the price shape snapped back to something more conventional: a positive peak/off-peak spread of €20.63, the first day this week where the traditional evening premium actually held. The morning ramp from 06:00 to 07:30 pushed price from €161.50 to €201.29 as wind eased into the mid-20s, and the evening peak at 19:00 (€214.54) came as wind dipped back toward 19%.

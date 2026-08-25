@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-17/bess-2026-08-17.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Monday broke the shape as well as the pattern. Overnight wind was strong — 46–48% through the small hours — but it collapsed to single digits by 06:00–09:30, right as morning demand ramped up, and the price spiked into a €248.00 peak at 09:30. That's a morning squeeze, not the usual evening one, and it's why every single period cleared above €150 today (100%, the first time this week) and 42% cleared above €200. Wind recovered steadily through the afternoon and evening — back to 40%+ by 18:00 — which capped what would otherwise have been a second, evening peak: prices eased to a €162.12 trough at 15:30 and only climbed back to €215-ish by 19:00, well under the morning's €248.

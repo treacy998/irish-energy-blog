@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-14/bess-2026-08-14.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Friday eased off Thursday's extreme without breaking the pattern. Wind nudged up only slightly to 11.1% (8.0–18.3%), still firmly in low-wind territory, and the price responded the same way in miniature: mean fell to €182.7, peak to €273.29 at 19:00, periods above €200 down to fourteen of forty-eight (29%, from Thursday's 40%). The share above €150 held exactly at 83% — the floor stayed elevated even as the ceiling came down.

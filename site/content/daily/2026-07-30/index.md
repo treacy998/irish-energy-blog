@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-07-30/bess-2026-07-30.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Wind spent the day climbing out of an overnight trough — 9.3% at 08:00, past 20% by 11:00, peaking at 32.6% mid-afternoon — and price followed it down almost tick for tick. The €121–122 plateau from 12:00 to 14:30 is as flat a trough as the week has produced, a full €37 under the day's average. Wind then unwound just as fast into the evening, falling from 32% at 18:00 to 20.9% by 20:30, and price rebuilt itself into a proper spike: €189 by 18:00, €214.01 by 20:00, the day's peak.

@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-21/bess-2026-08-21.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Friday's low point was a genuine morning squeeze: wind fell from 17.8% to 12.4% between 07:00 and 08:30, and price spiked to €205.04 right in the middle of it — the day's second-highest reading, beaten only by the evening. Wind recovered steadily through the afternoon, touching a 27.9% high at 17:00, and held above 20% for the rest of the evening — but that didn't stop price climbing to a €213.08 peak at 21:00 anyway. Demand was doing the driving this time, not wind: every single half-hour period cleared €150 today, the tightest floor of the run, with a €152.73 minimum.

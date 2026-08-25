@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-01/bess-2026-08-01.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 The lowest-wind day of the week, 9.7% on average and never above 17.8%, but it didn't play out as a flat, high day like the 29th — Saturday demand was too soft for that. Wind eased price down from €211 at 23:00 to the €156–158 range by 05:00–07:00, then held there as wind fell back toward 8–10%. With weekend demand light enough to absorb it, price didn't spike — it flatlined instead, pinned at exactly €122.30 for six straight periods from 11:00 to 14:00. Only once wind collapsed further into the evening, down to 2.2% by 22:30, and demand picked back up did the market break: €146 by 17:00, €215 by 20:00, a session-high €247.60 at 22:00.

@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-16/bess-2026-08-16.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Sunday pushed the weekend demand story further and delivered the week's flattest day: std dev €23.52, mean €168.38, both new lows. The standout number is the peak/off-peak spread — it went negative, €-8.46, meaning the average price during peak hours (07:00–22:00) actually came in below the overnight average. With Sunday demand at the week's floor (3583 MW) and wind up to a moderate 14.6% (1.7–25.0%), there was no daytime demand pull strong enough to lift peak-hour prices above whatever held overnight — a genuine inversion of the usual shape, not just a flat day.

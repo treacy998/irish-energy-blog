@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-06-18/bess-2026-06-18.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Today was the calmest day in a while — mean €138.77, and not a single half-hour broke €200. Wind running at 31.5% kept a lid on things across the board.

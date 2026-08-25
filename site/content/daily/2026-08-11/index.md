@@ -73,8 +73,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-11/bess-2026-08-11.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Tuesday eased off Monday's scarcity pricing — no period cleared €200, and std dev fell to €20.91, the week's second-flattest day behind only the 4th. Wind sat in a familiar moderate band (20.6%, 13.5–32.1%), and the shape followed the same gentle single-cycle pattern as most of the week: a mild overnight rise to €160-ish by 06:00–08:00, a soft afternoon trough of €119.52 at 15:00, then a clean build into a €190.64 evening peak at 19:30.

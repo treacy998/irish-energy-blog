@@ -64,8 +64,6 @@ draft: false
 
 ![BESS Dispatch](/charts/2026-08-20/bess-2026-08-20.png)
 
-<!-- BESS Commentary: Was today a good day for storage? What drove the spread? -->
-
 ## Commentary
 
 Thursday traced the usual midday-dip, evening-climb shape — down to a €140.56 floor at 15:00, up to €203.17 by 20:30 — but the wind feed didn't come through today, so this one's price-only. What we do have is wind in raw MW: it held above 1,400MW for most of the morning and only fell away after 19:00, right as the evening price started climbing, which is at least a plausible driver even without demand to turn it into a clean percentage. The odd number of the day was a slightly negative peak/off-peak spread (€-2.18) — overnight hours stayed elevated enough (€187.87 at 23:00, still €173 by midnight) to outweigh the midday trough within the 07:00–22:00 window, so "peak" hours actually averaged a touch below "off-peak."
