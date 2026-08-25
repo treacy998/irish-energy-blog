@@ -75,11 +75,13 @@ A sharply negative spread: -€59.8. Off-peak (€227.81) is the most expensive 
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €116/MWh | 13:30 | 2 MWh | −€232 |
-| **Discharge** | €276/MWh | 02:00 | 1.7 MWh (85% RTE) | +€470 |
-| **Gross profit** | | | | **€238** |
-| **Price spread** | €160/MWh | | | **ROI: 102.4%** |
+| **Discharge** | €181/MWh | 19:00 | 1.7 MWh (85% RTE) | +€307 |
+| **Gross profit** | | | | **€75** |
+| **Price spread** | €65/MWh | | | **ROI: 32.2%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
+*Updated 2026-08-25: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery. This day's figure was recalculated enforcing charge-before-discharge; gross profit corrected from €238 to €75.*
 
 ![BESS Dispatch](/charts/2026-06-14/bess-2026-06-14.png)
 

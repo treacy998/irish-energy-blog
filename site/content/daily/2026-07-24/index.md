@@ -65,11 +65,13 @@ draft: false
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €129/MWh | 14:30 | 2 MWh | −€257 |
-| **Discharge** | €213/MWh | 23:00 | 1.7 MWh (85% RTE) | +€362 |
-| **Gross profit** | | | | **€105** |
-| **Price spread** | €84/MWh | | | **ROI: 40.8%** |
+| **Discharge** | €205/MWh | 19:00 | 1.7 MWh (85% RTE) | +€348 |
+| **Gross profit** | | | | **€91** |
+| **Price spread** | €76/MWh | | | **ROI: 35.4%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
+*Updated 2026-08-25: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery. This day's figure was recalculated enforcing charge-before-discharge; gross profit corrected from €105 to €91.*
 
 ![BESS Dispatch](/charts/2026-07-24/bess-2026-07-24.png)
 

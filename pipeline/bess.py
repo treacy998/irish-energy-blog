@@ -9,7 +9,7 @@ Assumptions:
   - 2 MWh usable capacity
   - Charge window: 4 consecutive half-hours at lowest prices
   - Discharge window: 4 consecutive half-hours at highest prices
-  - No constraint that discharge must follow charge (DAM arbitrage model)
+  - Discharge window must start after charge window ends (same-day only)
   - Round-trip efficiency: 85%
   - Result is gross — before network charges, capacity costs, degradation
 
@@ -36,11 +36,19 @@ def simulate_bess(df: pd.DataFrame) -> dict | None:
 
     rolling_sum = prices.rolling(4).sum()
 
-    # Find the 4-consecutive-period window with lowest / highest sum
+    # Charge window: the 4-consecutive-period window with lowest sum
     charge_end_idx = int(rolling_sum.idxmin())
-    discharge_end_idx = int(rolling_sum.idxmax())
-
     charge_idx = list(range(charge_end_idx - 3, charge_end_idx + 1))
+
+    # Discharge window: highest-sum 4-period window, but only among windows
+    # that start after the charge window ends (same-day causality — a battery
+    # can't sell energy it hasn't charged yet). Earliest valid discharge_end_idx
+    # is charge_end_idx + 4, so its own window doesn't overlap the charge window.
+    post_charge = rolling_sum.iloc[charge_end_idx + 4:]
+    if post_charge.empty:
+        return None  # no viable causal discharge window left in the day
+
+    discharge_end_idx = int(post_charge.idxmax())
     discharge_idx = list(range(discharge_end_idx - 3, discharge_end_idx + 1))
 
     charge_mean = prices.iloc[charge_idx].mean()
