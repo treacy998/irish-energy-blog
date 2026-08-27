@@ -65,15 +65,17 @@ draft: false
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €123/MWh | 11:30 | 2 MWh | −€245 |
-| **Discharge** | €226/MWh | 07:00 | 1.7 MWh (85% RTE) | +€385 |
-| **Gross profit** | | | | **€139** |
-| **Price spread** | €104/MWh | | | **ROI: 56.8%** |
+| **Discharge** | €221/MWh | 20:30 | 1.7 MWh (85% RTE) | +€375 |
+| **Gross profit** | | | | **€130** |
+| **Price spread** | €98/MWh | | | **ROI: 52.9%** |
+
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery — in this case, by picking the 07:00 morning block, which falls before the 11:30 charge. Recalculated enforcing charge-before-discharge; gross profit corrected from €139 to €130.*
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
 
 ![BESS Dispatch](/charts/2026-05-07/bess-2026-05-07.png)
 
-€139 gross — the week's best, and wind built it. Charged at €123 (11:30) and discharged at €226 (07:00), capturing €104 of spread. The charge price was the cheapest of the week; the midday trough that built it was 22.6% wind at €119. A real operator realises 70–85% of the model spread — but even at the low end, this is the week's best day by a distance.
+€130 gross — still the week's best, and wind built it. Charged at €123 (11:30) and discharged into the evening peak at €221 (20:30), capturing €98 of spread. The morning peak (€226 at 07:00) was actually higher, but it fell before the midday charge, so it's out of reach for a same-day cycle. The charge price was still the cheapest of the week; the midday trough that built it was 22.6% wind at €119.
 
 ## Commentary
 
@@ -81,7 +83,7 @@ Wind cannibalisation, compressed into six hours. Wind climbed from 8.6% at 09:00
 
 The consequence for wind farms is the cannibalisation problem in its most legible form. Wind generated heavily in the cheap midday window (16–23% of demand during €119–150 periods) and barely at all through the expensive overnight and morning-peak periods (2–5% during €189–242). Capture price today probably sat around €130–145 against a €174 time-weighted mean — meaningful volume, realised well below the day's average price.
 
-The peak/off-peak spread went negative: peak hours averaged €169.30, off-peak averaged €182.90. Off-peak more expensive than peak. The midday trough sat inside peak hours; overnight retained Wednesday's wind-drought tail. Any commercial product banded on conventional peak/off-peak windows misfires on a day like this. Storage, on the other hand, made its best money of the week. €139 gross from a €104 spread — the shape that cannibalises wind revenue is exactly the shape batteries are built for.
+The peak/off-peak spread went negative: peak hours averaged €169.30, off-peak averaged €182.90. Off-peak more expensive than peak. The midday trough sat inside peak hours; overnight retained Wednesday's wind-drought tail. Any commercial product banded on conventional peak/off-peak windows misfires on a day like this. Storage, on the other hand, made its best money of the week. €130 gross from a €98 spread — the shape that cannibalises wind revenue is exactly the shape batteries are built for, even though the morning's sharper peak (€226) fell before the battery could reach it.
 
 
 <details>

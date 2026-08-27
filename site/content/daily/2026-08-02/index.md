@@ -65,9 +65,11 @@ draft: false
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €143/MWh | 11:00 | 2 MWh | −€286 |
-| **Discharge** | €202/MWh | 23:00 | 1.7 MWh (85% RTE) | +€344 |
-| **Gross profit** | | | | **€58** |
-| **Price spread** | €59/MWh | | | **ROI: 20.2%** |
+| **Discharge** | €198/MWh | 19:00 | 1.7 MWh (85% RTE) | +€337 |
+| **Gross profit** | | | | **€51** |
+| **Price spread** | €55/MWh | | | **ROI: 17.8%** |
+
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery — in this case, by picking periods 1–4 (23:00–00:30), which precede the 11:00 charge. Recalculated enforcing charge-before-discharge; gross profit corrected from €58 to €51.*
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
 
@@ -79,7 +81,7 @@ The day opened already elevated — €220.53 at 23:00, €206.62 by 23:30, the 
 
 The evening rebuild is the odd part. Price climbed to a local high of €200.50 at 19:00 even with wind sitting at a moderate 14% — demand doing the lifting, not wind — only for wind to keep rising into the close, 21.3% at 21:00 and 27.5% by 22:30, and pull price back down to €171.52. Std dev was the lowest of the week at €20.99, and the negative peak/off-peak spread (€-10.42) is the same story as the last few days: the real extremes sit either side of the 07:00–22:00 window, not inside it.
 
-Storage had a quieter day for it — €58 gross, 20.2% ROI, the softest return since Thursday. Charging at €143 and discharging at €202 only found a €59 spread, thin by the week's standards, because this trough was shallow rather than sharp. Calmer prices, calmer battery.
+Storage had a quieter day for it — €51 gross, 17.8% ROI, the softest return since Thursday. Charging at €143 and discharging into the evening peak at €198 only found a €55 spread, thin by the week's standards, because this trough was shallow rather than sharp. Calmer prices, calmer battery.
 
 
 <details>

@@ -75,21 +75,23 @@ As close to zero as this market gets. Peak and off-peak average almost the same 
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €106/MWh | 14:00 | 2 MWh | −€213 |
-| **Discharge** | €149/MWh | 23:00 | 1.7 MWh (85% RTE) | +€253 |
-| **Gross profit** | | | | **€40** |
-| **Price spread** | €42/MWh | | | **ROI: 18.8%** |
+| **Discharge** | €146/MWh | 19:00 | 1.7 MWh (85% RTE) | +€247 |
+| **Gross profit** | | | | **€34** |
+| **Price spread** | €39/MWh | | | **ROI: 16.1%** |
+
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery — in this case, by picking periods 1–4 (23:00–00:30), which precede the 14:00 charge. Recalculated enforcing charge-before-discharge; gross profit corrected from €40 to €34.*
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
 
 ![BESS Dispatch](/charts/2026-06-11/bess-2026-06-11.png)
 
-€40 gross, the worst of the week. With std dev this low there's no volatility for a battery to exploit — the captured spread of €42 is barely above the charge price itself.
+€34 gross, the worst of the week. With std dev this low there's no volatility for a battery to exploit — the captured spread of €39 is barely above the charge price itself.
 
 ## Commentary
 
 Wind built through the night to 71.1% and the day went flat: €13.28 std dev, the lowest of the week by a wide margin, and only 2 periods above €150.
 
-Storage doesn't reward flat days — €40 gross was the worst result of the week, because there was simply no spread to capture.
+Storage doesn't reward flat days — €34 gross was the worst result of the week, because there was simply no spread to capture.
 
 Wind above 50% for a second straight day tomorrow would mean more of the same. But if that surplus shifts toward midday instead of overnight, this flat shape could break into something much sharper.
 <details>

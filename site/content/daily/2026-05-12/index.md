@@ -87,17 +87,17 @@ Strip the carryover hours: the genuine May 12 off-peak (02:00–07:00) runs arou
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €81/MWh | 14:30 | 2 MWh | −€161 |
-| **Discharge** | €140/MWh | 23:00 | 1.7 MWh (85% RTE) | +€238 |
-| **Gross profit** | | | | **€77** |
-| **Price spread** | €60/MWh | | | **ROI: 47.8%** |
+| **Discharge** | €136/MWh | 19:00 | 1.7 MWh (85% RTE) | +€231 |
+| **Gross profit** | | | | **€70** |
+| **Price spread** | €55/MWh | | | **ROI: 43.3%** |
+
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery — in this case, by picking periods 1–4 (23:00–00:30), which are Monday's evening peak crossing the SEM day boundary and sit before Tuesday's own 14:30 charge. Recalculated enforcing charge-before-discharge; gross profit corrected from €77 to €70.*
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
 
 ![BESS Dispatch](/charts/2026-05-12/bess-2026-05-12.png)
 
-The model charged at 14:30 (€81, midday wind surplus) and discharged into the 23:00–02:00 window averaging €140. Mechanically correct — those are the highest consecutive hours in the SEM day. Operationally misleading. That 23:00 discharge block physically belongs to Monday's evening; a rolling 24-hour optimisation would have cycled those half-hours into Monday's discharge window (€195 average) and earned closer to Monday's €107 gross.
-
-Today's genuine BESS signal is the charge floor: €81 at 14:30 is the first sub-€85 charge window of the working week. The wind-rich midday is shifting the optimal charge slot firmly to the afternoon — and giving the battery a cheaper fill price than the overnight window managed on Monday.
+The model charges at 14:30 (€81, midday wind surplus) and, correctly excluding the Monday-evening-spillover block (periods 1–4, which precede the charge), discharges into Tuesday's own evening peak at 19:00 (€136). Captured spread €55, gross €70. The genuine BESS signal today is still the charge floor: €81 at 14:30 is the first sub-€85 charge window of the working week — the wind-rich midday is shifting the optimal charge slot firmly to the afternoon.
 
 ## Commentary
 
@@ -105,7 +105,7 @@ Tuesday cleared at €112.48 — €25 below Monday on essentially unchanged dem
 
 The €161.70 peak at 23:00 needs a footnote. The I-SEM delivery day runs from 23:00 the prior evening to 22:30 of the named date — so today's first period is the tail of Monday's evening peak (which closed at €195 at 21:00 in yesterday's file). The actual May 12 profile is softer: a morning ramp to €138, a deep wind-suppressed midday belly with 13 periods below €100 between 10:00 and 16:30, and an evening peak that capped at €137. Zero scarcity hours on the day itself. The reported negative spread (-€12.78) is the same effect — strip the carryover hours and the underlying shape is flat, not inverted.
 
-The floor at 15:00 (€79.40) is the real signal: the lowest working-day price of the run. Seven consecutive half-hours below €85, wind at 54–56%, full working-day demand on the system, and the market still couldn't clear above €85. That's the mark of 12 May. Not the borrowed evening peak at the top — the wind-suppressed trough at the bottom. For storage, €77 gross; but the discharge window physically belonged to Monday evening. Sub-€85 midday charging is the new working-day norm in a wind-rich week.
+The floor at 15:00 (€79.40) is the real signal: the lowest working-day price of the run. Seven consecutive half-hours below €85, wind at 54–56%, full working-day demand on the system, and the market still couldn't clear above €85. That's the mark of 12 May. Not the borrowed evening peak at the top — the wind-suppressed trough at the bottom. For storage, €70 gross, discharging into Tuesday's own evening peak once the Monday-spillover block is correctly excluded. Sub-€85 midday charging is the new working-day norm in a wind-rich week.
 
 
 <details>

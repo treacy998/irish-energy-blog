@@ -83,27 +83,23 @@ The metric is reading the day as completely flat — peak and off-peak averaged 
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €105/MWh | 14:00 | 2 MWh | −€210 |
-| **Discharge** | €163/MWh | 07:00 | 1.7 MWh (85% RTE) | +€278 |
-| **Gross profit** | | | | **€68** |
-| **Price spread** | €58/MWh | | | **ROI: 32.3%** |
+| **Discharge** | €161/MWh | 19:00 | 1.7 MWh (85% RTE) | +€273 |
+| **Gross profit** | | | | **€63** |
+| **Price spread** | €56/MWh | | | **ROI: 30.1%** |
+
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery — in this case, by picking the 07:00–08:30 morning block, which falls before the 14:00 charge. Recalculated enforcing charge-before-discharge; gross profit corrected from €68 to €63.*
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
 
 ![BESS Dispatch](/charts/2026-06-08/bess-2026-06-08.png)
 
-€68 gross. Ninth morning-discharge day. After yesterday's €304, a reset to the working-day mid-range.
-
-The morning block (07:00–08:30 at €163 avg) narrowly beat the evening block (19:30–21:00 at €159 avg) by €4/MWh. Marginal choice — and the modest scale of either block kept the day at €68 rather than into the top tier.
-
-37-day cumulative: €3,876, mean €105/day. The cumulative mean per day has just jumped €5 from June 4's €100 — one outlier reshaping the whole portfolio statistic.
+€63 gross. After yesterday's €304, a reset to the working-day mid-range. The morning block (07:00–08:30, €163 avg) was actually the day's highest-priced window, edging the evening block (19:00, €161 avg) by a couple of euros — but it falls before the 14:00 charge, so it's out of reach for a same-day cycle. The evening block it actually discharges into is a close second, which is why the corrected number is still close to the original estimate.
 
 ## Commentary
 
 Reset Monday after the outlier. Mean €137, modest morning peak €168, no scarcity. Wind drained 48% → 23% into the morning ramp, then recovered through the day and held high through evening. Same V-out-of-evening shape we've seen on May 21 and a few others.
 
-BESS €68 — back to working-day mid-range after yesterday's €304. Ninth morning-discharge day in the run. The morning block edged out the evening block by €4/MWh — a marginal optimiser choice.
-
-The interesting cumulative point: the running mean per day jumped from €100 to €105 yesterday on a single day's revenue. **One outlier reshapes the whole portfolio mean.** That's the BESS-revenue distribution doing what BESS-revenue distributions do — right-skewed, with the tail carrying the result.
+BESS €63 — back to working-day mid-range after yesterday's €304. The market's own highest-priced window was the morning, but it happened before the charge, so the battery discharged into the close-second evening block instead.
 
 
 <details>
