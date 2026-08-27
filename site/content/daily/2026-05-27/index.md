@@ -76,7 +76,7 @@ This is the "morning-spike" archetype — distinct from May 6's twin-peak PDC or
 
 ## Price Spread
 
-**Captured spread:** €98/MWh  ·  **Charge:** €114/MWh (14:30)  ·  **Discharge:** €213/MWh (07:00)
+**Captured spread:** €39/MWh  ·  **Charge:** €114/MWh (14:30)  ·  **Discharge:** €153/MWh (19:00)
 
 ## BESS Dispatch Signal
 
@@ -94,7 +94,7 @@ This is the "morning-spike" archetype — distinct from May 6's twin-peak PDC or
 
 *Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery — in this case, by picking the 07:00–08:30 morning block, which falls before the afternoon charge. Recalculated enforcing charge-before-discharge; gross profit corrected from €133 to €32.*
 
-€32 gross. The morning block (07:00–08:30, €212.65 avg) was the day's highest-priced window by a wide margin — €60/MWh above the evening block (19:00–20:30, €153.12 avg) — but the charge sits in the deep midday trough (13:30–15:00, €114 avg), after the morning peak has already passed. A same-day cycle can only reach the evening, so today's captured spread is €39, not the €98 the morning peak would have offered.
+€32 gross. The morning block (07:00–08:30, €212.65 avg) was the day's highest-priced window by a wide margin — €60/MWh above the evening block (19:00–20:30, €153.12 avg) — but the charge sits in the afternoon trough (14:30–16:00, €114 avg), after the morning peak has already passed. A same-day cycle can only reach the evening, so today's captured spread is €39, not the €98 the morning peak would have offered.
 
 ## Commentary
 

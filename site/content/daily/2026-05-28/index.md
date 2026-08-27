@@ -78,7 +78,7 @@ Compare to May 27's PDC: today's has a wider top shelf (more periods above €15
 
 ## Price Spread
 
-**Captured spread:** €63/MWh  ·  **Charge:** €100/MWh (13:30)  ·  **Discharge:** €163/MWh (07:30)
+**Captured spread:** €54/MWh  ·  **Charge:** €100/MWh (13:30)  ·  **Discharge:** €154/MWh (18:30)
 
 ## BESS Dispatch Signal
 

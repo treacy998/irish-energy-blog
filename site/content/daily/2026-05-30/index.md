@@ -78,7 +78,7 @@ Strip the boundary periods and the underlying Saturday PDC is essentially flat: 
 
 ## Price Spread
 
-**Captured spread:** €57/MWh  ·  **Charge:** €105/MWh (13:00)  ·  **Discharge:** €163/MWh (23:00)
+**Captured spread:** €46/MWh  ·  **Charge:** €105/MWh (13:00)  ·  **Discharge:** €151/MWh (20:00)
 
 ## BESS Dispatch Signal
 
