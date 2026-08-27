@@ -82,7 +82,9 @@ Spread flips negative again, €-19.49 — the overnight hours, still starved of
 
 ![BESS Dispatch](/charts/2026-07-10/bess-2026-07-10.png)
 
-Charged into the midday floor at €142.75 (13:00), discharged into the morning ramp at €245 (07:30). ROI 44.6% — a solid trade, though the spread is narrowing slightly as the week's extremes start to soften.
+*Updated 2026-08-27: prose previously described a discharge into the 07:30 morning ramp, which falls before the 13:00 charge and is physically unreachable by a same-day cycle. The table already reflected the corrected evening discharge; the prose didn't.*
+
+Charged into the midday floor at €144 (13:00), discharged into the evening peak at €199 (19:00) — the morning ramp's €245 print was higher, but it happened before the charge, so it's out of reach for a same-day cycle. ROI 17.6% — a modest trade, the spread narrower than the week's extremes because the reachable peak is a step down from the morning's.
 
 ## Commentary
 

@@ -101,9 +101,9 @@ The SEM peak window was defined to capture weekday demand peaks. On a Sunday whe
 
 ![BESS Dispatch](/charts/2026-05-17/bess-2026-05-17.png)
 
-€161 gross — the highest of the run at the point of dispatch. Charged at 10:00 (€111, the late-morning fold where wind was rising and weekend demand hadn't yet reached its afternoon level) and discharged into the 20:30–22:00 scarcity block (€225 average). Captured spread €114 — wider than May 15's €112.
+€161 gross — the highest of the run at the point of dispatch. Charged at 10:00 (€111, the late-morning fold where wind was rising and weekend demand hadn't yet reached its afternoon level) and discharged into the 21:00–22:30 scarcity block (€225 average). Captured spread €114 — wider than May 15's €112.
 
-The charge time is the operational note. 10:00 isn't the conventional midday slot (most days in the run used 13:00–14:30). The model found the day's cheapest window in the late-morning fold rather than the standard early-afternoon trough. A real operator forecasting today's shape would need to identify that late-morning cheapness rather than defaulting to the 13:30 charge that works on most days. Running 15-day cumulative: €1,350 across two prior weeks, daily revenue spanning €56 to €161. No correlation to mean daily price; strong correlation to within-day wind variability.
+The charge time is the operational note. 10:00 isn't the conventional midday slot (most days in the run used 13:00–14:30). The model found the day's cheapest window in the late-morning fold rather than the standard early-afternoon trough. A real operator forecasting today's shape would need to identify that late-morning cheapness rather than defaulting to the 13:30 charge that works on most days.
 
 ## Commentary
 
@@ -111,7 +111,7 @@ A Sunday with €200+ prints. Mean €136.77/MWh, peak €227.28 at 22:00, six c
 
 The peak arrived at 22:00, not the conventional 19:00–20:00. That's the structural tell. A demand-driven evening peak builds to its high when residential and commercial demand overlap, then fades as people go to bed. A wind-decay peak builds whenever wind is leaving — and Sunday's wind kept leaving until 22:30. Different driver, different shape, different timing. The PDC shows it: a top plateau of 6 periods above €200, a broad middle in the €110–135 band, a shallow tail that never got below €108. Expensive base, scarcity spike, no real cheap surplus — and that absence of a cheap tail is why the peak/off-peak spread came in at just +€2.48 despite six scarcity periods. The SEM peak window closes at 22:00; two of the six €200+ prints are off-peak by calendar convention. The metric measured what its definition told it to.
 
-For storage, the best day of the run at the point of dispatch. A simulated 1MW/2MWh battery charged in the late-morning fold (€111 at 10:00 — earlier than the conventional midday slot) and discharged into the 20:30–22:00 scarcity block (€225 average). Captured spread €114, gross €161, ROI 72.8%. The unusual charge time is the operational footnote: the cheapest window was late morning, not early afternoon, and a real operator would need to spot it rather than default to the conventional 13:30 charge.
+For storage, the best day of the run at the point of dispatch. A simulated 1MW/2MWh battery charged in the late-morning fold (€111 at 10:00 — earlier than the conventional midday slot) and discharged into the 21:00–22:30 scarcity block (€225 average). Captured spread €114, gross €161, ROI 72.8%. The unusual charge time is the operational footnote: the cheapest window was late morning, not early afternoon, and a real operator would need to spot it rather than default to the conventional 13:30 charge.
 
 
 <details>
