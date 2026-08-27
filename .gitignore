@@ -30,3 +30,6 @@ site/static/charts/**/*.html
 # and adding BLOB_READ_WRITE_TOKEN to Vercel env vars (see pipeline/storage.py docstring)
 # site/static/charts/**/*.png
 blog.log
+
+# Scratch content notes — not ready to commit
+site/Source Material/
