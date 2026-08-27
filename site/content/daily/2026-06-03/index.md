@@ -97,11 +97,12 @@ The boundary-driven negative spread is now an established pattern, appearing on 
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €70/MWh | 14:00 | 2 MWh | −€140 |
-| **Discharge** | €144/MWh | 07:00 | 1.7 MWh (85% RTE) | +€244 |
-| **Gross profit** | | | | **€105** |
-| **Price spread** | €74/MWh | | | **ROI: 75.1%** |
+| **Discharge** | €137/MWh | 19:00 | 1.7 MWh (85% RTE) | +€233 |
+| **Gross profit** | | | | **€94** |
+| **Price spread** | €68/MWh | | | **ROI: 67.2%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
 
 ![BESS Dispatch](/charts/2026-06-03/bess-2026-06-03.png)
 

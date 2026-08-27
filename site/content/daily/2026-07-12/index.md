@@ -73,11 +73,12 @@ Spread inverts hardest here, €-68.08 — by far the week's biggest — because
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €50/MWh | 15:00 | 2 MWh | −€100 |
-| **Discharge** | €197/MWh | 03:00 | 1.7 MWh (85% RTE) | +€335 |
-| **Gross profit** | | | | **€235** |
-| **Price spread** | €147/MWh | | | **ROI: 234.5%** |
+| **Discharge** | €158/MWh | 19:30 | 1.7 MWh (85% RTE) | +€268 |
+| **Gross profit** | | | | **€168** |
+| **Price spread** | €108/MWh | | | **ROI: 167.9%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
 
 ![BESS Dispatch](/charts/2026-07-12/bess-2026-07-12.png)
 

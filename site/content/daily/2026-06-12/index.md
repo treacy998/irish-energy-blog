@@ -75,11 +75,12 @@ The spread is negative: -€19.78. Off-peak (€104.19) outprices peak (€84.41
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €29/MWh | 14:00 | 2 MWh | −€57 |
-| **Discharge** | €132/MWh | 07:00 | 1.7 MWh (85% RTE) | +€224 |
-| **Gross profit** | | | | **€167** |
-| **Price spread** | €103/MWh | | | **ROI: 292.5%** |
+| **Discharge** | €116/MWh | 20:00 | 1.7 MWh (85% RTE) | +€197 |
+| **Gross profit** | | | | **€140** |
+| **Price spread** | €87/MWh | | | **ROI: 244.0%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
 
 ![BESS Dispatch](/charts/2026-06-12/bess-2026-06-12.png)
 

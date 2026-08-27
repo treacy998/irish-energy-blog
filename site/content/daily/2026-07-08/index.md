@@ -73,11 +73,12 @@ Spread flips negative again, but for a new reason. It's not an overnight wind gl
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €133/MWh | 13:30 | 2 MWh | −€267 |
-| **Discharge** | €223/MWh | 07:00 | 1.7 MWh (85% RTE) | +€379 |
-| **Gross profit** | | | | **€113** |
-| **Price spread** | €90/MWh | | | **ROI: 42.2%** |
+| **Discharge** | €217/MWh | 19:30 | 1.7 MWh (85% RTE) | +€368 |
+| **Gross profit** | | | | **€102** |
+| **Price spread** | €83/MWh | | | **ROI: 38.1%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
 
 ![BESS Dispatch](/charts/2026-07-08/bess-2026-07-08.png)
 

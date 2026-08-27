@@ -65,11 +65,12 @@ draft: false
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €163/MWh | 14:30 | 2 MWh | −€326 |
-| **Discharge** | €236/MWh | 08:30 | 1.7 MWh (85% RTE) | +€402 |
-| **Gross profit** | | | | **€76** |
-| **Price spread** | €74/MWh | | | **ROI: 23.3%** |
+| **Discharge** | €214/MWh | 18:00 | 1.7 MWh (85% RTE) | +€364 |
+| **Gross profit** | | | | **€38** |
+| **Price spread** | €51/MWh | | | **ROI: 11.8%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
 
 ![BESS Dispatch](/charts/2026-08-17/bess-2026-08-17.png)
 
@@ -77,7 +78,7 @@ draft: false
 
 Monday broke the shape as well as the pattern. Overnight wind was strong — 46–48% through the small hours — but it collapsed to single digits by 06:00–09:30, right as morning demand ramped up, and the price spiked into a €248.00 peak at 09:30. That's a morning squeeze, not the usual evening one, and it's why every single period cleared above €150 today (100%, the first time this week) and 42% cleared above €200. Wind recovered steadily through the afternoon and evening — back to 40%+ by 18:00 — which capped what would otherwise have been a second, evening peak: prices eased to a €162.12 trough at 15:30 and only climbed back to €215-ish by 19:00, well under the morning's €248.
 
-Storage followed the shape, not the clock: charge into the afternoon trough near 14:30, discharge into the morning squeeze near 08:30 — the model picks the day's single cheapest and priciest windows independently, with no requirement that charging comes first, so an unusual double-peaked day like this one produces a discharge that clock-wise precedes the charge. €76 gross, 23.3% ROI — a modest return given how sharp the morning peak was, because the trough-to-peak spread it found was the afternoon-to-morning one, not the wider overnight-to-morning collapse that actually drove the day's price.
+Storage charged into the afternoon trough at 14:30 (€163 avg) and discharged into the evening peak at 18:00 (€214 avg). €38 gross, 11.8% ROI — a modest return, because the morning squeeze at 09:30 (€248 peak) was the day's real scarcity event, but it came *before* the afternoon trough, so a same-day cycle couldn't reach it: the battery can only discharge into a window after it has charged, and by the time the afternoon trough opened up, the morning's sharper peak was already behind it.
 
 
 <details>

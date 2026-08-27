@@ -83,10 +83,10 @@ The captured spread the BESS actually earned was €77 — between a €121 midd
 
 |                  | Price    | Time  | Energy            | Value          |
 | ---------------- | -------- | ----- | ----------------- | -------------- |
-| **Charge**       | €121/MWh | 13:00 | 2 MWh             | −€243          |
-| **Discharge**    | €198/MWh | 07:00 | 1.7 MWh (85% RTE) | +€337          |
-| **Gross profit** |          |       |                   | **€94**        |
-| **Price spread** | €77/MWh  |       |                   | **ROI: 38.8%** |
+| **Charge** | €121/MWh | 13:00 | 2 MWh | −€243 |
+| **Discharge** | €182/MWh | 18:30 | 1.7 MWh (85% RTE) | +€309 |
+| **Gross profit** | | | | **€66** |
+| **Price spread** | €60/MWh | | | **ROI: 27.0%** |
 
 _Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs._
 

@@ -93,11 +93,12 @@ Third inverted spread of the run (May 9, May 12, May 16). All three are weekend 
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €124/MWh | 14:30 | 2 MWh | −€249 |
-| **Discharge** | €194/MWh | 23:00 | 1.7 MWh (85% RTE) | +€329 |
-| **Gross profit** | | | | **€80** |
-| **Price spread** | €69/MWh | | | **ROI: 32.3%** |
+| **Discharge** | €147/MWh | 19:00 | 1.7 MWh (85% RTE) | +€249 |
+| **Gross profit** | | | | **€0** |
+| **Price spread** | €22/MWh | | | **ROI: 0.1%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
 
 ![BESS Dispatch](/charts/2026-05-16/bess-2026-05-16.png)
 

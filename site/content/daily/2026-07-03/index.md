@@ -75,11 +75,12 @@ Negative again, same mechanism as Wednesday: a low-wind pre-dawn stretch drags t
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €98/MWh | 14:00 | 2 MWh | −€195 |
-| **Discharge** | €212/MWh | 07:00 | 1.7 MWh (85% RTE) | +€361 |
-| **Gross profit** | | | | **€166** |
-| **Price spread** | €115/MWh | | | **ROI: 84.8%** |
+| **Discharge** | €141/MWh | 19:30 | 1.7 MWh (85% RTE) | +€239 |
+| **Gross profit** | | | | **€44** |
+| **Price spread** | €43/MWh | | | **ROI: 22.6%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
 
 ![BESS Dispatch](/charts/2026-07-03/bess-2026-07-03.png)
 

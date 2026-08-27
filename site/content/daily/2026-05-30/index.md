@@ -85,11 +85,12 @@ Strip the boundary periods and the underlying Saturday PDC is essentially flat: 
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €105/MWh | 13:00 | 2 MWh | −€210 |
-| **Discharge** | €163/MWh | 23:00 | 1.7 MWh (85% RTE) | +€276 |
-| **Gross profit** | | | | **€66** |
-| **Price spread** | €57/MWh | | | **ROI: 31.3%** |
+| **Discharge** | €151/MWh | 20:00 | 1.7 MWh (85% RTE) | +€257 |
+| **Gross profit** | | | | **€47** |
+| **Price spread** | €46/MWh | | | **ROI: 22.2%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
 
 ![BESS Dispatch](/charts/2026-05-30/bess-2026-05-30.png)
 

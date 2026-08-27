@@ -97,23 +97,16 @@ This is now the **fifth negative peak/off-peak day** in 31 days (after May 7, Ma
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €114/MWh | 13:30 | 2 MWh | −€227 |
-| **Discharge** | €219/MWh | 07:00 | 1.7 MWh (85% RTE) | +€373 |
-| **Gross profit** | | | | **€146** |
-| **Price spread** | €106/MWh | | | **ROI: 64.3%** |
+| **Discharge** | €167/MWh | 20:30 | 1.7 MWh (85% RTE) | +€283 |
+| **Gross profit** | | | | **€56** |
+| **Price spread** | €53/MWh | | | **ROI: 24.8%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
 
+
 ![BESS Dispatch](/charts/2026-06-02/bess-2026-06-02.png)
 
-**€146 gross — the fifth-best day of the 31-day run.** Sixth morning-discharge day in the series (May 5, May 18, May 26, May 27, May 28, June 2).
-
-Charge €114 in the midday belly (13:30–15:00 at €113.5 avg). Discharge €219 in the morning scarcity block (07:00–08:30 at €219.4 avg). Captured spread €106, ROI 64.3% on the €227 charge cost.
-
-The discharge averaged across 4 of the 6 scarcity periods — exactly the structural condition the BESS revenue model needs. The discharge window block (€219 avg) is the third-highest of the run, behind May 18 (€245 avg) and May 24 (€226 avg).
-
-**31-day BESS series crosses €3,000.** Cumulative €3,073, mean €99/day. The top-5 days now (May 18 €168, May 24 €163, May 17 €161, May 15 €156, May 29 €155) total €803 from 5/31 = 16% of days = 26% of cumulative. June 2's €146 lands at #6 in the all-time table.
-
-Five of the six morning-discharge days have BESS revenue above €100: May 18 €168, May 27 €133, June 2 €146, May 26 €94, May 5 €56, May 28 €77. **Morning-discharge days outperform evening-discharge days on average** — €112 vs ~€91 mean. The morning shortfall, when it occurs, produces structurally higher peaks than the equivalent evening shortfall.
+€56 gross on a €53 captured spread. Charge €114 in the midday belly (13:30–15:00 at €113.5 avg), discharge €167 in the evening peak (20:30–22:00 at €167 avg). ROI 24.8% on the €227 charge cost — a modest trade; the midday trough was shallow and the evening peak, while the day's highest reachable window after charging, didn't offer much spread to capture.
 
 ## Commentary
 
@@ -123,7 +116,7 @@ The structural read is **scarcity inertia**. Wind was actually *recovering* duri
 
 The negative peak/off-peak spread (−€17.54) is now the run's most negative reading. The pattern is consistent across five negative spreads in 31 days: the metric breaks on scarcity-spillover or wind-rich-weekend days where the cheap window isn't where the metric assumes it is. **A negative peak/off-peak metric should be read as a flag that the metric has failed, not as a signal about the market.**
 
-For storage, the €3,000 cumulative milestone arrives. €146 gross — the fifth-best day of the run — on a captured spread of €106. The 31-day cumulative now stands at €3,073, mean €99/day. The morning-discharge pattern continues (sixth such day) and continues to outperform: the mean revenue across the six morning-discharge days is €112, versus ~€91 for the evening-discharge days. **Morning shortfalls produce structurally higher peaks than evening shortfalls.** The post-holiday-Tuesday calendar event is now the structural amplifier for the pattern: of 6 morning-discharge days, 4 sit on Tuesdays.
+For storage, a modest day: €56 gross on a €53 captured spread, ROI 24.8%. The midday trough was shallow and the evening peak was the best window reachable after charging — not a standout trade, but a clean one.
 
 
 <details>

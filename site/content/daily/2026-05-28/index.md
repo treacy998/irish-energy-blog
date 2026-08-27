@@ -85,11 +85,12 @@ Compare to May 27's PDC: today's has a wider top shelf (more periods above €15
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €100/MWh | 13:30 | 2 MWh | −€200 |
-| **Discharge** | €163/MWh | 07:30 | 1.7 MWh (85% RTE) | +€277 |
-| **Gross profit** | | | | **€77** |
-| **Price spread** | €63/MWh | | | **ROI: 38.5%** |
+| **Discharge** | €154/MWh | 18:30 | 1.7 MWh (85% RTE) | +€262 |
+| **Gross profit** | | | | **€62** |
+| **Price spread** | €54/MWh | | | **ROI: 30.8%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
 
 ![BESS Dispatch](/charts/2026-05-28/bess-2026-05-28.png)
 

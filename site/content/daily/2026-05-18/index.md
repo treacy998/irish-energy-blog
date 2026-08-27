@@ -97,19 +97,16 @@ Compare to May 17: same order of magnitude of scarcity hours (6 vs 8), spread +�
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €124/MWh | 14:00 | 2 MWh | −€248 |
-| **Discharge** | €245/MWh | 07:00 | 1.7 MWh (85% RTE) | +€416 |
-| **Gross profit** | | | | **€168** |
-| **Price spread** | €121/MWh | | | **ROI: 67.7%** |
+| **Discharge** | €162/MWh | 18:00 | 1.7 MWh (85% RTE) | +€276 |
+| **Gross profit** | | | | **€28** |
+| **Price spread** | €38/MWh | | | **ROI: 11.3%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
 
+
 ![BESS Dispatch](/charts/2026-05-18/bess-2026-05-18.png)
 
-€168 gross — a new high for the run. Captured spread €121 — widest of the series. The dispatch pattern is the operational note: for the first time since May 5, the optimiser chose morning (07:00) for the discharge window rather than evening.
-
-The reason is mechanical. The four highest consecutive half-hours today were 07:00, 07:30, 08:00, 08:30, averaging €244.78. The evening peak's four-hour cluster (18:00–19:30) averaged €162.50. €82 of difference per half-hour. The optimiser discharged into the morning scarcity block and recharged in the afternoon wind-recovery trough (€124 at 14:00) — a reverse sequence compared to every other day in the run. The operational implication is direct: optimal discharge follows the wind shortfall, not the demand peak. Most days the two coincide. On May 18 they didn't, and a model that defaulted to "evening discharge" would have left €82 per half-hour on the table.
-
-The 15-day BESS series now stands at €1,518 cumulative. Top 4 days (May 7 €139, May 15 €156, May 17 €161, May 18 €168) = €624 — 41% of cumulative revenue from 27% of days.
+€28 gross, captured spread €38, ROI 11.3%. The morning scarcity block (07:00–08:30, averaging €244.78) was the day's sharpest window by far — €82/MWh above the evening peak's four-hour cluster (18:00–19:30, averaging €162.50). But it came before the afternoon wind-recovery trough (€124 at 14:00) where the battery charged, so a same-day cycle couldn't reach it: the battery discharged into the evening peak instead, the best window still open after charging. The morning spike was the day's real story; storage just couldn't reach it.
 
 ## Commentary
 
@@ -117,7 +114,7 @@ Monday's mean of €162.73/MWh is the highest of the 17-day run. The peak hit �
 
 The most analytically important fact of the day isn't the peak — it's the comparison to May 5. May 5 (Tuesday): 8.5% mean wind, €174 mean. May 18 (Monday): 25.0% mean wind, €163 mean. Three times more wind on May 18, only €11/MWh cheaper. The reason is timing. May 5's wind was uniformly low (range 4.4–15.7%): bad timing all day but no extreme moment. May 18's wind averaged 25% but ran 1.0% at the morning peak and 55.7% in the evening. Mean wind doesn't capture the timing of wind shortfalls. Same average, near-identical market outcomes. This has direct implications for capacity adequacy analysis: models using mean wind capacity factors will systematically understate how often the system runs into May 18-style morning events.
 
-For storage, a new high and a structural first. €168 gross, captured spread €121, ROI 67.7%. For the first time in 13 days, the optimiser chose morning for the discharge window — the 07:00–08:30 block averaged €245, €83 above the evening peak. Optimal discharge follows the wind shortfall, not the demand peak. Most days they coincide; on May 18 they didn't.
+For storage, a modest day: €28 gross, captured spread €38, ROI 11.3%. The morning scarcity block (07:00–08:30, €245 avg) was €83/MWh above the evening peak — but it happened before the battery's charge window, so a same-day cycle couldn't reach it.
 
 
 <details>

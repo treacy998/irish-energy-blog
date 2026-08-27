@@ -83,11 +83,12 @@ This is the "morning-spike" archetype — distinct from May 6's twin-peak PDC or
 | | Price | Time | Energy | Value |
 |--|--|--|--|--|
 | **Charge** | €114/MWh | 14:30 | 2 MWh | −€229 |
-| **Discharge** | €213/MWh | 07:00 | 1.7 MWh (85% RTE) | +€362 |
-| **Gross profit** | | | | **€133** |
-| **Price spread** | €98/MWh | | | **ROI: 58.1%** |
+| **Discharge** | €153/MWh | 19:00 | 1.7 MWh (85% RTE) | +€260 |
+| **Gross profit** | | | | **€32** |
+| **Price spread** | €39/MWh | | | **ROI: 13.9%** |
 
 *Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
+
 
 ![BESS Dispatch](/charts/2026-05-27/bess-2026-05-27.png)
 
