@@ -95,17 +95,29 @@ def backfill_market_prices(conn: sqlite3.Connection, data_dir: Path = DATA_DIR) 
 
 
 def backfill_system_conditions(
-    conn: sqlite3.Connection, start: date, end: date, out_dir: Path = DATA_DIR
+    conn: sqlite3.Connection, start: date, end: date, out_dir: Path = DATA_DIR,
+    retries: int = 3, retry_delay: float = 2.0,
 ) -> tuple[int, list[str]]:
     """
     Live-fetch wind/demand for every date in [start, end] via fetch_wind_and_demand.
+    EirGrid's demand endpoint intermittently returns no rows for a valid date —
+    confirmed transient by retrying failed dates, which succeed within a few
+    attempts — so each date gets `retries` attempts before being recorded failed.
     Returns (rows written, list of dates that failed / had no data).
     """
+    import time
+
     rows = 0
     failed = []
     d = start
     while d <= end:
-        df = fetch_wind_and_demand(d, out_dir=out_dir)
+        df = None
+        for attempt in range(retries):
+            df = fetch_wind_and_demand(d, out_dir=out_dir)
+            if df is not None and not df.empty:
+                break
+            if attempt < retries - 1:
+                time.sleep(retry_delay)
         if df is None or df.empty:
             failed.append(d.isoformat())
             d += timedelta(days=1)
