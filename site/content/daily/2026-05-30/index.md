@@ -94,13 +94,9 @@ Strip the boundary periods and the underlying Saturday PDC is essentially flat: 
 
 ![BESS Dispatch](/charts/2026-05-30/bess-2026-05-30.png)
 
-€66 gross. **The optimiser picked the Friday spillover as the discharge window** — fourth time this has happened (May 12, May 16, plus implicit on other days).
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery — in this case, by picking periods 1–4 (23:00–00:30), which are Friday's evening peak crossing the SEM day boundary and sit before Saturday's own 13:00 charge. Recalculated enforcing charge-before-discharge; gross profit corrected from €66 to €47.*
 
-The mechanics: the four consecutive highest-priced half-hours within Saturday's SEM-DA file are periods 1–4 (23:00–00:30, averaging €162.50). These are Friday's evening peak crossing the SEM day boundary. The real Saturday-internal best discharge would have been periods 44–47 (20:30–22:00 at €149.6 avg) — €13 lower, which would have produced gross around €40.
-
-The €66 is mechanically correct and physically misallocated. A rolling 24h optimisation would have captured those four periods as part of Friday's discharge window. **Saturday's "real" day, stripped of the spillover, would have been the run's third-weakest BESS day** at around €40 gross — only May 21 (€38) and possibly May 9 in earlier weeks would have been worse.
-
-The 27-day cumulative now stands at €2,757, mean €102/day. Saturday added €66 *but* roughly half of that is misallocated revenue that physically belongs to Friday. The cumulative across the series is right; the day-by-day attribution across high-volatility transitions needs a caveat.
+€47 gross — one of the run's weaker BESS days on its own terms. The four consecutive highest-priced half-hours in Saturday's file are actually periods 1–4 (23:00–00:30, €162.50 avg), Friday's evening peak spilling across the SEM day boundary — but those precede the 13:00 charge, so they're out of reach. The real, causally-valid discharge is Saturday's own evening window (20:00, €151 avg), €13 lower than the boundary block. Saturday was a genuinely calm underlying day, and the corrected number reflects that rather than an artefact of the SEM day's 23:00 boundary.
 
 ## Commentary
 
@@ -108,7 +104,7 @@ A boundary-distorted Saturday on a genuinely calm underlying day. The headline p
 
 The boundary effect is the second major distortion on this Saturday. The off-peak window (22:00–07:00) caught Friday's late-evening scarcity tail at the start and Saturday's own elevated overnight at the end — producing a technically elevated overnight average on a day where the real cheap hours were midday. On a genuinely calm Saturday, the cheap hours are in the middle of the day, not overnight; a rolling 24h window would read this correctly where the SEM-DA window cannot.
 
-For storage, €66 gross — but the optimiser's discharge window is the Friday spillover (periods 1–4, averaging €163), not the Saturday evening peak (€150). The 27-day cumulative now stands at €2,757, mean €102/day. The day-by-day attribution problem is now an established feature of the data: roughly 5–10% of the running BESS total sits on the wrong day because of how the SEM-DA day is defined. The cumulative is approximately right; the daily numbers across high-volatility transitions need a caveat. **Worth fixing in a future iteration with a 24h rolling-window optimisation.**
+For storage, €47 gross — the genuinely reachable trade, once the Friday-spillover block (periods 1–4, averaging €163) is correctly excluded as pre-charge. The real discharge is Saturday's own evening peak (€151 at 20:00). It's a smaller number than the boundary block would have suggested, and a more honest one: today's real dispatch opportunity was thin, on a calm underlying day.
 
 
 <details>

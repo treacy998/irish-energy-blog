@@ -84,13 +84,15 @@ The spread is negative: -€19.78. Off-peak (€104.19) outprices peak (€84.41
 
 ![BESS Dispatch](/charts/2026-06-12/bess-2026-06-12.png)
 
-€167 gross, ROI 292.5% — the best day of the week so far. The battery charges at €29 into the midday trough and discharges at €132 into the morning peak, getting ahead of the crash rather than waiting for it.
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery. This day's figure was recalculated enforcing charge-before-discharge; gross profit corrected from €167 to €140.*
+
+€140 gross, ROI 244.0% — still the best day of the week so far. The battery charges at €29 into the midday trough and discharges at €116 into the evening peak (20:00) — the morning peak was higher, but it happened before the midday charge, so a same-day cycle can't reach it.
 
 ## Commentary
 
 A morning peak of €136.16, then the floor drops to €28.17 by mid-afternoon — wind never below 44.6% all day saw to that. Zero scarcity hours, but the second-widest range of the week, all of it downside.
 
-That inversion flipped the spread negative (-€19.78) and made today the best BESS day so far: €167 gross from charging straight into the midday surplus and discharging into the morning ramp ahead of it.
+That inversion flipped the spread negative (-€19.78) and made today the best BESS day so far: €140 gross from charging straight into the midday surplus and discharging into the evening peak — the one causally-reachable window after the charge.
 
 If wind eases off this afternoon high, the cheap window could shift. And if it falls hard towards evening instead, the ceiling could lift fast.
 <details>

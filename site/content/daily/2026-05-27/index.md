@@ -92,19 +92,17 @@ This is the "morning-spike" archetype — distinct from May 6's twin-peak PDC or
 
 ![BESS Dispatch](/charts/2026-05-27/bess-2026-05-27.png)
 
-€133 gross — tied with May 23 as the run's seventh-best day. **Third consecutive morning-discharge day.**
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery — in this case, by picking the 07:00–08:30 morning block, which falls before the afternoon charge. Recalculated enforcing charge-before-discharge; gross profit corrected from €133 to €32.*
 
-The optimiser's choice was clean. Morning block (07:00–08:30 at €212.65 avg) beats evening block (19:00–20:30 at €153.12 avg) by €60/MWh on the discharge side. Charge sits in the deep midday trough (13:30–15:00 at €114 avg). Captured spread €98, ROI 58.1% on the €229 charge cost.
-
-The 24-day BESS series moves to €2,459 cumulative, mean €102/day. Top 5 days (May 18, 24, 17, 15, 27/23) sum to €781 — 32% of cumulative from 21% of days. **Morning-discharge days are now over-represented in the top tier** — May 18, May 27 alone are 2 of the top 5.
+€32 gross. The morning block (07:00–08:30, €212.65 avg) was the day's highest-priced window by a wide margin — €60/MWh above the evening block (19:00–20:30, €153.12 avg) — but the charge sits in the deep midday trough (13:30–15:00, €114 avg), after the morning peak has already passed. A same-day cycle can only reach the evening, so today's captured spread is €39, not the €98 the morning peak would have offered.
 
 ## Commentary
 
 The wind drought broke, but only halfway. Mean wind 32% (up from May 26's 6.6%) — but the *timing* of the wind was punishing: from 42% in the Tuesday spillover, dropping to 19% by 08:30 inside the morning peak demand window. The merit order climbed into peakers and produced the second-highest morning peak of the series at €227.22, with 3 periods clearing above €200.
 
-The structural read is now obvious from repetition: **for the third consecutive day, the morning peak outpriced the evening peak.** May 26 (6.6% mean wind, €212 morning), May 27 (32% mean wind, €227 morning), May 28 (preview: 39% mean wind, €175 morning). The common signature isn't mean wind level — it's the wind decline rate going into the morning demand surge. When overnight wind ≥30% drops to ≤25% by 07:30, the morning peak wins. When it doesn't, the evening peak wins.
+The structural read: the morning peak (€227.22) outpriced the evening for the third consecutive day, driven by the wind decline rate into the morning demand surge rather than the mean wind level. But that's a statement about the *market's* price shape, not about what a same-day battery can capture — the morning peak happens before any afternoon charge window, so it's structurally out of reach for this dispatch model.
 
-For storage, €133 gross — third morning-discharge day in a row. The 24-day cumulative sits at €2,459, mean €102/day. The top 5 BESS days now include two morning-discharge events (May 18, May 27), supporting a structural hypothesis worth flagging: **the morning shortfall produces higher peaks than the evening shortfall, on equivalent wind conditions.** Why? Because the morning peak demand is *climbing* into the wind shortfall; the evening demand is more often flat or declining. Demand acceleration into a wind shortfall is the recipe for the highest single-period prints.
+For storage, €32 gross — a thin day, because the market's real scarcity event (the morning peak) fell before the battery could charge into it. The evening block it actually discharged into was a distant second-highest window. The gap between the day's best price and the battery's best reachable price is now the recurring theme of this run's morning-peak days.
 
 
 <details>

@@ -85,13 +85,13 @@ A sharply negative spread: -€59.8. Off-peak (€227.81) is the most expensive 
 
 ![BESS Dispatch](/charts/2026-06-14/bess-2026-06-14.png)
 
-€238 gross, ROI 102.4% — second-best of the week. Charging at €116 in the afternoon lull and discharging at €276 into the 02:00 overnight scarcity spike captures most of the day's €191 range.
+€75 gross, ROI 32.2%. Charging at €116 in the afternoon lull and discharging at €181 into the 19:00 evening peak — the day's real overnight scarcity spike (€276 at 02:00) fell before the charge window, so a same-day cycle couldn't reach it.
 
 ## Commentary
 
 An 8.2% wind floor at midnight set off the highest price of the week — €306.57 at 03:00 — and kept the overnight hours expensive for the rest of the night. The only relief came after lunch, once wind climbed back past 20% and the price eased to €115.09.
 
-Storage didn't miss it: €238 gross, second-best of the week, just behind yesterday's record. Two low-wind evenings in a row have now produced the week's two biggest spikes and its two best BESS days.
+Storage caught only part of it: €75 gross. The overnight scarcity spike was the day's real story, but it landed before the afternoon charge window closed, so a same-day cycle could only reach the evening peak, not the 03:00 record.
 
 The pattern this week has been consistent — when wind falls away, the ceiling lifts and storage gets paid. Worth watching whether wind recovers into next week, or whether this becomes the new normal.
 <details>

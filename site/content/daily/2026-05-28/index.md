@@ -94,21 +94,19 @@ Compare to May 27's PDC: today's has a wider top shelf (more periods above €15
 
 ![BESS Dispatch](/charts/2026-05-28/bess-2026-05-28.png)
 
-€77 gross. Fourth-best non-scarcity working day of the run, but the *weakest* of the three consecutive morning-discharge days.
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery — in this case, by picking the 07:30–09:00 morning block, which falls before the midday charge. Recalculated enforcing charge-before-discharge; gross profit corrected from €77 to €62.*
 
-Charge €100 in the midday trough (13:30–15:00 at ~€100 avg), discharge €163 in the morning block (07:30–09:00 at €163 avg). Captured spread €63, ROI 38.5% on the €200 charge cost.
+€62 gross. Charge €100 in the midday trough (13:30–15:00, ~€100 avg), discharge €154 in the evening block (18:30, €154 avg) — the morning block (07:30–09:00, €163 avg) was higher but fell before the charge, so it's out of reach for a same-day cycle. Captured spread €54, ROI 30.8% on the €200 charge cost.
 
-The morning-discharge sequence across the three days is €94 (May 26) → €133 (May 27) → €77 (today). Not a clean trend — the BESS gross tracks the depth of the morning wind shortfall, not the discharge calendar. When the morning shortfall is sharp (May 27, 19% wind), the morning peak prints high and the day pays. When the shortfall is moderate (May 28, 24% wind), the peak is contained and the day pays less.
-
-25-day BESS series: cumulative €2,536, mean €101/day.
+The past three days (May 26, 27, 28) all showed a morning peak that outpriced the evening — but in every case the charge sits in the afternoon, so none of them can actually discharge into that morning window. The corrected gross across the three is €66, €32, €62: no clean trend, because each day's reachable evening peak depends on its own shape, not on how sharp the (unreachable) morning shortfall was.
 
 ## Commentary
 
 A wind-recovered Thursday — the wind drought is properly broken, even with the morning-discharge pattern persisting. Mean €128.37 sits below the working-week average, zero periods above €200, and a sub-€100 midday trough returns for the first time since May 23. Wind 38.8% on the day with a 24–54% range; the morning peak landed at a contained €175, and the evening built a flat plateau at €154.
 
-The morning-discharge pattern persists — May 26, 27, 28 in a row — but the magnitude tracks the morning wind shortfall depth, not the calendar. May 27's 19% morning low produced €227; today's 24% morning low produced €175. **€8/MWh of additional wind during the demand surge cost €52/MWh of peak price.** That ratio (€52 of peak per 5pp of wind) is roughly consistent with the May 18 / May 26 / May 27 readings — the merit-order step at low-wind morning conditions is a steep one, but the slope is now starting to look measurable.
+A three-day pattern of morning peaks outpricing the evening persists — May 26, 27, 28 in a row — with the magnitude tracking the morning wind shortfall depth, not the calendar. May 27's 19% morning low produced €227; today's 24% morning low produced €175. **€8/MWh of additional wind during the demand surge cost €52/MWh of peak price.** But this is a statement about market shape, not about what a same-day battery earns: in all three cases the charge sits in the afternoon, so the morning peak is never actually reachable.
 
-For storage, €77 gross — the third consecutive morning-discharge day, but the most modest of the three. 25-day cumulative €2,536, mean €101/day. **Three consecutive morning-discharge days is a regime signal, not a coincidence**: a multi-day weather pattern that drains overnight wind into the morning has now produced three days of the same dispatch optimum. A real operator's forecasting horizon needs to cover the next-morning shortfall risk — and dispatch the previous evening's charge accordingly. The single-cycle DAM model captures it after the fact; an operating asset has to predict it before bid submission.
+For storage, €62 gross — the third day in a row where the market's real peak happened before the battery could charge into it. A real operator's forecasting horizon needs to cover the next-morning shortfall risk and charge the previous evening to actually capture it — the single-cycle, same-day DAM model captures the market's shape after the fact, but an operating asset able to charge overnight would earn a materially different number on days like these.
 
 
 <details>

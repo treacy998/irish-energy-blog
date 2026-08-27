@@ -106,15 +106,11 @@ The boundary-driven negative spread is now an established pattern, appearing on 
 
 ![BESS Dispatch](/charts/2026-06-03/bess-2026-06-03.png)
 
-€105 gross. The **cheapest charge of the entire 32-day series** at €70/MWh average (14:00–15:30 at €69.81 avg). The ROI (75.1%) is the third-highest of the run after May 23 (84.4%) and May 29 (83.4%).
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery — in this case, by choosing between the 07:00–08:30 morning block and the 23:00 boundary-spillover block, both of which fall before the 14:00 charge. Recalculated enforcing charge-before-discharge; gross profit corrected from €105 to €94.*
 
-The dispatch is structurally interesting. The day's single highest price (€161 at 23:00) sits in the boundary spillover, and the morning shoulder caps at €145. The optimiser's choice: morning block (07:00–08:30 at €143.79 avg) edges out the boundary block (periods 1–4 at €142.63 avg) by €1.16/MWh. **The boundary almost won the discharge slot but didn't quite** — the steady morning band of four near-identical €144 prints just edged the descending boundary cluster.
+€94 gross. The **cheapest charge of the entire 32-day series** at €70/MWh average (14:00–15:30, €69.81 avg) — that part holds. But both candidates the day's price shape offered as its highest points — the morning block (07:00–08:30, €143.79 avg) and the boundary-spillover block (periods 1–4, €142.63 avg) — fall before the 14:00 charge, so neither is reachable by a same-day cycle. The actual discharge is the evening block at 19:00 (€137 avg), a step below either of the unreachable candidates, giving a spread of €68 and ROI 67.2%.
 
-Had the dispatch chosen the boundary, the day would have been a fifth boundary-spillover-discharge case (after May 12, May 16, May 30, possibly others). It didn't — the discharge sits inside the real Wednesday day, even though the cheap charge captures the historic surplus trough.
-
-The 32-day BESS series moves to €3,178 cumulative, mean €99/day. **Seven morning-discharge days now** (May 5, May 18, May 26, May 27, May 28, June 2, June 3). The pattern's structural anchor is overnight wind below ~30% combined with a real demand morning ramp — except on June 3, where the dispatch isn't strictly a "scarcity morning" but rather the only above-€140 window the day offered.
-
-Worth noting: June 3 is a morning-discharge day **without** a morning shortfall. The optimiser picked morning because there was nothing else above €140 — not because the morning was a price spike. This is the *anti-scarcity* version of the pattern.
+The lesson is the same one May 26–28 produced: the day's headline price shape and the battery's actual payday are different things once causality is enforced properly, and a cheap charge doesn't guarantee a big spread if the market's real peak happened earlier in the day.
 
 ## Commentary
 
@@ -124,7 +120,7 @@ The Tuesday-to-Wednesday swing is the largest 24-hour mean-price change of the e
 
 The peak/off-peak spread reports −€12.93, the sixth negative reading in 31 days. The pattern is now established: negative metric = the boundary has caught scarcity tail from the previous day, and/or the cheap hour is midday rather than overnight. **Roughly 20% of days in this regime produce a metric that's actively misleading.** Worth a permanent caveat on any dashboard that uses peak/off-peak as a primary signal.
 
-For storage, €105 gross — and the cheapest charge of the entire run at €70/MWh (the wind-saturation trough). The 32-day cumulative now stands at €3,178, mean €99/day. The structural lesson from the back-to-back Tuesday/Wednesday is the *symmetry* of the BESS revenue function: Tuesday produced €146 from a scarcity discharge above the trough; Wednesday produced €105 from a normal discharge below an extreme trough. **BESS revenue is a function of the spread, and the spread can come from either tail.** In real operating conditions, days with deep cheap troughs (like today) are arguably easier to forecast than days with sharp scarcity peaks (like yesterday) — the trough builds slowly with wind, the peak builds quickly with demand. Asymmetric forecast skill requirements; symmetric revenue outcomes.
+For storage, €94 gross on the cheapest charge of the entire run at €70/MWh (the wind-saturation trough) — but the day's actual highest prices, in the morning and in the previous evening's boundary spillover, both happened before that charge and were never reachable. The discharge fell back to the evening block instead. Days with deep cheap troughs (like today) are arguably easier to forecast than days with sharp scarcity peaks — the trough builds slowly with wind, the peak builds quickly with demand — but a cheap charge alone doesn't guarantee a big spread if the causally-reachable peak turns out to be a modest one.
 
 ---
 

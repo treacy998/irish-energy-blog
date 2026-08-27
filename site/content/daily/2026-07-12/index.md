@@ -82,7 +82,9 @@ Spread inverts hardest here, €-68.08 — by far the week's biggest — because
 
 ![BESS Dispatch](/charts/2026-07-12/bess-2026-07-12.png)
 
-The week's best trade by a wide margin: charged at €46.31, the week-low, and discharged into the €208 overnight spike. Gross profit €235, ROI 234.5% — nearly six times Saturday's return, proof that the widest spread of the week showed up on the day with the most wind, not the least.
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery. This day's figure was recalculated enforcing charge-before-discharge; gross profit corrected from €235 to €168.*
+
+Still the week's best trade by a wide margin: charged at €50 (15:00), discharged into the evening peak (€158, 19:30) — the €208 overnight spike was higher, but it fell before the afternoon charge, so a same-day cycle couldn't reach it. Gross profit €168, ROI 167.9% — still comfortably the week's best return, proof that the widest reachable spread of the week showed up on the day with the most wind, not the least.
 
 ## Commentary
 

@@ -102,11 +102,9 @@ Third inverted spread of the run (May 9, May 12, May 16). All three are weekend 
 
 ![BESS Dispatch](/charts/2026-05-16/bess-2026-05-16.png)
 
-€80 gross — with the same boundary caveat as May 12. The optimiser charged at 14:30 (€124, wind-rich afternoon) and discharged into the 23:00–00:30 block (averaging €194). Mechanically correct: those four half-hours are the highest consecutive periods in the SEM day. Physically, they're Friday's evening tail.
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery — in this case, by picking the 23:00–00:30 block that's actually Friday's evening tail carried into Saturday's file, before Saturday's own 14:30 charge. Recalculated enforcing charge-before-discharge: gross profit corrected from €80 to €0 (a €0.26 breakeven).*
 
-A rolling 24h optimisation would have rolled those discharge hours into Friday's cycle. Saturday's "real" optimal dispatch — charge at €124, discharge into the €147 evening peak — would capture roughly €21 of spread, roughly breakeven after round-trip efficiency. Stripped of the boundary inheritance, today was one of the weakest BESS days of the run: wind recovery killed the midday trough, and the contained evening peak left no scarcity to capture.
-
-Running 14-day cumulative: €1,189. May 12 and May 16 together contributed roughly €157 via boundary-spillover discharge. About 13% of the total sits across the wrong SEM day. The cumulative is approximately right; the day-by-day attribution on boundary days isn't.
+Almost no trade today. The optimiser charges at 14:30 (€124, wind-rich afternoon) and the only causally-reachable discharge window left is the contained evening peak at 19:00 (€147) — €22 of spread, which just about covers round-trip losses and nothing more. Wind recovery killed the midday trough and left no real scarcity for the evening to price in: one of the weakest BESS days of the run on its own terms, not because of any attribution artefact.
 
 ## Commentary
 
@@ -114,7 +112,7 @@ Saturday's mean of €149.27 reads as if the market sustained Friday's scarcity.
 
 The actual Saturday structure is two different markets in one file, separated by the noon wind recovery. Before noon: wind at 9–25%, a morning ramp from €135 to €190 between 06:00 and 08:30 that looked more working-day than weekend. After noon: wind climbing near-linearly from 22% at 09:30 to 57% at 16:00, with prices falling in near-lockstep from €187 to €124. €63 of suppression across seven hours — the cleanest within-day cannibalisation chart of the run. The evening peak capped at €147 with wind still at 45–55%; a contained finish. Saturday morning was Friday's market. Saturday afternoon was last Saturday's.
 
-For storage, €80 gross with a structural caveat. The discharge window at 23:00 was Friday's tail again — €194 average across the spillover block. Stripped of the boundary inheritance, Saturday's real optimal dispatch would have charged at €124 and discharged into a €147 evening peak: roughly €21 of spread, roughly breakeven after round-trip efficiency. The actual May 16 market, on its own terms, was one of the weakest dispatch days of the run. Running 14-day cumulative stands at €1,189 — but roughly 13% of that total sits across the two boundary-spillover days. The cumulative is approximately right; the per-day attribution on May 12 and May 16 needs a rolling 24h window to be clean.
+For storage, essentially no trade: €0 gross. Charging at €124 into the wind-rich afternoon and discharging into a contained €147 evening peak captures just €22 of spread — a breakeven result once round-trip losses are counted. One of the weakest dispatch days of the run on its own terms: wind recovery flattened the midday trough, and the evening peak never built enough scarcity to price a real spread.
 
 
 <details>

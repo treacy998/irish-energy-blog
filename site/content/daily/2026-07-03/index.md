@@ -84,7 +84,9 @@ Negative again, same mechanism as Wednesday: a low-wind pre-dawn stretch drags t
 
 ![BESS Dispatch](/charts/2026-07-03/bess-2026-07-03.png)
 
-Charged into the shallow afternoon trough (€98, 14:00), discharged into the morning spike (€212, 07:00). Gross €166, ROI 85% — a solid trade, but the smallest spread of the week so far because wind never gave the market a real floor to charge into.
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery. This day's figure was recalculated enforcing charge-before-discharge; gross profit corrected from €166 to €44.*
+
+Charged into the shallow afternoon trough (€98, 14:00), discharged into the evening peak (€141, 19:30) — the morning spike at €212 was higher, but it happened before the afternoon charge, so a same-day cycle couldn't reach it. Gross €44, ROI 22.6% — the smallest spread of the week so far, because wind never gave the market a real floor to charge into and the only reachable peak was a modest one.
 
 ## Commentary
 

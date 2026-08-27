@@ -72,18 +72,9 @@ Flipped spread. The overnight low-wind stretch (00:00–07:00) held the off-peak
 
 ## BESS Dispatch Signal
 
-| | Price | Time | Energy | Value |
-|--|--|--|--|--|
-| **Charge** | €91/MWh | 21:00 | 2 MWh | −€181 |
-| **Discharge** | €216/MWh | 07:00 | 1.7 MWh (85% RTE) | +€368 |
-| **Gross profit** | | | | **€187** |
-| **Price spread** | €126/MWh | | | **ROI: 103.1%** |
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery. Recalculated enforcing charge-before-discharge — see below.*
 
-*Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
-
-![BESS Dispatch](/charts/2026-07-01/bess-2026-07-01.png)
-
-Charged cheap into the evening wind (€91 at 21:00, wind above 60%), discharged straight into the morning's wind-collapse spike (€216 at 07:00). ROI 103% — a clean overnight-to-morning trade that only exists because the wind crash was so abrupt.
+No profitable single-cycle trade today. The cheapest four-period block (€91/MWh, 21:00, into the evening wind surplus) sits after the day's priciest block (€216/MWh, 07:00, the morning wind-collapse spike) has already passed. A same-day model can't charge into tonight's trough and then discharge into a peak that happened this morning.
 
 ## Commentary
 

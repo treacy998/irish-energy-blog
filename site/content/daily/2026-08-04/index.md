@@ -72,7 +72,7 @@ Tuesday's shape flipped the usual script: the day's high, €201.03, landed at 0
 
 That double-hump, morning-led profile is why std dev came in at €18.86 — the flattest day of the week so far. Both humps sit inside the 07:00–22:00 window, so the peak/off-peak spread barely registers at €4.99: nearly all the volatility is happening *within* the daytime block rather than between day and night, leaving nothing for a simple peak/off-peak split to capture.
 
-Storage had a thin day of it — €67 gross, the week's weakest, because the €129 trough isn't cheap enough to build a real spread against a morning peak that peaked early and eased off before the evening. A muted start to the week; worth watching whether Wednesday's wind forecast breaks the pattern.
+Storage had a thin day of it — €49 gross, charging at €131 (14:00) and discharging into the €183 evening plateau — because the trough isn't cheap enough to build a real spread against a morning peak that peaked early and eased off well before the battery could reach it. A muted start to the week; worth watching whether Wednesday's wind forecast breaks the pattern.
 
 
 <details>

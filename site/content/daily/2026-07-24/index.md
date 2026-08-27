@@ -81,7 +81,7 @@ Wind nearly doubled on yesterday, averaging 18.2% and touching 30.3% through the
 
 The two ends of the day tell the opposite story. Wind collapsed to single digits overnight and again in the first hour of trade, and price spiked to the day's €240.76 peak at 23:00 as generation scrambled to cover the gap. Two-hundred-euro swings within the same 24 hours, driven almost entirely by wind moving between 7% and 30%.
 
-That spread was good news for storage: €105 gross profit, a 40.8% ROI, nearly double Thursday's flat-day take. The lesson repeats — it's the gap between the trough and the peak that pays, not the average price level.
+Storage caught a modest slice of it: €91 gross, a 35.4% ROI, charging into the afternoon trough (€129, 14:30) and discharging into the evening peak (€205, 19:00). The lesson repeats — it's the gap between the trough and the peak that pays, not the average price level.
 
 
 <details>

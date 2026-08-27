@@ -53,18 +53,9 @@ draft: false
 
 ## BESS Dispatch Signal
 
-| | Price | Time | Energy | Value |
-|--|--|--|--|--|
-| **Charge** | €140/MWh | 21:00 | 2 MWh | −€280 |
-| **Discharge** | €211/MWh | 07:00 | 1.7 MWh (85% RTE) | +€359 |
-| **Gross profit** | | | | **€78** |
-| **Price spread** | €71/MWh | | | **ROI: 28.0%** |
+*Updated 2026-08-27: the BESS simulation previously allowed the discharge window to occur before the charge window ended, which is physically impossible for a battery. Recalculated enforcing charge-before-discharge — see below.*
 
-*Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges and capacity costs.*
-
-![BESS Dispatch](/charts/2026-05-08/bess-2026-05-08.png)
-
-€78 gross. Charged at 21:00 (€140), discharged at 07:00 (€211), capturing €71 of spread. The interesting thing about today is the charge window: the cheapest extended block was the late-evening fade, not overnight, not midday. The day ended where most days begin.
+No profitable single-cycle trade today. The day's cheapest four-period block sits at 21:00 (€140/MWh avg) — the late-evening fade. But the day's priciest block, €211/MWh, falls at 07:00, *earlier* in the same delivery day. A battery can't discharge into a peak that already happened before it charged, so with only one cycle allowed per day, there's no causally valid pairing left: by the time the evening trough opens up, the morning's opportunity is already behind it.
 
 ## Commentary
 
@@ -72,7 +63,7 @@ Friday softened. Mean dropped to €163.87/MWh — the lowest of the working wee
 
 The morning ramp held, as it has every working day this week. 06:00 to 07:30 moved €66/MWh — slightly softer than the €80+ ramps of Tue–Thu, but the same thermal signature in the same window. One exception worth flagging: a single spike to €205 at 11:00, €50 above its neighbours on either side. A single half-hour jumping that far above its neighbourhood is an operational event — a forecast error, short outage, or interconnector swing — the kind of thing visible next day in EirGrid's system reports.
 
-For storage, a quiet end to the week. €78 gross on €71 of captured spread — roughly half of Thursday's €104, a direct reflection of the day's halved volatility. Across five days, BESS gross ranged €56 to €139 with almost no correlation to the daily mean price. Storage revenue is a function of shape, not level. Friday's shape wasn't there.
+For storage, no trade today — the run's first no-cycle day. The day's real opportunity (charge into the evening fade, discharge into the morning peak) needs a cycle that spans two calendar days, which a same-day model can't take. It's a reminder that the single-cycle model understates real BESS revenue on exactly the days when the shape is this lopsided: a rolling 24-hour optimiser would have captured this one.
 
 
 <details>
