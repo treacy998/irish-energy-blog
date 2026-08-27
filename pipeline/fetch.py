@@ -101,10 +101,11 @@ def fetch_wind_and_demand(
     Fetch wind generation and demand for delivery_date from EirGrid.
 
     Returns a DataFrame with columns:
-        StartTime           datetime (Irish local time, 30-min intervals)
-        WindMW              float — wind generation in MW
-        DemandMW            float — system demand in MW
-        WindGeneration_pct  float — wind as % of demand
+        StartTime            datetime (Irish local time, 30-min intervals)
+        WindMW               float — wind generation in MW
+        WindForecastMW       float — day-ahead wind forecast in MW (NaN where unavailable)
+        DemandMW             float — system demand in MW
+        WindGeneration_pct   float — wind as % of demand
 
     Returns None if the fetch fails for any reason.
     The pipeline continues without wind data if None is returned.
@@ -113,25 +114,32 @@ def fetch_wind_and_demand(
     out_dir/eirgrid_raw/<delivery_date>/<area>.json before parsing, so the
     published figures stay reproducible from disk even if EirGrid's
     historical window later ages the live query out.
+
+    Note: EirGrid's demand endpoint does not return a forecast field for this
+    region/chart combination (only SYSTEM_DEMAND) — there is no DemandForecastMW.
     """
     date_str = delivery_date.strftime("%d-%b-%Y")   # e.g. "17-May-2026"
     raw_dir = Path(out_dir) / "eirgrid_raw" / delivery_date.isoformat()
 
-    wind   = _fetch_area("wind",   date_str, raw_dir=raw_dir)
-    demand = _fetch_area("demand", date_str, raw_dir=raw_dir)
+    wind   = _fetch_area("wind",   date_str, raw_dir=raw_dir, fields=["WIND_ACTUAL", "WIND_FCAST"])
+    demand = _fetch_area("demand", date_str, raw_dir=raw_dir, fields=["SYSTEM_DEMAND"])
 
     if wind is None or demand is None:
         return None
 
-    # Resample both to 30-minute intervals (EirGrid is 15-min)
-    wind   = _resample_30min(wind,   "WindMW")
-    demand = _resample_30min(demand, "DemandMW")
+    wind_actual   = _resample_30min(wind[wind["field"] == "WIND_ACTUAL"], "WindMW")
+    wind_forecast = _resample_30min(wind[wind["field"] == "WIND_FCAST"], "WindForecastMW")
+    demand        = _resample_30min(demand, "DemandMW")
 
-    if wind is None or demand is None:
+    if wind_actual is None or demand is None:
         return None
 
-    # Merge on StartTime
-    df = pd.merge(wind, demand, on="StartTime", how="inner")
+    # Merge on StartTime — forecast is left-joined since it may be absent for some periods
+    df = pd.merge(wind_actual, demand, on="StartTime", how="inner")
+    if wind_forecast is not None:
+        df = pd.merge(df, wind_forecast, on="StartTime", how="left")
+    else:
+        df["WindForecastMW"] = pd.NA
 
     # Calculate wind penetration %
     df["WindGeneration_pct"] = (
@@ -141,8 +149,12 @@ def fetch_wind_and_demand(
     return df
 
 
-def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None) -> pd.DataFrame | None:
-    """Fetch a single area (wind or demand) from EirGrid API."""
+def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: list[str] | None = None) -> pd.DataFrame | None:
+    """Fetch a single area (wind or demand) from EirGrid API.
+
+    fields restricts which FieldName values are kept (e.g. ["WIND_ACTUAL", "WIND_FCAST"]).
+    Returned rows carry a 'field' column so callers can split multi-field areas like wind.
+    """
     try:
         resp = requests.get(
             EIRGRID_BASE,
@@ -179,9 +191,7 @@ def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None) -> pd.Dat
             value = row.get("Value") or row.get("value")
 
             field = row.get("FieldName", "")
-            if area == "wind" and field != "WIND_ACTUAL":
-                continue
-            if area == "demand" and field != "SYSTEM_DEMAND":
+            if fields is not None and field not in fields:
                 continue
 
             if ts_raw is None or value is None:
@@ -196,7 +206,7 @@ def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None) -> pd.Dat
             else:
                 continue
 
-            records.append({"StartTime": ts, "value": float(value)})
+            records.append({"StartTime": ts, "value": float(value), "field": field})
 
         if not records:
             print(f"  [fetch] Could not parse any rows for area={area}")
