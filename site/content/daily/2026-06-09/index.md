@@ -58,7 +58,7 @@ The late-evening scarcity isn't about absolute wind level (19% has produced €2
 
 ![7-Day Price Comparison](/charts/2026-06-09/week-compare-2026-06-09.png)
 
-Two V-into-late-evening days in three: June 7 and June 9. Combined BESS revenue €503 — 12% of the entire run's cumulative on two days. The wind-shape lesson at its sharpest.
+Two V-into-late-evening days in three: June 7 and June 9. Combined BESS revenue €503 across the two days. The wind-shape lesson at its sharpest.
 
 ## Price Duration Curve
 
@@ -95,25 +95,19 @@ The captured spread (€132) is 14× the absolute value of the headline. The pea
 
 ![BESS Dispatch](/charts/2026-06-09/bess-2026-06-09.png)
 
-**€199 gross — the second-best day of the run** after June 7's €304.
+**€199 gross — a strong day, second only to June 7's €304 among comparable scarcity events.**
 
 Charge €84 in the wind-deep midday trough (14:00–15:30 at €84 avg). Discharge €216 in the late-evening scarcity block (21:00–22:30 at €216 avg). Captured spread €132.
 
-The €199 is what a "normal" BESS day looks like when the wind shape delivers both ends — without the €5 charge that made June 7 unique. **Captured spread €132 on a normal-charge day would have been the run's previous record.** The wind-shape lesson now has two demonstrations in three days.
-
-38-day cumulative: **€4,075. Crosses €4,000.** Mean €107/day. Top 5: June 7 €304, June 9 €199, May 18 €168, May 24 €163, May 17 €161 — €995 from 5/38 = 13% of days = 24% of cumulative. The top 2 days alone are 12% of revenue on 5% of days.
+The €199 is what a "normal" BESS day looks like when the wind shape delivers both ends — without the €5 charge that made June 7 unique. The wind-shape lesson now has two demonstrations in three days.
 
 ## Commentary
 
 Another late-evening scarcity event, two days after the last one. Wind held 50%+ for 18 hours then drained from 52% to 19% across the late evening. The merit order climbed into peakers and the day cleared €209–230 across the 21:00–22:30 block.
 
-BESS €199. Charge €84 midday, discharge €216 late evening, captured spread €132. That's a "normal-charge" version of the June 7 trade — without the €5 charge anomaly, but with a wider discharge window. **Second-best day of the run** at €199 gross.
+BESS €199. Charge €84 midday, discharge €216 late evening, captured spread €132. That's a "normal-charge" version of the June 7 trade — without the €5 charge anomaly, but with a wider discharge window.
 
-The cumulative crosses €4,000. Mean per day now €107 — up from €99 just six days ago. Two days have done that work. The top 2 BESS days are 12% of total revenue on 5% of days — and the concentration is increasing, not stabilising, as the series grows.
-
-The week-long arc: June 4 broke the trough record, June 7 set the BESS record (€304) by combining a deep trough with a scarcity peak, June 9 confirmed the pattern at €199. The same wind shape — high wind holding for 14-18 hours, then sharp drainage into a late demand peak — produced both top days. **Whatever weather setup creates that pattern, it's worth knowing the forecast for.**
-
-The week's arc, in one line: Six days. Two of them did €503 of BESS gross between them — 12% of the entire 38-day series. Same wind shape both times: sustained 50%+ wind through the day, sharp drainage into the late evening, scarcity prints between €200 and €230. Forecast that pattern and you've got the year.
+June 4 broke the trough record, June 7 produced the week's biggest BESS gross (€304) by combining a deep trough with a scarcity peak, and June 9 confirms the same pattern at €199. The same wind shape — high wind holding for 14–18 hours, then sharp drainage into a late demand peak — produced both days. **Whatever weather setup creates that pattern, it's worth knowing the forecast for.** Forecast that pattern and you've got the year.
 
 
 <details>

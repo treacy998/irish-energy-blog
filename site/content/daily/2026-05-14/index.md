@@ -105,7 +105,7 @@ Peak/off-peak spread is a two-tail function. A strong evening peak doesn't help 
 
 Wednesday: €110 mean, €52 spread, €61 BESS. Thursday: €127 mean, €54 spread, €61 BESS. €17 of daily price-level lift produced zero additional BESS revenue. The captured spread barely moved.
 
-The charge window stayed at 14:00 for the third consecutive working day. Monday was the single exception: 23% wind, overnight cheap, charge moved to 03:00. Every other day this week: midday. Wind penetration above 40% keeps the structural trough in the afternoon. Charge-time choice is now a wind-regime classifier. Running 11-day series: €93, €56, €108, €139, €78, €63, €110, €107, €77, €61, €61. Cumulative €953 gross. One good day from €1k.
+The charge window stayed at 14:00 for the third consecutive working day. Monday was the single exception: 23% wind, overnight cheap, charge moved to 03:00. Every other day this week: midday. Wind penetration above 40% keeps the structural trough in the afternoon. Charge-time choice is now a wind-regime classifier.
 
 ## Commentary
 

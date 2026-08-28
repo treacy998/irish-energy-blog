@@ -101,19 +101,9 @@ The curve signals "moderate-spread day with reliable evening peak" — a forecas
 
 ![BESS Dispatch](/charts/2026-06-01/bess-2026-06-01.png)
 
-€75 gross — mid-range BESS, third-best of the six-day arc after May 27 (€133) and May 29 (€155).
+€75 gross — mid-range BESS, third-best of the six-day arc after May 29 (€155) and May 31 (€95).
 
 Charge €108 in the midday trough (14:00–15:30 at €108 avg), discharge €171 in the evening plateau (19:00–20:30 at €171 avg). Captured spread €63, ROI 34.9% on the €215 charge cost. Standard wind-recovered weekend-shaped dispatch.
-
-The 29-day BESS series moves to **€2,927 cumulative**, mean €101/day. Closing on the €3,000 milestone — and the series has now been running long enough to draw the first structural conclusions:
-
-- **Mean per day:** €101 (remarkably stable at ~€100 across all 29 days)
-- **Top 5 days:** €803 (27% of cumulative from 17% of days)
-- **Top 10 days:** ~€1,440 (49% of cumulative from 34% of days)
-- **Median day:** ~€85 gross
-- **Worst day:** May 21 €38
-
-The shape of the distribution is right-skewed: most days deliver €60–110, with a long tail of high-revenue scarcity days.
 
 ## Commentary
 
@@ -121,7 +111,7 @@ The Irish June bank holiday. Mean €131.68, no scarcity, evening peak at €174
 
 The day's structural learning sits in the comparison to May 29. Same evening wind shortfall — 14.8% at 21:00 today vs ~14% during May 29's late evening — but May 29 cleared €203, today cleared €174. The difference is ~120 MW of demand suppression. **At low-wind conditions, roughly €30 of peak price moves per 120 MW of demand.** The merit-order slope is now measurable at the scarcity threshold — which is exactly the analytical neighbourhood where flexibility assets earn most of their revenue.
 
-For storage, €75 gross — mid-range, captured spread €63. The 29-day cumulative reaches €2,927, mean €101/day. Closing on €3,000 — and four weeks of simulated DAM arbitrage on a single 1MW/2MWh asset will cross that line in the next 24 hours. The data so far carries three structural conclusions worth surfacing: **(1) mean wind doesn't predict daily revenue; the morning or evening wind shortfall does. (2) Top-tier BESS days cluster on Fridays and weekends, not working-week peaks. (3) BESS revenue follows a binary threshold at €200/MWh — days that print scarcity are top-tier; days that don't are mid-range, regardless of how close they came.** Three weeks ago the pipeline was producing scaffold posts with commentary placeholders. Four weeks of data later, the structural patterns are starting to write themselves.
+For storage, €75 gross — mid-range, captured spread €63. Three structural conclusions worth surfacing: **(1) mean wind doesn't predict daily revenue; the morning or evening wind shortfall does. (2) Top-tier BESS days cluster on Fridays and weekends, not working-week peaks. (3) BESS revenue follows a binary threshold at €200/MWh — days that print scarcity are top-tier; days that don't are mid-range, regardless of how close they came.**
 
 ---
 
@@ -129,7 +119,7 @@ For storage, €75 gross — mid-range, captured spread €63. The 29-day cumula
 
 The cleanest single observation for the period:
 
-> **May 27–June 1: six consecutive days, six different wind shapes, six different BESS outcomes.** Mean wind ranged 32–39% across all six (a 7-percentage-point band); BESS revenue ranged €66–€155 (a 135% range). Wind level was effectively constant; wind *shape* drove a 2.3× variation in flexibility revenue. The salary-signal version: **forecasting the next 24h mean wind is solved; forecasting the next 24h wind shape — specifically the depth and timing of the day's worst half-hour — is where the value lives.**
+> **May 27–June 1: six consecutive days, six different wind shapes, six different BESS outcomes.** Mean wind ranged 32–39% across all six (a 7-percentage-point band); BESS revenue ranged €32–€155 (nearly a 5× range). Wind level was effectively constant; wind *shape* drove almost a 5× variation in flexibility revenue. The salary-signal version: **forecasting the next 24h mean wind is solved; forecasting the next 24h wind shape — specifically the depth and timing of the day's worst half-hour — is where the value lives.**
 
 ---
 
@@ -165,10 +155,10 @@ The metric assumes the cheap hours are overnight. On wind-rich weekend and bank 
 
 | Day | Peak/Off-Peak Spread | BESS Captured Spread | Difference |
 |-----|---------------------|---------------------|------------|
-| May 27 | €3.88 | €98 | 25× |
-| May 28 | €6.05 | €63 | 10× |
+| May 27 | €3.88 | €39 | 10× |
+| May 28 | €6.05 | €54 | 9× |
 | May 29 | €2.99 | €107 | 36× |
-| May 30 | −€13.59 | €57 | wrong sign |
+| May 30 | −€13.59 | €46 | wrong sign |
 | May 31 | €10.51 | €76 | 7× |
 | Jun 1 | €4.17 | €63 | 15× |
 
