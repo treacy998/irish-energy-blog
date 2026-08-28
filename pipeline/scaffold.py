@@ -241,6 +241,8 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     else:
         bess_section = ""
 
+    storage_prompt_line = "- Was it a good day for storage?\n" if include_bess else ""
+
     day_type = classify_day_type(summary)
     guardrail = "spot ≠ forward, educate don't signal"
     if day_type == "wide-spread":
@@ -307,11 +309,11 @@ draft: false
 
 <!--
 Write 2-3 paragraphs here:
-- What drove the price shape today, and was it a good day for storage?
+- What drove the price shape today?
 - How does wind/demand explain the peak and trough?
 - Anything unusual compared to the week?
 - Market context: outages, interconnector, weather forecast?
--->
+{storage_prompt_line}-->
 
 {data_table}
 """
