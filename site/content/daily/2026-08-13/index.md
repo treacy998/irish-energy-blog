@@ -77,7 +77,7 @@ draft: false
 
 Thursday delivered the week's clearest scarcity signal. Wind collapsed to 9.9% (5.8–17.2%, never breaking out of single digits-to-teens all day) and the market priced it accordingly: mean €196.14, the week's highest, on a peak of €312.1 at 19:30 — also the week's highest. Forty of forty-eight periods cleared above €150 (83%) and nineteen above €200 (40%), the most scarce day so far. Low wind alone doesn't set the ceiling — it removes the buffer, and thermal plant does the rest once evening demand arrives.
 
-Storage had its best day of the run: charge at 13:30's €139 trough, discharge into the 18:00 ramp at €304, for €239 gross and 85.8% ROI. The cause-and-effect chain is direct here — the lower the wind, the wider the trough-to-peak spread, the better the battery does.
+Storage had a strong day of it: charge at 13:30's €139 trough, discharge into the 18:00 ramp at €304, for €239 gross and 85.8% ROI. The cause-and-effect chain is direct here — the lower the wind, the wider the trough-to-peak spread, the better the battery does.
 
 
 <details>

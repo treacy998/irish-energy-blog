@@ -109,7 +109,7 @@ The practical consequence: peak/off-peak averaging understates Friday's volatili
 
 Discharge window note: the optimiser captured four consecutive late-evening half-hours (21:00, 21:30, 22:00, 22:30) cleanly inside the SEM day proper. No boundary caveat, no misattribution. Today's €156 belongs entirely to May 15.
 
-The running cumulative crosses €1,000 on today's entry: 13 days, €1,109. One day earned 14% of the total. The operational implication is direct: BESS revenue concentrates in a small number of volatile days, and forecast skill on those days is worth more than dispatch optimisation on the calm majority. Friday is the case in point.
+The operational implication is direct: BESS revenue concentrates in a small number of volatile days, and forecast skill on those days is worth more than dispatch optimisation on the calm majority. Friday is the case in point.
 
 ## Commentary
 
@@ -117,7 +117,7 @@ The wind regime broke. After four consecutive working days at 23%, 47%, 60%, 53%
 
 The full Mon–Fri wind series is now the week's most analytically valuable sequence: 23% / 47% / 60% / 53% / 16% → €138 / €112 / €110 / €127 / €150. The non-linearity is the point. Going from 47% to 60% (+13pp, Tue→Wed) dropped the mean €2 — diminishing returns at the top of the wind distribution. Going from 53% to 16% (−37pp, Thu→Fri) added €23 and produced 9 scarcity hours. The merit-order curve is convex: incremental wind above 40% barely moves prices; pull wind down through the 20–25% threshold and the marginal plant steps into peakers. The price doesn't ramp — it steps. Friday's evening chart shows the step structure: €189 at 18:00, €214 by 19:00, €244 by 22:00. That's a different plant class clearing the market, not more expensive gas.
 
-For storage, the payday. A simulated 1MW/2MWh battery captured a €112 spread by charging in the midday belly (€113 at 13:30) and discharging cleanly into the 21:00–22:30 scarcity block (€225 average). Gross €156, ROI 68.8%. The 13-day cumulative crossed €1,109 — €156 is 14% of the total, earned on one day. BESS revenue concentrates in a small number of volatile events. Forecast skill on those days is worth more than perfect dispatch on the calm 80% of the year. Friday is the case in point.
+For storage, the payday. A simulated 1MW/2MWh battery captured a €112 spread by charging in the midday belly (€113 at 13:30) and discharging cleanly into the 21:00–22:30 scarcity block (€225 average). Gross €156, ROI 68.8%. BESS revenue concentrates in a small number of volatile events. Forecast skill on those days is worth more than perfect dispatch on the calm 80% of the year. Friday is the case in point.
 
 
 <details>

@@ -93,11 +93,9 @@ For BESS, both shapes deliver — but in different ways. May 27 cycled into a sh
 
 ![BESS Dispatch](/charts/2026-05-29/bess-2026-05-29.png)
 
-**€155 gross — the new fourth-best day of the 26-day run.** Tied with the May 17 scarcity event. ROI 83.4% — third-highest of the run after May 23 (84.4%) and May 18.
+**€155 gross — a strong day.** ROI 83.4%.
 
-Charge €93 at the deep midday trough (14:00–15:30 at €93 avg) — the second-cheapest charge of the run after May 23's €79. Discharge €200 at the late-evening scarcity block (20:30–22:00 at €200 avg). Captured spread €107.
-
-The 26-day BESS series moves to €2,691 cumulative, mean €103/day. The new top 5 days are May 18 €168, May 24 €163, May 17 €161, **May 29 €155**, May 15 €156 — €803 from 5/26 = 19% of days = 30% of cumulative. **Three of the top 5 BESS days are now Friday-or-weekend days** (May 15 Fri, May 24 Sun, May 29 Fri). The original working-week-scarcity assumption keeps weakening.
+Charge €93 at the deep midday trough (14:00–15:30 at €93 avg). Discharge €200 at the late-evening scarcity block (20:30–22:00 at €200 avg). Captured spread €107.
 
 ## Commentary
 
@@ -105,7 +103,7 @@ The day that hid a top-5 BESS event inside an unremarkable daily mean. Mean €1
 
 The structural cause is the wind shape — and specifically the widest wind range of the 26-day run (14% to 64%, 50 percentage points). Wind held 53–64% across the entire overnight and early morning. Then drained steadily through the day to bottom at 13.8% at 21:30 — exactly inside the late-evening demand window. From 19:30 to 22:00 wind ran at 14–22% while demand was at its evening peak, and the merit order climbed into scarcity. **Mean wind 39% on the day; effective wind during the late-evening peak window 16%.** Mean wind is uninformative.
 
-For storage, the captured spread €107 unlocks gross €155 — the fourth-best day of the run. Charge €93 in the deep midday trough (the second-cheapest charge of the run after May 23), discharge €200 in the scarcity block. ROI 83.4%. 26-day cumulative €2,691, mean €103/day. Three of the top 5 BESS days now sit on Friday or weekend (May 15 Fri, May 24 Sun, May 29 Fri) — the working-week-scarcity assumption continues to weaken. **The single best predictor for BESS revenue in the data so far is not the day of the week; it is the wind decline rate into the day's demand peak window.**
+For storage, the captured spread €107 unlocks gross €155. Charge €93 in the deep midday trough, discharge €200 in the scarcity block. ROI 83.4%. **The single best predictor for BESS revenue in the data so far is not the day of the week; it is the wind decline rate into the day's demand peak window.**
 
 
 <details>

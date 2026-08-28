@@ -115,7 +115,6 @@ The optimiser found the midday trough (13:30–15:00 at €111 avg) and the even
 
 The €23 BESS revenue difference between yesterday and today is the entire structural read of the working week. Same demand, same mean price level — different intra-day wind shape. A V-out-of-peak day (yesterday) earned €38. A W-shape day (today) earned €61. A V-into-peak day (May 20) earned €105. Three values, three wind shapes, single variable.
 
-Running 19-day BESS series: cumulative €1,808, mean €95/day. Top 4 days still anchor 34% of revenue from 21% of days.
 
 ## Commentary
 
@@ -129,7 +128,6 @@ The three working days from May 20 to May 22 produced the cleanest within-week w
 
 The structural lesson is that the daily summary statistics — mean price, mean wind, peak/off-peak spread — don't carry the relevant information for flexibility revenue. A BESS forecast model needs to predict the shape of the wind day, not its level. The captured spread (the metric the optimiser actually earns against) tracked the wind shape cleanly across all three days; the peak/off-peak spread didn't.
 
-For the running BESS series, €61 lands the 19-day cumulative at €1,808, mean €95/day. Top 4 days (May 7, 15, 17, 18 = €624) anchor 34% of revenue from 21% of days. The concentration is stable; the mid-range days are doing their work. Three weeks in.
 
 
 <details>

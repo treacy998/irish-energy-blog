@@ -93,11 +93,9 @@ Why does it work today? Because the cheap window IS overnight (the Thursday-tail
 
 ![BESS Dispatch](/charts/2026-06-05/bess-2026-06-05.png)
 
-€80 gross. Eighth morning-discharge day of the run.
+€80 gross. A morning-discharge day.
 
 The charge window is interesting: it sits at the START of the SEM day (23:00–00:30), catching Thursday's cheap evening tail. The optimiser found the four cheapest consecutive half-hours in the boundary band averaging €99. That's the inverse of the May 30 boundary discharge problem — here the boundary lets us charge cheap rather than letting us discharge expensive. Either way, the boundary affects the dispatch.
-
-34-day cumulative: €3,392, mean €100/day.
 
 ## Commentary
 

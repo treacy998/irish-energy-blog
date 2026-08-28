@@ -97,8 +97,6 @@ What's interesting: the captured spread (€86) is over 14× the headline. On no
 
 The day proves the symmetry of BESS revenue. The €86 spread three weeks ago would have come from a scarcity-peak discharge above an ordinary trough. Today it comes from a record-cheap charge below an ordinary peak. **Same revenue from opposite ends of the curve.**
 
-33-day cumulative: €3,312, mean €100/day.
-
 ## Commentary
 
 A day with no peak. Mean €82.30, no period above €150, midday trough of €37.85 at 15:00 — the deepest 30-minute clearing price the run has seen by €27/MWh. Wind held 50% on a narrow 41–60% band all day. With wind that high and that steady, gas dropped out of the merit order at midday and the marginal plant was whatever cheaper unit was available.

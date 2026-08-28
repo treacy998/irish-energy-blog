@@ -107,7 +107,7 @@ The dispatch logic chose midday charge (13:00–14:30 at €101 avg) for the thi
 
 The discharge sits in the 20:00–21:30 evening block at €180 avg — the conventional evening pattern restored after May 18's morning-discharge anomaly.
 
-Captured spread €80, gross €105, ROI 52.4% on the €201 charge cost. The 17-day BESS series now stands at €1,709 cumulative, mean €100/day.
+Captured spread €80, gross €105, ROI 52.4% on the €201 charge cost.
 
 ## Commentary
 
@@ -115,7 +115,7 @@ A real wind day with a real evening shortfall. Mean €127.94 dropped €9 from 
 
 For wind generators, a poor day in the conventional sense — most of the MWh sold into the cheap overnight hours, almost none into the dear evening peak. Capture price will sit below the daily mean. The classic cannibalisation problem, in its standard direction after May 5's reversal.
 
-For storage, the payday. A simulated 1MW/2MWh battery captured €80 of spread (€101 charge, €180 discharge), gross €105 — the best non-scarcity working-day result of the run. The running 17-day series crosses €1,709 cumulative. The structural read: the mid-range BESS day — a 40%+ wind day with a real evening wind shortfall — is the reliable €100-day workhorse of the portfolio. The €150+ days come from scarcity events; the €100 days come from days like this. Both matter.
+For storage, the payday. A simulated 1MW/2MWh battery captured €80 of spread (€101 charge, €180 discharge), gross €105. The structural read: the mid-range BESS day — a 40%+ wind day with a real evening wind shortfall — is a reliable €100-day workhorse. The €150+ days come from scarcity events; the €100 days come from days like this. Both matter.
 
 
 <details>

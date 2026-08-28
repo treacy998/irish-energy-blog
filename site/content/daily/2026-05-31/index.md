@@ -97,7 +97,6 @@ The shape signals "shaped day, no scarcity." A real evening peak that's worth ca
 
 The dispatch picked the evening cleanly — the morning had no peak to compete with. The captured spread €76 is reasonable; what matters analytically is that the spread *failed* to enter top-tier territory because the evening peak failed to break €200. **One more percentage point of wind drainage during the 18:00–19:00 window and today would have been a top-5 day at ~€130 gross.** The threshold for top-tier BESS revenue sits around the €200 line — and today missed it by €3.
 
-28-day BESS series: cumulative €2,852, mean €102/day.
 
 ## Commentary
 
@@ -105,7 +104,7 @@ Sunday, a near-scarcity event with the evening peak topping at €196.68 — thr
 
 The structural reading: there's a discontinuous reward function at the €200/MWh threshold. Peakers price in at €200+; gas at high load prices at €175–195. The merit order doesn't smoothly climb through €200 — it *steps* into peaker bids. A day that climbs to €197 and stops looks similar to a day that climbs to €203 in everyday statistics; for BESS revenue they differ by ~€30–40 gross on a single cycle. **Forecasting the scarcity threshold (binary) matters more than forecasting the peak price (continuous).**
 
-For storage, €95 gross — solid Sunday in the mid-range, captured spread €76. 28-day cumulative €2,852, mean €102/day. The day failed to break into top-tier BESS revenue by 3 euros on the discharge price. **Top-tier BESS days are scarcity days; near-miss days are mid-range days; the binary distinction is the €200 threshold.** That's the structural rule emerging from the data — a useful one for any operator modelling BESS revenue distributions.
+For storage, €95 gross — solid Sunday in the mid-range, captured spread €76. The day failed to break into top-tier BESS revenue by 3 euros on the discharge price. **Top-tier BESS days are scarcity days; near-miss days are mid-range days; the binary distinction is the €200 threshold.** That's the structural rule emerging from the data — a useful one for any operator modelling BESS revenue distributions.
 
 
 <details>

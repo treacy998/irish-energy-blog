@@ -97,8 +97,6 @@ A negative spread is now appearing every 4-5 days in this regime. Worth a tag on
 
 €112 gross. Cheap charge (€72) does the work again — ROI 78.2% on a modest discharge (€150). The same pattern as June 4 in miniature.
 
-35-day cumulative: €3,504, mean €100/day.
-
 ## Commentary
 
 Another deep midday trough — €69.92 at 14:30, the third record low this week after €37.85 on Thursday and €65.25 on Wednesday. Calm Saturday, weekend demand at 3,608 MW, wind 30-67% with the lowest point at midday.

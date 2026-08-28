@@ -103,7 +103,7 @@ Both windows are cheaper: the peak window no longer contains morning scarcity, a
 
 €86 gross — back to the wind-rich-working-day range. Charged at 13:00 (€91, the deep midday belly), discharged at 19:30 (€157, the evening peak). Captured spread €67, ROI 47.4%. The conventional dispatch pattern fully restored: midday charge, evening discharge, standard working-day shape.
 
-The May 11–14 wind-rich working week produced €107, €77, €61, €61. Today's €86 lands in the middle of that range — the wind regime has reset and the BESS series resets with it. Running 17-day cumulative: €1,604. Top 4 days (May 7 €139, May 15 €156, May 17 €161, May 18 €168) = €624 — 39% of total from 24% of days. Whatever a real operator pays for forecast skill on the volatile days is worth more than optimal dispatch across the remaining 76%.
+The May 11–14 wind-rich working week produced €107, €77, €61, €61. Today's €86 lands in the middle of that range — the wind regime has reset and the BESS pattern resets with it.
 
 ## Commentary
 
@@ -111,7 +111,7 @@ Wind returned. Tuesday's mean of €120.05/MWh is €43 below Monday's €162.73
 
 The day's structure is the wind-rich working-day archetype in clean form: a soft overnight floor (€92–132, wind holding 45–52%), a contained morning ramp capping at €142 (€113 below yesterday's €255), a wide and deep midday belly with six consecutive periods below €100 and a €90.63 floor at 14:00 (the lowest working-day price of the entire run), a conventional evening peak capping at €161. Every structural feature of a weekday market is visible, but each is dialled back — the merit order finds mid-merit gas comfortably across all 48 half-hours. Worth flagging: today's wind profile, with its 16-point range, is what an annual capacity factor calculation assumes is the norm. It is not the norm. Most days in this run had wind range 30+ percentage points. Annual planning that models from mean wind profiles understates exposure to both the May 15/18 scarcity days and the May 13 surplus days simultaneously.
 
-For storage, €86 gross — firmly in the wind-rich-working-day range. Charged in the midday belly (€91 at 13:00), discharged into the 19:30 evening peak (€157). The 17-day series now stands at €1,604 cumulative. Top 4 days earned 39% of that total from 24% of days. Two complete weeks of simulated DAM arbitrage, and the concentration of revenue in a small number of volatile events is now the dominant fact of the series. Whatever a real operator pays for forecast skill on the days that matter, it's worth more than perfect dispatch on all the calm ones combined.
+For storage, €86 gross — firmly in the wind-rich-working-day range. Charged in the midday belly (€91 at 13:00), discharged into the 19:30 evening peak (€157). Whatever a real operator pays for forecast skill on the days that matter, it's worth more than perfect dispatch on all the calm ones combined.
 
 
 <details>

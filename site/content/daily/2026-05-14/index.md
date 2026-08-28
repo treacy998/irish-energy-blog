@@ -113,7 +113,7 @@ Thursday lifted €17 to €127.08 as wind eased from Wednesday's 60% to 53% and
 
 The Monday-Thursday comparison is the structural lesson of the week. Both days: 11–12 periods above €150. Monday's peak/off-peak spread: +€23.62. Thursday's: +€5.90. The overnight off-peak window ran €5/MWh dearer on Thursday (€117–128 vs Monday's €112–125). That €5 difference compressed the spread by €18. Peak/off-peak spread is a two-tail function — a strong evening peak doesn't help arbitrage if the overnight isn't structurally cheap. Monday had both. Thursday had the peak and a gas-marginal overnight with no cheap window, the floor pinned by fuel cost rather than wind surplus.
 
-For storage, €61 gross — tied with Wednesday, despite the €17 higher daily mean. Captured spread €54 vs Wednesday's €52: functionally identical. €17 of price-level lift produced zero additional BESS revenue. The running 11-day series now stands at €953 cumulative gross — close to €1k of simulated DAM arbitrage on a single 1MW/2MWh asset — with daily revenue spanning €56 to €139 and no correlation to mean daily price. Storage lives on spread, not level. Thursday's €127 mean bought exactly the same BESS day as Wednesday's €110. Send Friday when you have it — with five wind levels in one week, the weekly recap structure writes itself.
+For storage, €61 gross — tied with Wednesday, despite the €17 higher daily mean. Captured spread €54 vs Wednesday's €52: functionally identical. €17 of price-level lift produced zero additional BESS revenue. Storage lives on spread, not level. Thursday's €127 mean bought exactly the same BESS day as Wednesday's €110. Send Friday when you have it — with five wind levels in one week, the weekly recap structure writes itself.
 
 
 <details>

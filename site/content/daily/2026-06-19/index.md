@@ -89,7 +89,7 @@ Wild swing of a day — the biggest range yet at €99.88, mean of €158.27. Th
 
 Overnight wind was a glut, peaking at 50.7% around 01:00, and the floor sank to €106.22 by 04:00. Then it fell apart — 35% at 05:00 down to 13% by 07:00 — gone in two hours, right as the morning ramp usually kicks in. Prices went from €106 to €199.98 in three hours flat. Wind never recovered past 16% for the rest of the day, which is why the high carried through to an oddly-timed peak of €206.10 at 11:00 rather than the usual evening spike.
 
-A brief afternoon dip as wind ticked back up to 13-16% gave some relief before the evening climbed back to €180-195 on the same low wind. Good day for storage though — charge at €110 into the overnight glut, discharge at €195 right on the morning ramp, €112 gross. Best BESS day of the run so far, and it's exactly the kind of whipsaw that pays.
+A brief afternoon dip as wind ticked back up to 13-16% gave some relief before the evening climbed back to €180-195 on the same low wind. Good day for storage though — charge at €110 into the overnight glut, discharge at €195 right on the morning ramp, €112 gross. Exactly the kind of whipsaw that pays.
 
 
 <details>

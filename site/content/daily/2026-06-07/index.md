@@ -86,7 +86,7 @@ A real-world example of a "scarcity day" PDC and a "surplus day" PDC on the same
 
 Peak avg €66.73 (the peak window is dominated by surplus hours), off-peak avg €89.64 (the boundary spillover at the start and the scarcity buildup at the end lift it). The metric is reading the day backwards — and the captured spread (€180) is *eight times* the absolute value of the headline.
 
-If a metric tells you the day is calm and inverted while a BESS earned its best day of the run on it, the metric is wrong. Worth a stronger dashboard caveat: peak/off-peak averaging fails on bimodal days entirely.
+If a metric tells you the day is calm and inverted while a BESS earned an exceptional gross on it, the metric is wrong. Worth a stronger dashboard caveat: peak/off-peak averaging fails on bimodal days entirely.
 
 ## BESS Dispatch Signal
 
@@ -101,13 +101,11 @@ If a metric tells you the day is calm and inverted while a BESS earned its best 
 
 ![BESS Dispatch](/charts/2026-06-07/bess-2026-06-07.png)
 
-**€304 gross — almost double the previous record (May 18, €168).** ROI 2,609%.
+**€304 gross.** ROI 2,609%.
 
-Charge €6 in the morning surplus (07:00–08:30 at €5.82 avg). Discharge €186 in the late-evening scarcity (21:00–22:30 at €185.6 avg). Captured spread €180 — a number that doesn't really compare to anything else in the run; the previous widest captured spread was May 15's €112.
+Charge €6 in the morning surplus (07:00–08:30 at €5.82 avg). Discharge €186 in the late-evening scarcity (21:00–22:30 at €185.6 avg). Captured spread €180.
 
 The single best argument for BESS in the data so far. **One day, one cycle, €304.** Three weeks of mid-range working-day BESS revenue earned on a single Sunday's wind-shape variance.
-
-36-day cumulative: €3,808. Top 5 BESS days: June 7 €304, May 18 €168, May 24 €163, May 17 €161, May 15 €156 — €952 from 5/36 = 14% of days = 25% of cumulative. The concentration just got more extreme; June 7 alone is 32% of the top-5 total.
 
 ## Commentary
 

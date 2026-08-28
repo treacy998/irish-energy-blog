@@ -109,7 +109,6 @@ Charge €121 in the afternoon trough (14:00–15:30 at €121 avg), discharge �
 
 A real BESS operator running RTE-aware optimisation would have a question to ask today: is the captured spread wide enough to justify the cycle at all? €43 of spread minus 15% of round-trip losses leaves perhaps €25/MWh of net spread before any wear-and-tear or opportunity cost. A discretionary operator might reasonably skip the day entirely — and that decision, applied across enough days, is what separates a model BESS portfolio from a real one.
 
-Running BESS series: 18 days, cumulative €1,747, mean €97/day. Top 4 days (May 7, 15, 17, 18 = €624) now represent 36% of cumulative revenue from 22% of days. Today reinforces the concentration story rather than diluting it.
 
 ## Commentary
 
@@ -117,7 +116,7 @@ The flattest day of the 19-day run. Mean €136.98 is mid-pack, but every volati
 
 The structural story is the wind shape. May 20 saw wind drain into the evening peak (62% → 27%) and produced a €184 high. May 21 saw wind recover into the evening peak (62% overnight → 32% afternoon → 52% by 21:30) and produced a €166 high. Same mean demand, similar mean wind, opposite intra-day wind timing — and €19/MWh of evening peak difference attributable to the timing alone. The bigger lever on price isn't wind level; it's wind shape. Today's V-out-of-peak shape capped the merit order short of any escalation event.
 
-For storage, the floor of the series. €38 gross, captured spread €43, ROI 15.6%. After 85% round-trip efficiency, the day barely justifies cycling. The 18-day cumulative now reads €1,747, with the four big scarcity days (May 7, 15, 17, 18) anchoring 36% of revenue from 22% of days. Give us a wind shortfall tomorrow.
+For storage, a thin day. €38 gross, captured spread €43, ROI 15.6%. After 85% round-trip efficiency, the day barely justifies cycling. Give us a wind shortfall tomorrow.
 
 
 <details>

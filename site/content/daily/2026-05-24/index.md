@@ -92,17 +92,16 @@ _Simulated 1MW/2MWh battery, one optimal DAM cycle. Gross before network charges
 
 ![BESS Dispatch](/charts/2026-05-24/bess-2026-05-24.png)
 
-€163 gross — the second-best day of the 21-day run, narrowly behind May 18's €168 and ahead of May 17's €161. Sunday delivers a top-tier BESS outturn.
-Charge €111 in the midday belly (12:30–14:00 at €111 avg), discharge €226 in the late-evening scarcity block (20:30–22:00 at €226 avg). Captured spread €115 — the second-widest of the run. ROI 73.6% on the €222 charge cost.
-The 21-day cumulative now stands at €2,104 — crossing the €2,000 milestone. Mean €100/day. The new top 4 BESS days (May 18 €168, May 24 €163, May 17 €161, May 15 €156) sum to €648 — 31% of cumulative revenue from 19% of days. The concentration metric is stable as the series grows.
+€163 gross. Sunday delivers a top-tier BESS outturn.
+Charge €111 in the midday belly (12:30–14:00 at €111 avg), discharge €226 in the late-evening scarcity block (20:30–22:00 at €226 avg). Captured spread €115. ROI 73.6% on the €222 charge cost.
 
-21 days of simulated I-SEM DAM arbitrage on a 1MW/2MWh asset. €2,104 gross. Three of the top four days landed on a Sunday or Friday — not Mondays. Conventional wisdom puts the best BESS days on working-week scarcity; the data so far says otherwise.
+Conventional wisdom puts the best BESS days on working-week scarcity; today's a Sunday.
 
 ## Commentary
 
 Sunday, demand at the run's lowest (3,358 MW), and 7 of 48 periods cleared above €200. Mean €143.77 lifted €21 from Saturday. The structural cause was the wind shape: wind held 24–30% through the morning, drifted down through the working day, and then drained sharply through the evening peak — 17% at 17:00, 13% at 18:00, 9% at 18:30, 6% by 20:00. With wind effectively absent at peak demand, the merit order climbed into peakers and the day cleared €226 across four consecutive half-hours from 20:30 to 22:00.
 The May 17–18 lesson re-confirmed: scarcity isn't a demand event, it's a wind-timing event. Today's demand was the lowest of the 21-day run; today's evening peak was the third-highest. A Sunday with 3,358 MW demand and 6% evening wind cleared higher than working days with 4,028 MW demand and 50% evening wind. The relevant variable for I-SEM price formation in 2026 is wind timing, not load.
-For storage, the €2,000 cumulative milestone arrives. €163 gross — second-best day of the run — on a €115 captured spread (€111 midday charge, €226 evening discharge). The 21-day BESS series moves to €2,104, mean €100/day. The top 4 days (May 15, 17, 18, 24) anchor 31% of revenue from 19% of days, and three of the top four landed on Friday or Sunday. The working-week-scarcity assumption that underpins most BESS revenue modelling deserves a closer look.
+For storage, €163 gross on a €115 captured spread (€111 midday charge, €226 evening discharge). The working-week-scarcity assumption that underpins most BESS revenue modelling deserves a closer look.
 
 <details>
 <summary>Half-hourly data — 2026-05-24</summary>

@@ -95,9 +95,9 @@ Round-trip efficiency on a 2MWh cycle requires roughly €13/MWh to cover the en
 
 ![BESS Dispatch](/charts/2026-05-13/bess-2026-05-13.png)
 
-€61 gross — tied for worst working-day of the run. The model charged at 13:00 (€91, midday wind trough) and discharged at 19:00 (€143, early evening peak), capturing €52 of spread.
+€61 gross — a weak working day. The model charged at 13:00 (€91, midday wind trough) and discharged at 19:00 (€143, early evening peak), capturing €52 of spread.
 
-€52 is the structural ceiling on a 60%-wind working day: midday at €91–96, evening peak capped at €145, nowhere higher with perfect foresight. A forecast-driven operator — running on estimates rather than actuals — would almost certainly do worse. Trough-timing error alone could halve the captured spread on a day this flat. The 10-day series: €93, €56, €108, €139, €78, €63, €110, €107, €77, €61. Mean €89, range €56–€139. Today ties for third-worst. Zero correlation to daily price level.
+€52 is the structural ceiling on a 60%-wind working day: midday at €91–96, evening peak capped at €145, nowhere higher with perfect foresight. A forecast-driven operator — running on estimates rather than actuals — would almost certainly do worse. Trough-timing error alone could halve the captured spread on a day this flat.
 
 ## Commentary
 
@@ -105,7 +105,7 @@ The calmest day of the run. Wednesday's mean of €109.94 is the lowest working-
 
 The structural read is cannibalisation in its inter-day form. Intra-day, wind's capture price sat maybe €5/MWh below the daily mean — a small effect, because wind generated steadily across both cheap and moderately-expensive hours. The bigger number: today's mean is €30 below the 11-day running average because wind owned the merit order from end to end. Today's wind earned approximately €105/MWh across its output. May 4 (13% wind) earned close to €170/MWh. Wind doesn't just cannibalise its own captured price within a volatile day — it cannibalises the entire price level when it dominates supply. Same market mechanics, very different revenue.
 
-For storage, €61 gross — tied for worst working-day of the run. The captured spread was €52; the peak/off-peak window only offered €8.86, below the round-trip efficiency break-even threshold. A blind mechanical cycling strategy today would have lost money. The discretionary dispatch (charge 13:00, discharge 19:00) is doing real work — and even with perfect foresight the ceiling was thin. The 10-day BESS series spans €56 to €139, mean €89, no correlation to daily price level. Storage lives on shape — and today the shape was flat.
+For storage, €61 gross — a weak working day. The captured spread was €52; the peak/off-peak window only offered €8.86, below the round-trip efficiency break-even threshold. A blind mechanical cycling strategy today would have lost money. The discretionary dispatch (charge 13:00, discharge 19:00) is doing real work — and even with perfect foresight the ceiling was thin. Storage lives on shape — and today the shape was flat.
 
 
 <details>
