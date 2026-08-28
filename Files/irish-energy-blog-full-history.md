@@ -91,6 +91,8 @@ The Hugo site with Congo theme is configured and deployed to Vercel. It has:
 
 ### What Doesn't Work / What's Broken
 
+**RESOLVED as of 2026-08-28 — `hugo server -D` now works fine** (build ~1.9s, "Web Server is available at http://localhost:1313/insights/" prints and the site serves correctly; note the `/insights/` base path, so `localhost:1313/` alone 404s). Not clear when or how this got fixed — nothing in this doc changed — so treat the section below as historical, not current state. Original write-up follows unedited:
+
 **Hugo local preview is completely broken.** This is the main blocker. Running `hugo server -D` (whether directly, via a Makefile, or via the ./blog shell script) causes the terminal to hang with no visible output. Hugo appears to build successfully (build logs show when forced with --logLevel info) but the server startup message never appears and it's unclear whether localhost:1313 actually serves anything. Multiple approaches have been tried:
 - Direct command: `cd site && ~/.local/bin/hugo server -D` — hangs
 - Makefile wrapper — hangs
