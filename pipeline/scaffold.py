@@ -142,6 +142,10 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
             f"\n| Peak/Off-Peak Spread | €{summary['peak_offpeak_spread']}/MWh   |"
         )
 
+    arb_spread_row = ""
+    if "arb_spread" in summary:
+        arb_spread_row = f"\n| Cheap/Dear Spread    | €{summary['cheap_mean']}/MWh → €{summary['dear_mean']}/MWh (€{summary['arb_spread']}) |"
+
     wind_row = ""
     if "wind_pct_mean" in summary:
         wind_row = f"\n| Wind % of Demand     | {summary['wind_pct_mean']}%          |"
@@ -198,6 +202,13 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
             f"  ·  **Off-peak avg:** €{summary['offpeak_mean']}/MWh"
             f"  ·  **Spread:** €{summary['peak_offpeak_spread']}/MWh"
         )
+        if "arb_spread" in summary:
+            spread_stats += (
+                f"\n\n**Cheap window:** €{summary['cheap_mean']}/MWh"
+                f"  ·  **Dear window:** €{summary['dear_mean']}/MWh"
+                f"  ·  **Spread:** €{summary['arb_spread']}/MWh"
+                f"  — the actual cheapest and dearest 2-hour blocks of the day, wherever they fall on the clock"
+            )
         spread_section = (
             f"\n## Peak / Off-Peak Spread\n\n"
             f"![Peak / Off-Peak Spread](/charts/{date_str}/spread-{date_str}.png)\n"
@@ -279,7 +290,7 @@ draft: false
 | Mean DAM Price       | €{summary['mean_price']}/MWh    |{median_row}{std_row}
 | Peak Price           | €{summary['peak_price']}/MWh ({summary['peak_time']}) |
 | Min Price            | €{summary['min_price']}/MWh ({summary['min_time']})   |
-| Price Range          | €{summary['price_range']}/MWh   |{above_rows}{spread_rows}{wind_row}{wind_range_row}{demand_row}
+| Price Range          | €{summary['price_range']}/MWh   |{above_rows}{spread_rows}{arb_spread_row}{wind_row}{wind_range_row}{demand_row}
 
 </details>
 

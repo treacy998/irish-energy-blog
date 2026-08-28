@@ -98,6 +98,22 @@ def daily_summary(df: pd.DataFrame, target_date: date) -> dict:
     except Exception:
         pass
 
+    # Condition-based spread: the actual cheapest vs actual dearest 4-period
+    # (2h) window in the day, wherever they fall on the clock. Unlike the
+    # peak/off-peak split above, this can't invert or get diluted by the SEM
+    # day's 23:00 boundary — it just finds the two windows that were
+    # genuinely cheap and genuinely dear. Added alongside peak/off-peak
+    # rather than replacing it: past posts reference peak_mean/offpeak_mean
+    # by name.
+    prices_reset = price.reset_index(drop=True)
+    if len(prices_reset) >= 4:
+        rolling_sum = prices_reset.rolling(4).sum()
+        cheap_idx = int(rolling_sum.idxmin())
+        dear_idx = int(rolling_sum.idxmax())
+        summary["cheap_mean"] = round(float(prices_reset.iloc[cheap_idx - 3:cheap_idx + 1].mean()), 2)
+        summary["dear_mean"] = round(float(prices_reset.iloc[dear_idx - 3:dear_idx + 1].mean()), 2)
+        summary["arb_spread"] = round(summary["dear_mean"] - summary["cheap_mean"], 2)
+
     # Wind data if available
     if "WindGeneration_pct" in day.columns:
         summary["wind_pct_mean"] = round(day["WindGeneration_pct"].mean(), 1)
