@@ -101,7 +101,7 @@ def classify_day_type(summary: dict) -> str:
     return "flat"
 
 
-def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = None, eirgrid_df=None, bess_result=None, force: bool = False):
+def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = None, eirgrid_df=None, bess_result=None, force: bool = False, include_bess: bool = False):
     """Generate a daily briefing post with charts and pre-filled metrics."""
     data_file = find_data_file(target_date, explicit=explicit_file)
     if title is None:
@@ -209,7 +209,7 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
         spread_section = ""
 
     has_bess_chart = (chart_day_dir / f"bess-{date_str}.png").exists()
-    if bess_result is not None:
+    if include_bess and bess_result is not None:
         b = bess_result
         bess_roi = round((b['gross_profit'] / b['charge_cost']) * 100, 1) if b['charge_cost'] > 0 else 0
         bess_section = f"""
