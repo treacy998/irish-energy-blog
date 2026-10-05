@@ -296,7 +296,10 @@ def _parse_area(data: dict, area: str, fields: list[str] | None = None) -> pd.Da
             or row.get("effectivetime")
             or row.get("DateTime")
         )
-        value = row.get("Value") or row.get("value")
+        # `is None`, not truthiness: a genuine Value of 0 (no wind) is data, not a gap.
+        value = row.get("Value")
+        if value is None:
+            value = row.get("value")
 
         field = row.get("FieldName", "")
         if fields is not None and field not in fields:
