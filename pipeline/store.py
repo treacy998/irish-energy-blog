@@ -27,8 +27,10 @@ Design notes:
 
 import sqlite3
 import sys
+import traceback
 from pathlib import Path
 from datetime import date, timedelta
+from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 from process import load_dam_data
@@ -62,8 +64,10 @@ CREATE TABLE IF NOT EXISTS system_conditions (
 """
 
 
-def build_db(db_path: Path = DB_PATH) -> sqlite3.Connection:
-    conn = sqlite3.connect(db_path)
+def build_db(db_path: Path | None = None) -> sqlite3.Connection:
+    # Resolved at call time, not definition time: a default of DB_PATH would
+    # bind the real database permanently and ignore a patched DB_PATH.
+    conn = sqlite3.connect(db_path or DB_PATH)
     conn.executescript(SCHEMA)
     return conn
 
@@ -112,7 +116,7 @@ def upsert_system_conditions(conn: sqlite3.Connection, d: date, df) -> int:
     return len(records)
 
 
-def persist_day(d: date, price_df, conditions_df=None, db_path: Path = DB_PATH) -> tuple[int, int]:
+def persist_day(d: date, price_df, conditions_df=None, db_path: Path | None = None) -> tuple[int, int]:
     """Incremental write for one delivery date, used by run_daily.
 
     Idempotent (same INSERT OR REPLACE keys as the backfill). conditions_df=None
@@ -145,10 +149,16 @@ def backfill_market_prices(conn: sqlite3.Connection, data_dir: Path = DATA_DIR) 
     return rows
 
 
+class BackfillResult(NamedTuple):
+    rows: int                   # system_conditions rows written
+    wind_failed: list[str]      # dates with no usable wind: nothing stored
+    demand_missing: list[str]   # dates stored with at least one NULL demand_mw
+
+
 def backfill_system_conditions(
     conn: sqlite3.Connection, start: date, end: date, out_dir: Path = DATA_DIR,
     retries: int = 2, backoff: float = 2.0, dry_run: bool = False,
-) -> tuple[int, list[str]]:
+) -> BackfillResult:
     """
     Fill system_conditions for every date in [start, end], archive first.
 
@@ -165,7 +175,8 @@ def backfill_system_conditions(
     and touches nothing.
     A date with wind but an empty demand feed is stored with demand_mw and
     wind_pct NULL and counts as "ok"; only a date with no usable wind fails.
-    Returns (rows written, list of dates that failed).
+    Returns a BackfillResult: rows written, dates with no usable wind, and dates
+    stored with a demand gap (candidates for --heal).
     """
     import contextlib
     import io
@@ -173,6 +184,7 @@ def backfill_system_conditions(
 
     rows = 0
     failed = []
+    demand_missing = []
     d = start
     while d <= end:
         live = [a for a in AREA_FIELDS if archive_row_count(archive_path(d, a, out_dir)) == 0]
@@ -203,10 +215,26 @@ def backfill_system_conditions(
             n = upsert_system_conditions(conn, d, df)
             conn.commit()
             rows += n
+            if df["DemandMW"].isna().any():
+                demand_missing.append(d.isoformat())
             print(f"{d.isoformat()} {source} ok rows={n}", flush=True)
         d += timedelta(days=1)
 
-    return rows, failed
+    return BackfillResult(rows, failed, demand_missing)
+
+
+def missing_price_dates(conn: sqlite3.Connection, start: date, end: date) -> list[str]:
+    """Dates in [start, end] with no market_prices rows at all."""
+    have = {r[0] for r in conn.execute(
+        "SELECT DISTINCT date FROM market_prices WHERE date BETWEEN ? AND ?",
+        (start.isoformat(), end.isoformat()),
+    )}
+    out, d = [], start
+    while d <= end:
+        if d.isoformat() not in have:
+            out.append(d.isoformat())
+        d += timedelta(days=1)
+    return out
 
 
 def heal_demand(
@@ -286,10 +314,53 @@ def pd_notna(value) -> bool:
     return pd.notna(value)
 
 
-if __name__ == "__main__":
+def _label(name: str, dates: list[str]) -> str:
+    return f"{name}: {len(dates)} dates: {','.join(dates) if dates else 'none'}"
+
+
+def _run(args) -> int:
+    # A dry run only reads the date range, so it never takes a write lock.
+    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True) if args.dry_run else build_db()
+    try:
+        if args.prices and not args.dry_run:
+            print(f"market_prices: {backfill_market_prices(conn, DATA_DIR)} rows", flush=True)
+
+        if args.heal:
+            lo, hi = conn.execute("SELECT MIN(date), MAX(date) FROM system_conditions").fetchone()
+            heal_demand(conn, date.fromisoformat(args.start or lo), date.fromisoformat(args.end or hi),
+                        out_dir=DATA_DIR, dry_run=args.dry_run)
+            return 0
+
+        # Default range follows what market_prices actually covers, not a hardcoded guess.
+        lo, hi = conn.execute("SELECT MIN(date), MAX(date) FROM market_prices").fetchone()
+        start = date.fromisoformat(args.start or lo)
+        end = date.fromisoformat(args.end or hi)
+
+        result = backfill_system_conditions(conn, start, end, out_dir=DATA_DIR, dry_run=args.dry_run)
+        if args.dry_run:
+            return 0
+
+        price_missing = missing_price_dates(conn, start, end)
+        if result.wind_failed:
+            print(_label("wind missing", result.wind_failed))
+        if price_missing:
+            print(_label("price missing", price_missing))
+        # Always the last line. Empty-demand dates are expected gaps for --heal, not failures.
+        print(_label("demand missing", result.demand_missing))
+        return 1 if (result.wind_failed or price_missing) else 0
+    finally:
+        conn.close()
+
+
+def main(argv=None) -> int:
+    """Exit codes: 0 = done (empty-demand dates are allowed); 1 = wind or prices
+    missing for at least one date; 2 = an exception aborted the run."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Backfill data/history.db system_conditions (archive first).")
+    parser = argparse.ArgumentParser(
+        description="Backfill data/history.db system_conditions (archive first).",
+        epilog="exit codes: 0 ok (demand gaps allowed), 1 wind or prices missing, 2 exception",
+    )
     parser.add_argument("--start", metavar="YYYY-MM-DD", help="First date (default: first market_prices date).")
     parser.add_argument("--end", metavar="YYYY-MM-DD", help="Last date (default: last market_prices date).")
     parser.add_argument("--prices", action="store_true",
@@ -300,25 +371,13 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true",
                         help="Backfill: print which source each date would use. Heal: list the dates "
                              "that would be fetched. No network, no DB writes.")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    try:
+        return _run(args)
+    except Exception:
+        traceback.print_exc()
+        return 2
 
-    # A dry run only reads the date range, so it never takes a write lock.
-    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True) if args.dry_run else build_db()
-    if args.prices and not args.dry_run:
-        print(f"market_prices: {backfill_market_prices(conn)} rows", flush=True)
 
-    if args.heal:
-        lo, hi = conn.execute("SELECT MIN(date), MAX(date) FROM system_conditions").fetchone()
-        heal_demand(conn, date.fromisoformat(args.start or lo), date.fromisoformat(args.end or hi),
-                    dry_run=args.dry_run)
-        conn.close()
-        sys.exit(0)
-
-    # Default range follows what market_prices actually covers, not a hardcoded guess.
-    lo, hi = conn.execute("SELECT MIN(date), MAX(date) FROM market_prices").fetchone()
-    start = date.fromisoformat(args.start or lo)
-    end = date.fromisoformat(args.end or hi)
-
-    _, failed = backfill_system_conditions(conn, start, end, dry_run=args.dry_run)
-    conn.close()
-    sys.exit(1 if failed else 0)
+if __name__ == "__main__":
+    sys.exit(main())
