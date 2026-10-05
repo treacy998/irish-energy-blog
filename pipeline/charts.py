@@ -529,10 +529,10 @@ def generate_daily_charts(data_filepath: Path, target_date: date, eirgrid_df=Non
     summary = daily_summary(df, target_date)
 
     if eirgrid_df is not None:
-        eg = eirgrid_df.copy()
-        eg["StartTime"] = eg["StartTime"].dt.strftime("%H:%M")
-        wind_cols = ["StartTime", "WindMW", "DemandMW", "WindGeneration_pct"]
-        day_df = pd.merge(day_df, eg[wind_cols], on="StartTime", how="left")
+        # Join on the UTC instant: a local HH:MM label repeats on the autumn
+        # change day and, on any day, pairs 23:00 with the wrong evening.
+        wind_cols = ["StartUTC", "WindMW", "DemandMW", "WindGeneration_pct"]
+        day_df = pd.merge(day_df, eirgrid_df[wind_cols], on="StartUTC", how="left")
         summary.update(wind_summary(day_df["WindGeneration_pct"], day_df["DemandMW"]))
 
     print(f"\nGenerating charts for {date_str}...")

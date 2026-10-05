@@ -55,9 +55,7 @@ def load_week(monday: date, sunday: date) -> list[dict]:
         # a weekly re-fetch must never replace one that already has rows.
         eirgrid_df = fetch_wind_and_demand(d, overwrite_raw=False)
         if eirgrid_df is not None:
-            eg = eirgrid_df.copy()
-            eg["StartTime"] = eg["StartTime"].dt.strftime("%H:%M")
-            merged = day_df.merge(eg[["StartTime", "WindGeneration_pct"]], on="StartTime", how="left")
+            merged = day_df.merge(eirgrid_df[["StartUTC", "WindGeneration_pct"]], on="StartUTC", how="left")
             # Same 36-of-48 rule as the daily post: a day with too few wind rows
             # gets no wind_pct_mean, so a thin day never drives the weekly figures.
             wind = wind_summary(merged["WindGeneration_pct"])

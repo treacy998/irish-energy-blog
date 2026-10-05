@@ -15,6 +15,7 @@ from pathlib import Path
 from datetime import date, timedelta
 
 from process import load_dam_data, get_day_data, daily_summary
+from trading_day import expected_periods
 from charts import generate_daily_charts
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -117,10 +118,8 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     # Load day-level data for the table (same data used by charts)
     day_df = get_day_data(data_file, target_date)
     if eirgrid_df is not None:
-        eg = eirgrid_df.copy()
-        eg["StartTime"] = eg["StartTime"].dt.strftime("%H:%M")
-        wind_cols = ["StartTime", "WindMW", "DemandMW", "WindGeneration_pct"]
-        day_df = day_df.merge(eg[wind_cols], on="StartTime", how="left")
+        wind_cols = ["StartUTC", "WindMW", "DemandMW", "WindGeneration_pct"]
+        day_df = day_df.merge(eirgrid_df[wind_cols], on="StartUTC", how="left")
 
     data_table = _build_data_table(day_df, eirgrid_df, date_str)
 
@@ -128,13 +127,14 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     chart_day_dir = CHART_DIR / date_str
 
     # ── Snapshot table rows (conditional on data availability) ──────────────
-    pct_48 = lambda n: f"{n/48*100:.0f}%"
+    n_periods = expected_periods(target_date)   # 48; 50 or 46 on the clock-change days
+    pct_48 = lambda n: f"{n/n_periods*100:.0f}%"
 
     median_row = f"\n| Median Price         | €{summary['median_price']}/MWh    |"
     std_row    = f"\n| Std Dev              | €{summary['std_dev']}/MWh    |"
     above_rows = (
-        f"\n| Periods above €150   | {summary['periods_above_150']} of 48 ({pct_48(summary['periods_above_150'])}) |"
-        f"\n| Periods above €200   | {summary['periods_above_200']} of 48 ({pct_48(summary['periods_above_200'])}) |"
+        f"\n| Periods above €150   | {summary['periods_above_150']} of {n_periods} ({pct_48(summary['periods_above_150'])}) |"
+        f"\n| Periods above €200   | {summary['periods_above_200']} of {n_periods} ({pct_48(summary['periods_above_200'])}) |"
     )
 
     spread_rows = ""
@@ -165,7 +165,7 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     price_profile_stats = (
         f"\n**Std dev** €{summary['std_dev']}/MWh"
         f"  ·  **Median** €{summary['median_price']}/MWh"
-        f"  ·  **Periods above €150:** {summary['periods_above_150']} of 48 ({pct_48(summary['periods_above_150'])})"
+        f"  ·  **Periods above €150:** {summary['periods_above_150']} of {n_periods} ({pct_48(summary['periods_above_150'])})"
     )
 
     has_wind_chart = (chart_day_dir / f"price-wind-{date_str}.png").exists()
