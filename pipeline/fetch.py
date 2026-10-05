@@ -8,6 +8,7 @@ No authentication required. Fails gracefully — if the fetch fails,
 the pipeline continues without wind data (wind chart is skipped).
 """
 
+import json
 import requests
 import pandas as pd
 from datetime import datetime, date, timedelta
@@ -94,6 +95,12 @@ def fetch_semo(delivery_date: date | str | None = None, out_dir: Path | str = "d
     return out_path
 
 
+AREA_FIELDS = {
+    "wind":   ["WIND_ACTUAL", "WIND_FCAST"],
+    "demand": ["SYSTEM_DEMAND"],
+}
+
+
 def fetch_wind_and_demand(
     delivery_date: date, out_dir: Path | str = DEFAULT_DATA_DIR, overwrite_raw: bool = True
 ) -> pd.DataFrame | None:
@@ -115,19 +122,22 @@ def fetch_wind_and_demand(
     published figures stay reproducible from disk even if EirGrid's
     historical window later ages the live query out.
 
-    overwrite_raw=False keeps any archive already on disk and only writes
-    missing files. Backfills use it so a re-fetch never replaces the raw JSON
-    a published post was written from.
+    overwrite_raw=False keeps any archive on disk that holds at least one data
+    row and only writes missing or zero-row files. Backfills use it so a
+    re-fetch never replaces the raw JSON a published post was written from;
+    a zero-row file is a failed fetch, not a record worth protecting.
 
     Note: EirGrid's demand endpoint does not return a forecast field for this
     region/chart combination (only SYSTEM_DEMAND) — there is no DemandForecastMW.
     """
-    date_str = delivery_date.strftime("%d-%b-%Y")   # e.g. "17-May-2026"
-    raw_dir = Path(out_dir) / "eirgrid_raw" / delivery_date.isoformat()
+    wind   = fetch_area(delivery_date, "wind",   out_dir=out_dir, overwrite_raw=overwrite_raw)
+    demand = fetch_area(delivery_date, "demand", out_dir=out_dir, overwrite_raw=overwrite_raw)
+    return combine_wind_and_demand(wind, demand)
 
-    wind   = _fetch_area("wind",   date_str, raw_dir=raw_dir, fields=["WIND_ACTUAL", "WIND_FCAST"], overwrite_raw=overwrite_raw)
-    demand = _fetch_area("demand", date_str, raw_dir=raw_dir, fields=["SYSTEM_DEMAND"], overwrite_raw=overwrite_raw)
 
+def combine_wind_and_demand(wind: pd.DataFrame | None, demand: pd.DataFrame | None) -> pd.DataFrame | None:
+    """Build the 30-minute wind/demand frame from parsed wind and demand area rows
+    (from fetch_area or load_archived_area). Returns None if either is missing."""
     if wind is None or demand is None:
         return None
 
@@ -151,6 +161,42 @@ def fetch_wind_and_demand(
     ).clip(0, 100).round(1)
 
     return df
+
+
+def archive_path(delivery_date: date, area: str, out_dir: Path | str = DEFAULT_DATA_DIR) -> Path:
+    return Path(out_dir) / "eirgrid_raw" / delivery_date.isoformat() / f"{area}.json"
+
+
+def archive_row_count(path: Path) -> int:
+    """Data rows in an archived EirGrid response. 0 if missing, empty or unparseable."""
+    try:
+        data = json.loads(path.read_text())
+        return len(data.get("Rows") or data.get("rows") or [])
+    except (OSError, ValueError, AttributeError):
+        return 0
+
+
+def load_archived_area(delivery_date: date, area: str, out_dir: Path | str = DEFAULT_DATA_DIR) -> pd.DataFrame | None:
+    """Parse an archived area response with the same parser the live fetch uses.
+    No network call. Returns None if the archive is missing, has no rows, or won't parse."""
+    path = archive_path(delivery_date, area, out_dir)
+    if archive_row_count(path) == 0:
+        return None
+    try:
+        return _parse_area(json.loads(path.read_text()), area, AREA_FIELDS[area])
+    except Exception as e:
+        print(f"  [fetch] Could not parse archive {path}: {e}")
+        return None
+
+
+def fetch_area(delivery_date: date, area: str, out_dir: Path | str = DEFAULT_DATA_DIR,
+               overwrite_raw: bool = True) -> pd.DataFrame | None:
+    """Live-fetch one area (wind or demand) for delivery_date, archiving the raw response."""
+    return _fetch_area(
+        area, delivery_date.strftime("%d-%b-%Y"),   # e.g. "17-May-2026"
+        raw_dir=archive_path(delivery_date, area, out_dir).parent,
+        fields=AREA_FIELDS[area], overwrite_raw=overwrite_raw,
+    )
 
 
 def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: list[str] | None = None,
@@ -177,49 +223,11 @@ def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: l
 
         if raw_dir is not None:
             raw_path = raw_dir / f"{area}.json"
-            if overwrite_raw or not raw_path.exists():
+            if overwrite_raw or archive_row_count(raw_path) == 0:
                 raw_dir.mkdir(parents=True, exist_ok=True)
                 raw_path.write_text(resp.text)
 
-        data = resp.json()
-
-        rows = data.get("Rows") or data.get("rows") or []
-        if not rows:
-            print(f"  [fetch] EirGrid returned no rows for area={area}")
-            return None
-
-        records = []
-        for row in rows:
-            ts_raw = (
-                row.get("EffectiveTime")
-                or row.get("effectivetime")
-                or row.get("DateTime")
-            )
-            value = row.get("Value") or row.get("value")
-
-            field = row.get("FieldName", "")
-            if fields is not None and field not in fields:
-                continue
-
-            if ts_raw is None or value is None:
-                continue
-
-            for fmt in ("%d-%b-%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%d/%m/%Y %H:%M"):
-                try:
-                    ts = datetime.strptime(ts_raw, fmt)
-                    break
-                except ValueError:
-                    continue
-            else:
-                continue
-
-            records.append({"StartTime": ts, "value": float(value), "field": field})
-
-        if not records:
-            print(f"  [fetch] Could not parse any rows for area={area}")
-            return None
-
-        return pd.DataFrame(records)
+        return _parse_area(resp.json(), area, fields)
 
     except requests.RequestException as e:
         print(f"  [fetch] EirGrid request failed for area={area}: {e}")
@@ -227,6 +235,47 @@ def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: l
     except Exception as e:
         print(f"  [fetch] Unexpected error fetching area={area}: {e}")
         return None
+
+
+def _parse_area(data: dict, area: str, fields: list[str] | None = None) -> pd.DataFrame | None:
+    """Parse an EirGrid chart response (live or archived) into StartTime/value/field rows."""
+    rows = data.get("Rows") or data.get("rows") or []
+    if not rows:
+        print(f"  [fetch] EirGrid returned no rows for area={area}")
+        return None
+
+    records = []
+    for row in rows:
+        ts_raw = (
+            row.get("EffectiveTime")
+            or row.get("effectivetime")
+            or row.get("DateTime")
+        )
+        value = row.get("Value") or row.get("value")
+
+        field = row.get("FieldName", "")
+        if fields is not None and field not in fields:
+            continue
+
+        if ts_raw is None or value is None:
+            continue
+
+        for fmt in ("%d-%b-%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%d/%m/%Y %H:%M"):
+            try:
+                ts = datetime.strptime(ts_raw, fmt)
+                break
+            except ValueError:
+                continue
+        else:
+            continue
+
+        records.append({"StartTime": ts, "value": float(value), "field": field})
+
+    if not records:
+        print(f"  [fetch] Could not parse any rows for area={area}")
+        return None
+
+    return pd.DataFrame(records)
 
 
 def _resample_30min(df: pd.DataFrame, col_name: str) -> pd.DataFrame | None:

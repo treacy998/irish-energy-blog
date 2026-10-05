@@ -8,15 +8,12 @@ Two tables:
 Design notes:
   - market_prices is built by replaying every SEMO CSV in data/ through
     process.load_dam_data() — the existing, unmodified parser.
-  - system_conditions is built by calling fetch.fetch_wind_and_demand() per date
-    rather than parsing data/eirgrid_raw/*.json. There is no parser for the raw
-    JSON today (fetch.py only ever fetches live and archives as a side effect),
-    and the live EirGrid endpoint serves clean data back to at least 2026-05-10
-    with no observed "ages out" boundary — so live re-fetch covers the full
-    range uniformly instead of adding a second parser for ~20 sparse archived
-    days. This also means running the backfill re-populates data/eirgrid_raw/
-    for any date that was missing or incomplete (e.g. 2026-08-17..19, where the
-    fetch worked but the archive write silently didn't happen).
+  - system_conditions is built archive first: each area is parsed from
+    data/eirgrid_raw/<date>/<area>.json with the same parser the live fetch
+    uses, so the store holds exactly what published posts were written from.
+    Only an area whose archive is missing or has zero rows is fetched live,
+    and that fetch fills the gap in data/eirgrid_raw/ without ever replacing
+    an archive that has rows.
   - system_conditions is expected to be sparse only in the sense that a date can
     be entirely ABSENT (EirGrid fetch failed). Missing days must never appear as
     zero-valued rows — a rolling baseline computed over silent zeros would read
@@ -32,7 +29,10 @@ from datetime import date, timedelta
 
 sys.path.insert(0, str(Path(__file__).parent))
 from process import load_dam_data
-from fetch import fetch_wind_and_demand
+from fetch import (
+    AREA_FIELDS, archive_path, archive_row_count, combine_wind_and_demand,
+    fetch_area, load_archived_area,
+)
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 DB_PATH = Path(__file__).parent.parent / "data" / "history.db"
@@ -144,40 +144,63 @@ def backfill_market_prices(conn: sqlite3.Connection, data_dir: Path = DATA_DIR) 
 
 def backfill_system_conditions(
     conn: sqlite3.Connection, start: date, end: date, out_dir: Path = DATA_DIR,
-    retries: int = 3, retry_delay: float = 2.0, overwrite_raw: bool = False,
+    retries: int = 2, backoff: float = 2.0, dry_run: bool = False,
 ) -> tuple[int, list[str]]:
     """
-    Live-fetch wind/demand for every date in [start, end] via fetch_wind_and_demand.
-    EirGrid's demand endpoint intermittently returns no rows for a valid date —
-    confirmed transient by retrying failed dates, which succeed within a few
-    attempts — so each date gets `retries` attempts before being recorded failed.
-    Returns (rows written, list of dates that failed / had no data).
+    Fill system_conditions for every date in [start, end], archive first.
 
-    Raw EirGrid JSON already in out_dir/eirgrid_raw/ is left alone unless
-    overwrite_raw=True: those files are what published posts were written from.
+    Each area (wind, demand) is parsed from data/eirgrid_raw/<date>/<area>.json
+    when that file holds at least one data row — no network call, and the
+    values are exactly what the published post was written from. Only an area
+    whose archive is missing or has zero rows is fetched live, with `retries`
+    retries and exponential backoff (backoff, 2*backoff, ...). A live fetch
+    never replaces an archive that has rows; a zero-row archive is overwritten.
+
+    Commits after every date, so killing the run loses at most one day.
+    Prints exactly one line per date: "<date> archive|api ok|FAIL rows=<n>"
+    ("api" if any area needed the network). dry_run prints "<date> archive|api"
+    and touches nothing.
+    Returns (rows written, list of dates that failed).
     """
+    import contextlib
+    import io
     import time
 
     rows = 0
     failed = []
     d = start
     while d <= end:
-        df = None
-        for attempt in range(retries):
-            df = fetch_wind_and_demand(d, out_dir=out_dir, overwrite_raw=overwrite_raw)
-            if df is not None and not df.empty:
-                break
-            if attempt < retries - 1:
-                time.sleep(retry_delay)
-        if df is None or df.empty:
-            failed.append(d.isoformat())
+        live = [a for a in AREA_FIELDS if archive_row_count(archive_path(d, a, out_dir)) == 0]
+        source = "api" if live else "archive"
+        if dry_run:
+            print(f"{d.isoformat()} {source}")
             d += timedelta(days=1)
             continue
 
-        rows += upsert_system_conditions(conn, d, df)
+        # fetch.py prints its own diagnostics; keep the one-line-per-date contract.
+        with contextlib.redirect_stdout(io.StringIO()):
+            frames = {a: load_archived_area(d, a, out_dir) for a in AREA_FIELDS if a not in live}
+            for area in AREA_FIELDS:
+                if frames.get(area) is not None:
+                    continue
+                source = "api"
+                for attempt in range(retries + 1):
+                    frames[area] = fetch_area(d, area, out_dir=out_dir, overwrite_raw=False)
+                    if frames[area] is not None or attempt == retries:
+                        break
+                    time.sleep(backoff * 2 ** attempt)
+            df = combine_wind_and_demand(frames.get("wind"), frames.get("demand"))
+
+        if df is None or df.empty:
+            failed.append(d.isoformat())
+            print(f"{d.isoformat()} {source} FAIL rows=0", flush=True)
+        else:
+            n = upsert_system_conditions(conn, d, df)
+            conn.commit()
+            rows += n
+            print(f"{d.isoformat()} {source} ok rows={n}", flush=True)
         d += timedelta(days=1)
 
-    conn.commit()
     return rows, failed
 
 
@@ -187,24 +210,27 @@ def pd_notna(value) -> bool:
 
 
 if __name__ == "__main__":
-    conn = build_db()
+    import argparse
 
-    price_rows = backfill_market_prices(conn)
-    print(f"market_prices: {price_rows} rows")
+    parser = argparse.ArgumentParser(description="Backfill data/history.db system_conditions (archive first).")
+    parser.add_argument("--start", metavar="YYYY-MM-DD", help="First date (default: first market_prices date).")
+    parser.add_argument("--end", metavar="YYYY-MM-DD", help="Last date (default: last market_prices date).")
+    parser.add_argument("--prices", action="store_true",
+                        help="Also replay every SEMO CSV in data/ into market_prices first.")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Print which source each date would use; no network, no DB writes.")
+    args = parser.parse_args()
 
-    # Date range driven by what market_prices actually covers, not a hardcoded guess.
-    date_range = conn.execute("SELECT MIN(date), MAX(date) FROM market_prices").fetchone()
-    if date_range[0] is None:
-        print("No market_prices rows — nothing to backfill for system_conditions.")
-        sys.exit(0)
+    # A dry run only reads the date range, so it never takes a write lock.
+    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True) if args.dry_run else build_db()
+    if args.prices and not args.dry_run:
+        print(f"market_prices: {backfill_market_prices(conn)} rows", flush=True)
 
-    start = date.fromisoformat(date_range[0])
-    end = date.fromisoformat(date_range[1])
-    print(f"Backfilling system_conditions for {start}..{end} (live EirGrid fetch)...")
+    # Default range follows what market_prices actually covers, not a hardcoded guess.
+    lo, hi = conn.execute("SELECT MIN(date), MAX(date) FROM market_prices").fetchone()
+    start = date.fromisoformat(args.start or lo)
+    end = date.fromisoformat(args.end or hi)
 
-    cond_rows, failed = backfill_system_conditions(conn, start, end)
-    print(f"system_conditions: {cond_rows} rows")
-    if failed:
-        print(f"FAILED / no data for {len(failed)} date(s): {failed}")
-
+    _, failed = backfill_system_conditions(conn, start, end, dry_run=args.dry_run)
     conn.close()
+    sys.exit(1 if failed else 0)
