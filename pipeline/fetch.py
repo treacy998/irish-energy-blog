@@ -14,7 +14,7 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 from pathlib import Path
 
-from trading_day import DUBLIN_TZ, eirgrid_local_to_utc
+from trading_day import DUBLIN_TZ, eirgrid_local_to_utc, trading_day_start_utc
 
 DEFAULT_DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -109,6 +109,12 @@ def fetch_wind_and_demand(
     """
     Fetch wind generation and demand for delivery_date from EirGrid.
 
+    The frame covers the SEM trading day (local 23:00 the evening before to
+    23:00), not EirGrid's calendar day: the evening-before half-hours come from
+    the previous date's raw archive (no extra request; NaN if it is missing),
+    and the calendar day's final 23:00-24:00 belongs to the next trading day
+    and is dropped. See combine_for_trading_day.
+
     Returns a DataFrame with columns:
         StartTime            datetime (Irish local time, 30-min intervals; display only —
                              repeats 01:00–02:00 on the autumn change day)
@@ -141,7 +147,8 @@ def fetch_wind_and_demand(
     """
     wind   = fetch_area(delivery_date, "wind",   out_dir=out_dir, overwrite_raw=overwrite_raw)
     demand = fetch_area(delivery_date, "demand", out_dir=out_dir, overwrite_raw=overwrite_raw)
-    return combine_wind_and_demand(wind, demand)
+    prev_wind, prev_demand = load_archived_previous_day(delivery_date, out_dir)
+    return combine_for_trading_day(delivery_date, wind, demand, prev_wind, prev_demand)
 
 
 def combine_wind_and_demand(wind: pd.DataFrame | None, demand: pd.DataFrame | None) -> pd.DataFrame | None:
@@ -176,6 +183,37 @@ def combine_wind_and_demand(wind: pd.DataFrame | None, demand: pd.DataFrame | No
     df["WindGeneration_pct"] = compute_wind_pct(df["WindMW"], df["DemandMW"])
 
     return df
+
+
+def load_archived_previous_day(delivery_date: date, out_dir: Path | str = DEFAULT_DATA_DIR):
+    """(wind, demand) area rows from the archive of delivery_date - 1, offline.
+    Either is None if that archive is missing or empty."""
+    prev = delivery_date - timedelta(days=1)
+    return load_archived_area(prev, "wind", out_dir), load_archived_area(prev, "demand", out_dir)
+
+
+def combine_for_trading_day(
+    delivery_date: date,
+    wind: pd.DataFrame | None, demand: pd.DataFrame | None,
+    prev_wind: pd.DataFrame | None = None, prev_demand: pd.DataFrame | None = None,
+) -> pd.DataFrame | None:
+    """The shared join input: wind/demand half-hours for the SEM trading day of delivery_date.
+
+    A price period gets the EirGrid reading at its own start_utc. EirGrid serves
+    one calendar day per request, so the evening-before periods (periods 1-2 in
+    summer: 23:00 and 23:30) live in the previous date's response; the same-day
+    response's 23:00 is the NEXT trading day's period 1 and is excluded. With
+    no previous-day frames those half-hours are simply absent (NaN once joined).
+    Returns None if the day's own wind is unavailable, as combine_wind_and_demand does."""
+    today = combine_wind_and_demand(wind, demand)
+    if today is None:
+        return None
+    frames = [f for f in (combine_wind_and_demand(prev_wind, prev_demand), today) if f is not None]
+    df = pd.concat(frames, ignore_index=True)
+    start = pd.Timestamp(trading_day_start_utc(delivery_date))
+    end = pd.Timestamp(trading_day_start_utc(delivery_date + timedelta(days=1)))
+    df = df[(df["StartUTC"] >= start) & (df["StartUTC"] < end)]
+    return df.drop_duplicates("StartUTC", keep="last").sort_values("StartUTC").reset_index(drop=True)
 
 
 def compute_wind_pct(wind_mw: pd.Series, demand_mw: pd.Series) -> pd.Series:
