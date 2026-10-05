@@ -1,32 +1,33 @@
 """
-weekly.py — Aggregate an ISO week of daily DAM/wind data into a populated
-weekly-analysis draft.
+weekly.py — Build the weekly-post draft: weekly_summary -> weekly_chart -> build_weekly_post.
 
-Turns "write a weekly roundup" from a blank page into a review: pulls the
-week's 7 days of price data (already on disk from the daily pipeline) and
-wind/demand (re-fetched from EirGrid per day, same call the daily pipeline
-uses), computes week-level stats, generates a chart, and writes a pre-filled
-draft to site/content/weekly/<week-ending-date>.md — still gated behind
-draft: true, still needs a human read before publishing.
+Everything comes from data/history.db (prices and wind MW), read-only. There is no
+EirGrid or SEMOpx request here, so no raw archive under data/ can be fetched over or
+replaced by this script. The post is written with draft: true and needs a human read.
+
+A week is Monday to Sunday of delivery dates. The script refuses to build a week whose
+final day is not in the store, and weekly_summary() raises if any other day is missing
+or short, so a partial week is never summarised.
 
 Usage:
-    python pipeline/weekly.py                 # most recently completed ISO week
-    python pipeline/weekly.py 2026-07-12       # week containing this date (Mon-Sun)
+    python pipeline/weekly.py                   # the last complete Mon-Sun (Irish calendar)
+    python pipeline/weekly.py 2026-09-30         # the week containing this date
+    python pipeline/weekly.py --force            # overwrite an existing draft
 """
 
+import argparse
+import sqlite3
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
-import pandas as pd
-
-from bess import simulate_bess
-from charts import _load_all_dam_data, chart_weekly_overview
-from fetch import fetch_wind_and_demand
-from process import daily_summary, wind_summary
-
-CONTENT_DIR = Path(__file__).parent.parent / "site" / "content"
-CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts" / "weekly"
+sys.path.insert(0, str(Path(__file__).parent))
+import store
+from charts import CHART_DIR, weekly_chart
+from scaffold import CONTENT_DIR, build_weekly_post
+from trading_day import expected_periods
+from weekly_stats import weekly_summary
 
 
 def iso_week_bounds(d: date) -> tuple[date, date]:
@@ -35,229 +36,58 @@ def iso_week_bounds(d: date) -> tuple[date, date]:
     return monday, monday + timedelta(days=6)
 
 
-def load_week(monday: date, sunday: date) -> list[dict]:
-    """Per-day summary (price + wind + BESS) for each day of the week found on disk."""
-    all_df = _load_all_dam_data()
-    days = []
-
-    d = monday
-    while d <= sunday:
-        day_df = all_df[all_df["DeliveryDate"] == pd.Timestamp(d)].sort_values("Period")
-        if day_df.empty:
-            d += timedelta(days=1)
-            continue
-
-        summary = daily_summary(all_df, d)
-        summary["date"] = d.isoformat()
-        summary["weekday"] = d.strftime("%A")
-
-        # The raw archive for a past day is what its daily post was written from;
-        # a weekly re-fetch must never replace one that already has rows.
-        eirgrid_df = fetch_wind_and_demand(d, overwrite_raw=False)
-        if eirgrid_df is not None:
-            merged = day_df.merge(eirgrid_df[["StartUTC", "WindGeneration_pct"]], on="StartUTC", how="left")
-            # Same 75%-of-periods rule as the daily post: a day with too few wind rows
-            # gets no wind_pct_mean, so a thin day never drives the weekly figures.
-            wind = wind_summary(merged["WindGeneration_pct"], delivery_date=d)
-            if "wind_pct_mean" in wind:
-                summary["wind_pct_mean"] = wind["wind_pct_mean"]
-
-        bess_result = simulate_bess(day_df)
-        if bess_result:
-            summary["bess_profit"] = bess_result["gross_profit"]
-
-        days.append(summary)
-        d += timedelta(days=1)
-
-    return days
+def last_complete_week(now: datetime | None = None) -> date:
+    """Monday of the most recent Mon-Sun week that has fully ended, by the Irish calendar.
+    On a Sunday that week is the previous one: the Sunday itself has not finished."""
+    today = (now or datetime.now(ZoneInfo("Europe/Dublin"))).date()
+    last_sunday = today - timedelta(days=(today.weekday() + 1) % 7 or 7)
+    return last_sunday - timedelta(days=6)
 
 
-def aggregate_week(days: list[dict], prev_days: list[dict] | None = None) -> dict:
-    """Week-level stats + three templated commentary bullets from the daily summaries."""
-    if not days:
-        raise ValueError("No daily data found for this week")
+def build_weekly_draft(any_date_in_week: date, db_path: Path | None = None, content_root: Path | None = None,
+                       chart_dir: Path | None = None, force: bool = False) -> Path:
+    """Summarise, chart and scaffold the week containing any_date_in_week. Returns the post path.
 
-    means = [d["mean_price"] for d in days]
-    peak_day = max(days, key=lambda d: d["peak_price"])
-    trough_day = min(days, key=lambda d: d["min_price"])
-
-    agg = {
-        "week_mean": round(sum(means) / len(means), 2),
-        "week_peak_price": peak_day["peak_price"],
-        "week_peak_day": peak_day["weekday"],
-        "week_peak_time": peak_day["peak_time"],
-        "week_min_price": trough_day["min_price"],
-        "week_min_day": trough_day["weekday"],
-        "week_min_time": trough_day["min_time"],
-        "daily_mean_std": round(pd.Series(means).std(), 2) if len(means) > 1 else 0.0,
-        "total_bess_profit": round(sum(d.get("bess_profit", 0) for d in days), 2),
-        "days_covered": len(days),
-    }
-
-    wind_days = [d for d in days if "wind_pct_mean" in d]
-    if wind_days:
-        agg["week_wind_mean"] = round(sum(d["wind_pct_mean"] for d in wind_days) / len(wind_days), 1)
-        highest_wind = max(wind_days, key=lambda d: d["wind_pct_mean"])
-        lowest_wind = min(wind_days, key=lambda d: d["wind_pct_mean"])
-        agg["highest_wind_day"] = highest_wind["weekday"]
-        agg["highest_wind_pct"] = highest_wind["wind_pct_mean"]
-        agg["lowest_wind_day"] = lowest_wind["weekday"]
-        agg["lowest_wind_pct"] = lowest_wind["wind_pct_mean"]
-        if len(wind_days) > 2:
-            corr = pd.Series([d["wind_pct_mean"] for d in wind_days]).corr(
-                pd.Series([d["mean_price"] for d in wind_days])
-            )
-            agg["wind_price_corr"] = round(float(corr), 2) if corr == corr else None
-
-    if prev_days:
-        prev_mean = sum(d["mean_price"] for d in prev_days) / len(prev_days)
-        if prev_mean:
-            agg["wow_pct_change"] = round((agg["week_mean"] - prev_mean) / prev_mean * 100, 1)
-
-    agg["takeaways"] = _build_takeaways(agg)
-    return agg
-
-
-def _build_takeaways(agg: dict) -> list[str]:
-    """Three templated (not free-form) commentary bullets from the aggregate stats."""
-    bullets = []
-
-    spread = agg["week_peak_price"] - agg["week_min_price"]
-    bullets.append(
-        f"Price ranged from a €{agg['week_min_price']}/MWh low on {agg['week_min_day']} "
-        f"({agg['week_min_time']}) to a €{agg['week_peak_price']}/MWh peak on "
-        f"{agg['week_peak_day']} ({agg['week_peak_time']}) — a €{spread:.2f}/MWh spread across the week, "
-        f"averaging €{agg['week_mean']}/MWh overall."
-    )
-
-    if "week_wind_mean" in agg:
-        corr = agg.get("wind_price_corr")
-        if corr is not None and corr <= -0.3:
-            relationship = (
-                f"the usual inverse relationship held — {agg['highest_wind_day']}'s "
-                f"{agg['highest_wind_pct']}% wind coincided with cheaper power, while "
-                f"{agg['lowest_wind_day']}'s {agg['lowest_wind_pct']}% wind ran the tightest"
-            )
-        elif corr is not None and corr >= 0.3:
-            relationship = (
-                f"wind didn't track price as cleanly as usual — {agg['highest_wind_day']} had the week's "
-                f"highest wind ({agg['highest_wind_pct']}%) without the cheapest prices, "
-                f"while {agg['lowest_wind_day']} saw the least wind ({agg['lowest_wind_pct']}%)"
-            )
-        else:
-            relationship = (
-                f"wind ranged from {agg['lowest_wind_pct']}% on {agg['lowest_wind_day']} to "
-                f"{agg['highest_wind_pct']}% on {agg['highest_wind_day']}, without a clean read-through to price"
-            )
-        bullets.append(f"Average wind for the week was {agg['week_wind_mean']}% of demand — {relationship}.")
-
-    if "wow_pct_change" in agg:
-        direction = "up" if agg["wow_pct_change"] > 0 else "down"
-        bullets.append(
-            f"Mean price moved {direction} {abs(agg['wow_pct_change'])}% week-on-week."
-        )
-    elif agg["total_bess_profit"]:
-        bullets.append(
-            f"A simulated 1MW/2MWh battery would have cleared €{agg['total_bess_profit']:.0f} gross "
-            f"across the week's best daily cycles."
-        )
-
-    return bullets
-
-
-def build_weekly_draft(any_date_in_week: date) -> Path:
-    """Compute the ISO week containing any_date_in_week, aggregate it, and write the draft post."""
+    Raises ValueError if the store lacks the week's final day (or any other day), and
+    FileExistsError if the post exists and force is False (before anything is written)."""
     monday, sunday = iso_week_bounds(any_date_in_week)
-    days = load_week(monday, sunday)
-    if not days:
-        raise FileNotFoundError(f"No daily DAM data found for week {monday}–{sunday}")
+    post = Path(content_root or CONTENT_DIR) / "weekly" / monday.isoformat() / "index.md"
+    if post.exists() and not force:
+        raise FileExistsError(f"{post} exists; use --force to overwrite")
 
-    prev_monday, prev_sunday = iso_week_bounds(monday - timedelta(days=1))
-    prev_days = load_week(prev_monday, prev_sunday) or None
+    db = Path(db_path) if db_path else store.DB_PATH          # resolved at call time
+    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    try:
+        have = conn.execute("SELECT COUNT(*) FROM market_prices WHERE date=?", (sunday.isoformat(),)).fetchone()[0]
+        if have != expected_periods(sunday):
+            raise ValueError(f"store lacks the week's final day {sunday} ({have} of {expected_periods(sunday)} "
+                             f"periods); run the daily pipeline or --backfill-prices first")
+        summary = weekly_summary(monday, conn)
+    finally:
+        conn.close()
 
-    agg = aggregate_week(days, prev_days)
+    weekly_chart(summary, Path(chart_dir or CHART_DIR) / "weekly" / f"{monday.isoformat()}.png")
+    return build_weekly_post(summary, content_root, force=force)
 
-    chart_dir = CHART_DIR / sunday.isoformat()
-    chart_dir.mkdir(parents=True, exist_ok=True)
-    chart_path = chart_dir / f"weekly-overview-{sunday.isoformat()}.png"
-    chart_weekly_overview(days, monday, sunday, chart_path)
 
-    daily_rows = "\n".join(
-        f"| {d['weekday']} {pd.Timestamp(d['date']).strftime('%d %b')} "
-        f"| €{d['mean_price']} | €{d['peak_price']} | €{d['min_price']} "
-        f"| {d.get('wind_pct_mean', '—')}{'%' if 'wind_pct_mean' in d else ''} |"
-        for d in days
-    )
-
-    takeaway_lines = "\n".join(f"- {t}" for t in agg["takeaways"])
-
-    summary_line = (
-        f"DAM prices averaged €{agg['week_mean']}/MWh this week"
-        + (f", {'up' if agg.get('wow_pct_change', 0) > 0 else 'down'} "
-           f"{abs(agg['wow_pct_change'])}% week-on-week" if "wow_pct_change" in agg else "")
-        + f", ranging from €{agg['week_min_price']} to €{agg['week_peak_price']}/MWh."
-    )
-
-    md = f"""---
-title: "Weekly Analysis — {monday.strftime('%-d')}–{sunday.strftime('%-d %B %Y')}"
-slug: "{sunday.isoformat()}"
-date: {sunday.isoformat()}
-authors: ["Eoin"]
-tags: ["weekly-analysis", "I-SEM"]
-summary: "{summary_line}"
-images: ["charts/weekly/{sunday.isoformat()}/weekly-overview-{sunday.isoformat()}.png"]
-draft: true
-ShowToc: true
----
-
-## Key Takeaways
-
-{takeaway_lines}
-
-## Weekly Price Overview
-
-![Week in Review](/charts/weekly/{sunday.isoformat()}/weekly-overview-{sunday.isoformat()}.png)
-
-| Day | Mean | Peak | Min | Wind % |
-|-----|------|------|-----|--------|
-{daily_rows}
-{"" if agg['days_covered'] == 7 else f'''
-<!--
-Only {agg['days_covered']} of 7 days had data — note the gap in the analysis below.
--->
-'''}
-## Analysis
-
-<!--
-Write 800-1200 words here. The Key Takeaways above are templated from the
-numbers, not real analysis — use them as a starting point, not a substitute:
-- What actually drove the week's price shape? Outages, interconnector flows,
-  demand patterns, weather that the wind % alone doesn't capture?
-- How does this week compare to the broader monthly/seasonal trend?
-- Anything worth flagging for businesses on variable-rate contracts?
--->
-
-## Methodology
-
-Data sourced from SEMO Day-Ahead Market results and EirGrid generation reports.
-Analysis performed in Python using pandas and matplotlib.
-"""
-
-    outdir = CONTENT_DIR / "weekly" / sunday.isoformat()
-    outdir.mkdir(parents=True, exist_ok=True)
-    outpath = outdir / "index.md"
-    outpath.write_text(md)
-    print(f"\nWeekly draft scaffolded: {outpath}")
-    print(f"Covered {agg['days_covered']}/7 days. Chart: {chart_path}")
-    return outpath
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description="Build the weekly post draft from data/history.db.")
+    parser.add_argument("date", nargs="?", metavar="YYYY-MM-DD",
+                        help="Any date in the week to build (default: the last complete Mon-Sun).")
+    parser.add_argument("--force", action="store_true", help="Overwrite an existing draft and chart.")
+    parser.add_argument("--db", type=Path, help="History database (default: data/history.db).")
+    parser.add_argument("--content-root", type=Path, help="Content tree to write into (default: site/content).")
+    parser.add_argument("--chart-dir", type=Path, help="Chart root (default: site/static/charts).")
+    args = parser.parse_args(argv)
+    target = date.fromisoformat(args.date) if args.date else last_complete_week()
+    try:
+        post = build_weekly_draft(target, args.db, args.content_root, args.chart_dir, args.force)
+    except (ValueError, FileExistsError) as e:
+        print(f"weekly: {e}", file=sys.stderr)
+        return 1
+    print(f"Weekly draft: {post}")
+    return 0
 
 
 if __name__ == "__main__":
-    if len(sys.argv) >= 2:
-        target = date.fromisoformat(sys.argv[1])
-    else:
-        # Most recently completed ISO week (last Sunday, or today if today is Sunday)
-        today = date.today()
-        target = today - timedelta(days=today.weekday() + 1) if today.weekday() != 6 else today
-
-    build_weekly_draft(target)
+    sys.exit(main())
