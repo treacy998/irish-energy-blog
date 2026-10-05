@@ -20,6 +20,12 @@ A post with no ground truth in the store is skipped, listed with its reason,
 and makes the run exit non-zero unless --allow-skips is passed — a skip is
 an unaudited post, not a clean one.
 
+audit_known.csv (post, field, published, recomputed, reason) baselines flagged
+rows that are understood and accepted. A flag matches a baseline row only if
+post, field, published AND recomputed value all agree, so a figure that moves
+again is new, not known. Known flags are printed under "known (baselined)";
+the run exits 1 only for flagged rows that are not in the baseline.
+
 --exact sets the tolerance to 0 for integer-valued fields (INTEGER_FIELDS:
 counts, rank, percentile, days_since). Every other numeric field keeps the
 default ±1.0 tolerance, which would hide an off-by-one in a count.
@@ -44,6 +50,7 @@ from trading_day import calendar_label_to_utc, expected_periods, period_label_in
 DB_PATH = ROOT / "data" / "history.db"
 POSTS_DIR = ROOT / "site" / "content" / "daily"
 REPORT_PATH = ROOT / "audit_report.csv"
+KNOWN_PATH = Path(__file__).parent / "audit_known.csv"
 
 # Period order is index order within the trading day, taken from
 # trading_day (local 23:00 start, 30-minute steps in UTC): 48 periods, or 50 /
@@ -266,6 +273,27 @@ def extract_prose(lines, table_line_nos, frontmatter_range):
     return out
 
 
+def _norm(v) -> str:
+    """Comparable text for a published/recomputed value (numbers by value, else as text)."""
+    try:
+        return repr(round(float(v), 6))
+    except (TypeError, ValueError):
+        return str(v)
+
+
+def flag_key(post: str, field: str, published, recomputed) -> tuple:
+    return (str(post), field, _norm(published), _norm(recomputed))
+
+
+def load_known(path: Path = KNOWN_PATH) -> dict:
+    """{flag_key: reason} from the baseline file; empty if there is none."""
+    if not path.exists():
+        return {}
+    with open(path, newline="") as f:
+        return {flag_key(r["post"], r["field"], r["published"], r["recomputed"]): r["reason"]
+                for r in csv.DictReader(f)}
+
+
 def audit_post(post_path: Path, gt: dict, exact: bool = False) -> list:
     text = post_path.read_text()
     lines = text.split("\n")
@@ -341,6 +369,7 @@ def main():
         print(f"No {DB_PATH} — run pipeline/store.py first.", file=sys.stderr)
         sys.exit(1)
 
+    failed = False
     conn = sqlite3.connect(DB_PATH)
     all_rows = []
     checked = 0
@@ -382,6 +411,11 @@ def main():
         w.writerows(all_rows)
 
     flagged = [r for r in all_rows if r[-1]]
+    known_map = load_known()
+    # row layout: [date, surface, field, published, computed, delta, line, note]
+    known = [r for r in flagged if flag_key(r[0], r[2], r[3], r[4]) in known_map]
+    new_flags = [r for r in flagged if flag_key(r[0], r[2], r[3], r[4]) not in known_map]
+    stale = set(known_map) - {flag_key(r[0], r[2], r[3], r[4]) for r in flagged}
     posts_with_issues = sorted({r[0] for r in flagged})
 
     print(f"checked {checked} posts, skipped {len(skipped)} (against {DB_PATH})")
@@ -391,7 +425,7 @@ def main():
         print(f"  {len(no_conditions)} checked post(s) have no system_conditions in the store, "
               f"so wind/demand figures were not verified: {no_conditions}")
     print(f"Total extracted figures checked: {len(all_rows)}")
-    print(f"Flagged rows: {len(flagged)}")
+    print(f"Flagged rows: {len(flagged)} (known/baselined {len(known)}, not in baseline {len(new_flags)})")
     print(f"Posts with at least one flagged row: {len(posts_with_issues)}")
     print()
     from collections import Counter
@@ -405,11 +439,27 @@ def main():
     for note, n in note_counts.most_common():
         print(f"  {note:30s} {n}")
     print()
+    print(f"known (baselined): {len(known)} flagged row(s), from {KNOWN_PATH.name}")
+    for r in known:
+        print(f"  {r[0]} {r[2]:16s} published={r[3]} recomputed={r[4]}  [{known_map[flag_key(r[0], r[2], r[3], r[4])]}]")
+    if stale:
+        print(f"  {len(stale)} baseline row(s) no longer flagged (post corrected or data changed): "
+              f"{sorted(stale)[:5]}{' ...' if len(stale) > 5 else ''}")
+    print()
+    print(f"not in baseline: {len(new_flags)} flagged row(s)")
+    for r in new_flags:
+        print(f"  {r[0]} {r[2]} published={r[3]} recomputed={r[4]} ({r[-1]})")
+    print()
     print(f"Full report: {REPORT_PATH}")
 
+    if new_flags:
+        print(f"\nFAIL: {len(new_flags)} flagged row(s) not in {KNOWN_PATH.name}.", file=sys.stderr)
+        failed = True
     if skipped and not args.allow_skips:
         print(f"\nFAIL: {len(skipped)} post(s) skipped without ground truth "
               f"(pass --allow-skips to accept).", file=sys.stderr)
+        failed = True
+    if failed:
         sys.exit(1)
 
 
