@@ -165,8 +165,9 @@ def backfill_system_conditions(
     Each area (wind, demand) is parsed from data/eirgrid_raw/<date>/<area>.json
     when that file holds at least one data row — no network call, and the
     values are exactly what the published post was written from. Only an area
-    whose archive is missing or has zero rows is fetched live, with `retries`
-    retries and exponential backoff (backoff, 2*backoff, ...). A live fetch
+    whose archive is missing or has zero rows is fetched live. Wind gets
+    `retries` retries with exponential backoff (backoff, 2*backoff, ...);
+    demand is tried once (see --heal). A live fetch
     never replaces an archive that has rows; a zero-row archive is overwritten.
 
     Commits after every date, so killing the run loses at most one day.
@@ -201,9 +202,13 @@ def backfill_system_conditions(
                 if frames.get(area) is not None:
                     continue
                 source = "api"
-                for attempt in range(retries + 1):
+                # Demand is tried once: its feed is empty for minutes at a time, so
+                # retrying within seconds never helped; --heal is the retry. Wind
+                # is reliable, so a transient HTTP error there is worth retrying.
+                tries = 1 if area == "demand" else retries + 1
+                for attempt in range(tries):
                     frames[area] = fetch_area(d, area, out_dir=out_dir, overwrite_raw=False)
-                    if frames[area] is not None or attempt == retries:
+                    if frames[area] is not None or attempt == tries - 1:
                         break
                     time.sleep(backoff * 2 ** attempt)
             df = combine_wind_and_demand(frames.get("wind"), frames.get("demand"))
