@@ -326,25 +326,28 @@ def compare_findings(findings, gt: dict, exact: bool) -> list:
 
 
 # (label prefix, field, kind): longest prefixes first. kinds: num = first number in the value
-# cell; rank = "<n> of <m>" -> <field> and <field>_of; date = an ISO date; text = the cell, lowercased.
+# cell; rank = "<n> of <m>" -> <field> and <field>_of; date = an ISO date; text = the cell, lowercased;
+# verdict_spread = text before any "(" plus the € amount inside it as median_arb_spread.
 WEEKLY_ROWS = [
     ("Week mean (c/kWh)", "week_mean_c_per_kwh", "num"),
     ("Week mean", "week_mean", "num"),
     ("Periods above €150", "periods_above_150", "num"),
     ("Periods above €200", "periods_above_200", "num"),
     ("Median daily arb spread", "median_arb_spread", "num"),
+    ("Median daily spread", "median_arb_spread", "num"),
     ("Mean wind (MW)", "wind_mw_mean", "num"),
+    ("Trailing median wind (MW)", "wind_mw_trailing_median", "num"),
     ("Wind coverage", "wind_coverage_pct", "num"),
     ("Rank vs trailing", "trailing_rank", "rank"),
     ("Dearest since (trailing)", "trailing_dearest_since", "date"),
     ("Cheapest since (trailing)", "trailing_cheapest_since", "date"),
     ("Price verdict (trailing)", "trailing_verdict_price", "text"),
-    ("Volatility verdict (trailing)", "trailing_verdict_volatility", "text"),
+    ("Volatility verdict (trailing)", "trailing_verdict_volatility", "verdict_spread"),
     ("Rank vs seasonal", "seasonal_rank", "rank"),
     ("Dearest since (seasonal)", "seasonal_dearest_since", "date"),
     ("Cheapest since (seasonal)", "seasonal_cheapest_since", "date"),
     ("Price verdict (seasonal)", "seasonal_verdict_price", "text"),
-    ("Volatility verdict (seasonal)", "seasonal_verdict_volatility", "text"),
+    ("Volatility verdict (seasonal)", "seasonal_verdict_volatility", "verdict_spread"),
 ]
 ISO_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
@@ -353,7 +356,7 @@ def weekly_ground_truth(summary: dict) -> dict:
     """Flatten weekly_summary() into the field names WEEKLY_ROWS uses. A suppressed
     baseline contributes no fields, so a published figure from it has no ground truth."""
     gt = {k: summary[k] for k in ("week_mean", "week_mean_c_per_kwh", "periods_above_150", "periods_above_200",
-                                  "median_arb_spread", "wind_mw_mean")}
+                                  "median_arb_spread", "wind_mw_mean", "wind_mw_trailing_median")}
     gt["wind_coverage_pct"] = round(summary["wind_coverage"] * 100, 1)
     for kind in ("trailing", "seasonal"):
         b = summary[kind]
@@ -370,6 +373,11 @@ def extract_weekly_rows(lines) -> list:
     out = []
     for i, line in enumerate(lines, start=1):
         if "|" not in line:
+            # The opening rank sentence: "4th dearest of the last 14 weeks" / "Dearest of the last 14 weeks".
+            m = re.search(r"(?:\b(\d+)(?:st|nd|rd|th) dearest|\b(Dearest)) of the last (\d+) weeks", line)
+            if m:
+                out.append(("weekly:sentence", "trailing_rank", float(m.group(1)) if m.group(1) else 1.0, i))
+                out.append(("weekly:sentence", "trailing_rank_of", float(m.group(3)), i))
             continue
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if len(cells) < 2:
@@ -392,6 +400,11 @@ def extract_weekly_rows(lines) -> list:
                 nm = ISO_DATE_RE.search(val)
                 if nm:
                     out.append(("weekly:table", field, nm.group(0), i))
+            elif kind == "verdict_spread":
+                out.append(("weekly:table", field, val.split("(")[0].strip("* ").lower(), i))
+                eur = EUR_RE.search(val)
+                if eur:
+                    out.append(("weekly:table", "median_arb_spread", float(eur.group(1)), i))
             else:
                 out.append(("weekly:table", field, val.strip("* ").lower(), i))
             break
@@ -464,10 +477,16 @@ def main():
     parser = argparse.ArgumentParser(description="Audit published daily posts against data/history.db.")
     parser.add_argument("--allow-skips", action="store_true",
                         help="Exit 0 even if some posts had no ground truth and were skipped.")
+    parser.add_argument("--content-root", type=Path, metavar="DIR",
+                        help="Audit the posts under DIR/daily and DIR/weekly instead of site/content "
+                             "(a missing subdirectory is treated as having no posts).")
     parser.add_argument("--exact", action="store_true",
                         help="Tolerance 0 for integer-valued fields (counts, rank, percentile, "
                              "days_since); other fields keep ±1.0.")
     args = parser.parse_args()
+    posts_dir, weekly_dir = POSTS_DIR, WEEKLY_DIR
+    if args.content_root:
+        posts_dir, weekly_dir = args.content_root / "daily", args.content_root / "weekly"
 
     if not DB_PATH.exists():
         print(f"No {DB_PATH} — run pipeline/store.py first.", file=sys.stderr)
@@ -480,7 +499,7 @@ def main():
     skipped = []          # (post, reason)
     no_conditions = []    # checked on prices only; wind/demand figures unverifiable
 
-    for post_dir in sorted(POSTS_DIR.iterdir()):
+    for post_dir in sorted(posts_dir.iterdir() if posts_dir.exists() else []):
         if not post_dir.is_dir():
             continue
         try:
@@ -508,8 +527,8 @@ def main():
             all_rows.append([d.isoformat()] + row)
 
     weekly_unaudited = []
-    if WEEKLY_DIR.exists():
-        for wdir in sorted(WEEKLY_DIR.iterdir()):
+    if weekly_dir.exists():
+        for wdir in sorted(weekly_dir.iterdir()):
             idx = wdir / "index.md"
             if not (wdir.is_dir() and idx.exists()):
                 continue
