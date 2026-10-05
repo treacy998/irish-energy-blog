@@ -127,9 +127,10 @@ def fetch_wind_and_demand(
     historical window later ages the live query out.
 
     overwrite_raw=False keeps any archive on disk that holds at least one data
-    row and only writes missing or zero-row files. Backfills use it so a
-    re-fetch never replaces the raw JSON a published post was written from;
-    a zero-row file is a failed fetch, not a record worth protecting.
+    row, and writes a response only if it has rows and the archive is missing
+    or empty. Backfills and heals use it so a re-fetch never replaces the raw
+    JSON a published post was written from, and never writes an empty one; a
+    zero-row file is a failed fetch, not a record worth protecting.
 
     Note: EirGrid's demand endpoint does not return a forecast field for this
     region/chart combination (only SYSTEM_DEMAND) — there is no DemandForecastMW.
@@ -167,11 +168,21 @@ def combine_wind_and_demand(wind: pd.DataFrame | None, demand: pd.DataFrame | No
     else:
         df["WindForecastMW"] = pd.NA
 
-    # Wind penetration %. NaN demand stays NaN (never 0); zero demand is treated as missing.
-    demand_nonzero = df["DemandMW"].where(df["DemandMW"] != 0)
-    df["WindGeneration_pct"] = ((df["WindMW"] / demand_nonzero) * 100).clip(0, 100).round(1)
+    df["WindGeneration_pct"] = compute_wind_pct(df["WindMW"], df["DemandMW"])
 
     return df
+
+
+def compute_wind_pct(wind_mw: pd.Series, demand_mw: pd.Series) -> pd.Series:
+    """Wind as % of demand, clipped to 0-100 and rounded to 1 dp. NaN demand stays
+    NaN (never 0); zero demand is treated as missing rather than divided by."""
+    demand_nonzero = demand_mw.where(demand_mw != 0)
+    return ((wind_mw / demand_nonzero) * 100).clip(0, 100).round(1)
+
+
+def resample_demand(demand: pd.DataFrame) -> pd.DataFrame | None:
+    """30-minute StartTime/DemandMW rows from parsed demand area rows (None if unusable)."""
+    return _resample_30min(demand, "DemandMW")
 
 
 def archive_path(delivery_date: date, area: str, out_dir: Path | str = DEFAULT_DATA_DIR) -> Path:
@@ -232,13 +243,26 @@ def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: l
         )
         resp.raise_for_status()
 
+        try:
+            data = resp.json()
+        except ValueError:
+            data = None
+        has_rows = isinstance(data, dict) and bool(data.get("Rows") or data.get("rows"))
+
         if raw_dir is not None:
             raw_path = raw_dir / f"{area}.json"
-            if overwrite_raw or archive_row_count(raw_path) == 0:
+            # overwrite_raw=True (run_daily) archives whatever EirGrid said, even an
+            # empty response. overwrite_raw=False (backfill, heal) only archives a
+            # response that has rows, and only where the archive is missing or has
+            # none — an empty response is not a record worth writing.
+            if overwrite_raw or (has_rows and archive_row_count(raw_path) == 0):
                 raw_dir.mkdir(parents=True, exist_ok=True)
                 raw_path.write_text(resp.text)
 
-        return _parse_area(resp.json(), area, fields)
+        if data is None:
+            print(f"  [fetch] EirGrid returned non-JSON for area={area}")
+            return None
+        return _parse_area(data, area, fields)
 
     except requests.RequestException as e:
         print(f"  [fetch] EirGrid request failed for area={area}: {e}")
