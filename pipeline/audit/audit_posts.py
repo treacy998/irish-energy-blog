@@ -39,32 +39,22 @@ sys.path.insert(0, str(ROOT / "pipeline"))
 import pandas as pd
 from process import daily_summary
 from bess import simulate_bess
+from trading_day import calendar_label_to_utc, expected_periods, period_label_indices, period_start_utc
 
 DB_PATH = ROOT / "data" / "history.db"
 POSTS_DIR = ROOT / "site" / "content" / "daily"
 REPORT_PATH = ROOT / "audit_report.csv"
 
-# Canonical SEM-DA period order: period 1 = 23:00 the previous evening.
-# Used to check discharge-after-charge structurally, not by clock-time string.
-PERIOD_ORDER = []
-h, m = 23, 0
-for _ in range(48):
-    PERIOD_ORDER.append(f"{h:02d}:{m:02d}")
-    m += 30
-    if m == 60:
-        m = 0
-        h = (h + 1) % 24
-
+# Period order is index order within the trading day, taken from
+# trading_day (local 23:00 start, 30-minute steps in UTC): 48 periods, or 50 /
+# 46 on the clock-change days. A local label is not an index on its own — it
+# repeats 01:00-02:00 on the long day — so a label maps to a list of indices.
 
 # Integer-valued fields: with --exact these must match with tolerance 0.
 # Only the periods_above_* counts are extracted from posts today; rank,
 # percentile and days_since are listed so they are exact from the day an
 # extractor and ground-truth value for them exist.
-INTEGER_FIELDS = {"periods_above_150", "periods_above_200", "rank", "percentile", "days_since"}
-
-
-def period_index(t: str) -> int | None:
-    return PERIOD_ORDER.index(t) if t in PERIOD_ORDER else None
+INTEGER_FIELDS = {"periods_above_150", "periods_above_200", "period_count", "rank", "percentile", "days_since"}
 
 
 def load_ground_truth(conn: sqlite3.Connection, d: date) -> dict | None:
@@ -77,20 +67,35 @@ def load_ground_truth(conn: sqlite3.Connection, d: date) -> dict | None:
     ).fetchall()
     if not price_rows:
         return None
+    want = expected_periods(d)
+    if [r[0] for r in price_rows] != list(range(1, want + 1)):
+        raise ValueError(f"market_prices has {len(price_rows)} rows for {ds}, expected periods 1..{want}")
 
     df = pd.DataFrame(price_rows, columns=["Period", "StartTime", "DAMPrice_EUR_MWh"])
     df["DeliveryDate"] = pd.Timestamp(d)
+    # The instant of each period comes from the trading-day mapping, not the stored label.
+    df["StartUTC"] = [pd.Timestamp(period_start_utc(d, int(p))) for p in df["Period"]]
 
     summary = daily_summary(df, d)
     bess_result = simulate_bess(df)
 
+    # start_utc is absent from databases built before the clock-change work.
+    has_utc = "start_utc" in {r[1] for r in conn.execute("PRAGMA table_info(system_conditions)")}
     cond_rows = conn.execute(
-        "SELECT start_time, wind_mw, demand_mw, wind_pct FROM system_conditions WHERE date=? ORDER BY period",
+        f"SELECT start_time, {'start_utc' if has_utc else 'NULL'}, wind_mw, demand_mw, wind_pct "
+        "FROM system_conditions WHERE date=? ORDER BY period",
         (ds,),
     ).fetchall()
     if cond_rows:
-        cdf = pd.DataFrame(cond_rows, columns=["StartTime", "WindMW", "DemandMW", "WindGeneration_pct"])
-        merged = pd.merge(df, cdf, on="StartTime", how="left")
+        cdf = pd.DataFrame(cond_rows, columns=["StartTime", "StartUTC", "WindMW", "DemandMW", "WindGeneration_pct"])
+        # Rows stored before start_utc existed: calendar date + local label gives the instant
+        # (None inside a clock-change hour, so such a row is left unmatched, not guessed).
+        cdf["StartUTC"] = [
+            pd.Timestamp(u) if u else calendar_label_to_utc(d, lab)
+            for u, lab in zip(cdf["StartUTC"], cdf["StartTime"])
+        ]
+        cdf = cdf.drop(columns="StartTime").dropna(subset=["StartUTC"])
+        merged = pd.merge(df, cdf, on="StartUTC", how="left")
         if merged["WindGeneration_pct"].notna().any():
             summary["wind_pct_mean"] = round(merged["WindGeneration_pct"].mean(), 1)
             summary["wind_pct_min"] = round(float(merged["WindGeneration_pct"].min()), 1)
@@ -98,6 +103,7 @@ def load_ground_truth(conn: sqlite3.Connection, d: date) -> dict | None:
             summary["demand_mean_mw"] = round(merged["DemandMW"].mean(), 0)
 
     gt = dict(summary)
+    gt["period_count"] = want
     if bess_result:
         gt["bess_charge_mean"] = bess_result["charge_mean"]
         gt["bess_charge_start"] = bess_result["charge_start"]
@@ -179,9 +185,10 @@ def extract_table_rows(lines):
                     out.append(("table:snapshot", field, float(nm.group(1) if nm.lastindex else nm.group(0)), i))
 
         if label.startswith("Periods above €150") or label.startswith("**Periods above €150"):
-            nm = re.search(r"(\d+)\s+of\s+48", "|".join(cells))
+            nm = re.search(r"(\d+)\s+of\s+(\d+)", "|".join(cells))
             if nm:
                 out.append(("table:snapshot", "periods_above_150", float(nm.group(1)), i))
+                out.append(("table:snapshot", "period_count", float(nm.group(2)), i))
         if "Periods above €200" in label or "Above €200" in "|".join(cells):
             nm = re.search(r"Above €200.*?(\d+)\s*\(", "|".join(cells))
             if nm:
@@ -300,11 +307,14 @@ def audit_post(post_path: Path, gt: dict, exact: bool = False) -> list:
     # from any surface, respect discharge-after-charge in array-index order?
     charge_starts = [(s, v, ln) for s, f, v, ln in findings if f == "bess_charge_start"]
     discharge_starts = [(s, v, ln) for s, f, v, ln in findings if f == "bess_discharge_start"]
+    day = date.fromisoformat(gt["date"])
     for cs, cv, cln in charge_starts:
-        ci = period_index(cv)
+        cis = period_label_indices(day, cv)
         for ds, dv, dln in discharge_starts:
-            di = period_index(dv)
-            if ci is not None and di is not None and di < ci + 4:
+            dis = period_label_indices(day, dv)
+            # A label on the repeated hour fits two indices; the pair is only
+            # invalid if no choice of indices puts discharge >= charge + 4 periods.
+            if cis and dis and not any(di >= ci + 4 for ci in cis for di in dis):
                 results.append([f"{cs}+{ds}", "structural_ordering", f"charge={cv}@L{cln} discharge={dv}@L{dln}",
                                  "discharge >= charge+4 periods", "", f"{cln},{dln}", "INVALID_ORDERING"])
 
@@ -349,7 +359,11 @@ def main():
             skipped.append((post_dir.name, "no index.md in post directory"))
             continue
 
-        gt = load_ground_truth(conn, d)
+        try:
+            gt = load_ground_truth(conn, d)
+        except ValueError as e:
+            skipped.append((post_dir.name, str(e)))
+            continue
         if gt is None:
             skipped.append((post_dir.name, "no market_prices rows in history.db for this date"))
             continue
