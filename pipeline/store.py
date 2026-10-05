@@ -34,6 +34,7 @@ from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 from process import load_dam_data
+from trading_day import calendar_label_to_utc, expected_periods, iso_z
 from fetch import (
     AREA_FIELDS, archive_path, archive_row_count, combine_wind_and_demand,
     compute_wind_pct, fetch_area, load_archived_area, resample_demand,
@@ -48,6 +49,7 @@ CREATE TABLE IF NOT EXISTS market_prices (
     period INTEGER NOT NULL,
     start_time TEXT NOT NULL,
     dam_price_eur_mwh REAL NOT NULL,
+    start_utc TEXT,
     PRIMARY KEY (date, period)
 );
 
@@ -59,9 +61,15 @@ CREATE TABLE IF NOT EXISTS system_conditions (
     wind_forecast_mw REAL,
     demand_mw REAL,
     wind_pct REAL,
+    start_utc TEXT,
     PRIMARY KEY (date, period)
 );
 """
+
+# start_utc (ISO 'Z' text) is the unambiguous instant; start_time is a local
+# display label that repeats 01:00-02:00 on the autumn change day. Databases
+# created before it existed get the column added; old rows keep NULL.
+_MIGRATIONS = ("market_prices", "system_conditions")
 
 
 def build_db(db_path: Path | None = None) -> sqlite3.Connection:
@@ -69,24 +77,34 @@ def build_db(db_path: Path | None = None) -> sqlite3.Connection:
     # bind the real database permanently and ignore a patched DB_PATH.
     conn = sqlite3.connect(db_path or DB_PATH)
     conn.executescript(SCHEMA)
+    for table in _MIGRATIONS:
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if "start_utc" not in cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN start_utc TEXT")
     return conn
 
 
 def upsert_market_prices(conn: sqlite3.Connection, df) -> int:
     """Upsert a load_dam_data() DataFrame into market_prices. Returns rows written.
+    Raises ValueError, writing nothing, if a delivery date doesn't have exactly
+    expected_periods(date) rows (48; 50 or 46 on the clock-change days).
     Does not commit."""
+    for day, grp in df.groupby(df["DeliveryDate"].dt.date):
+        if len(grp) != expected_periods(day):
+            raise ValueError(f"{day}: {len(grp)} price rows, expected {expected_periods(day)}")
     records = [
         (
             row["DeliveryDate"].date().isoformat(),
             int(row["Period"]),
             row["StartTime"],
             float(row["DAMPrice_EUR_MWh"]),
+            iso_z(row["StartUTC"]),
         )
         for _, row in df.iterrows()
     ]
     conn.executemany(
         "INSERT OR REPLACE INTO market_prices "
-        "(date, period, start_time, dam_price_eur_mwh) VALUES (?, ?, ?, ?)",
+        "(date, period, start_time, dam_price_eur_mwh, start_utc) VALUES (?, ?, ?, ?, ?)",
         records,
     )
     return len(records)
@@ -94,23 +112,33 @@ def upsert_market_prices(conn: sqlite3.Connection, df) -> int:
 
 def upsert_system_conditions(conn: sqlite3.Connection, d: date, df) -> int:
     """Upsert a fetch_wind_and_demand() DataFrame for date d into system_conditions.
-    Returns rows written. Does not commit."""
+    Returns rows written. Does not commit.
+
+    period is the 1-based position within the EirGrid calendar day (00:00
+    local onward: 48 rows, 50 on the long day, 46 on the short one). It is NOT
+    SEMO's Period number, whose day starts at 23:00 the evening before; join
+    to market_prices on start_utc, never on period or the start_time label.
+    More rows than expected_periods(d) raises ValueError; fewer are stored as
+    they are (a gap is a gap, never filled)."""
+    if len(df) > expected_periods(d):
+        raise ValueError(f"{d}: {len(df)} condition rows, at most {expected_periods(d)} expected")
     records = [
         (
             d.isoformat(),
-            i + 1,  # period: 1..48, half-hourly, matches SEMO's Period numbering
+            i + 1,
             row["StartTime"].strftime("%H:%M"),
             float(row["WindMW"]) if pd_notna(row["WindMW"]) else None,
             float(row["WindForecastMW"]) if pd_notna(row.get("WindForecastMW")) else None,
             float(row["DemandMW"]) if pd_notna(row["DemandMW"]) else None,
             float(row["WindGeneration_pct"]) if pd_notna(row["WindGeneration_pct"]) else None,
+            iso_z(row["StartUTC"]),
         )
-        for i, (_, row) in enumerate(df.sort_values("StartTime").iterrows())
+        for i, (_, row) in enumerate(df.sort_values("StartUTC").iterrows())
     ]
     conn.executemany(
         "INSERT OR REPLACE INTO system_conditions "
-        "(date, period, start_time, wind_mw, wind_forecast_mw, demand_mw, wind_pct) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "(date, period, start_time, wind_mw, wind_forecast_mw, demand_mw, wind_pct, start_utc) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         records,
     )
     return len(records)
@@ -242,6 +270,20 @@ def missing_price_dates(conn: sqlite3.Connection, start: date, end: date) -> lis
     return out
 
 
+def wrong_price_counts(conn: sqlite3.Connection, start: date, end: date) -> list[str]:
+    """'<date> <rows> of <expected>' for each date in [start, end] whose market_prices
+    row count isn't expected_periods(date): 48, or 50/46 on the clock-change days."""
+    out = []
+    for ds, n in conn.execute(
+        "SELECT date, COUNT(*) FROM market_prices WHERE date BETWEEN ? AND ? GROUP BY date ORDER BY date",
+        (start.isoformat(), end.isoformat()),
+    ):
+        want = expected_periods(date.fromisoformat(ds))
+        if n != want:
+            out.append(f"{ds} {n} of {want}")
+    return out
+
+
 def heal_demand(
     conn: sqlite3.Connection, start: date, end: date, out_dir: Path = DATA_DIR,
     dry_run: bool = False,
@@ -296,22 +338,29 @@ def heal_demand(
 
         filled = 0
         if demand_30 is not None:
-            by_time = {t.strftime("%H:%M"): float(v)
-                       for t, v in zip(demand_30["StartTime"], demand_30["DemandMW"])}
+            by_utc = {iso_z(t): float(v)
+                      for t, v in zip(demand_30["StartUTC"], demand_30["DemandMW"])}
             rows = conn.execute(
-                "SELECT start_time, wind_mw FROM system_conditions WHERE date=? AND demand_mw IS NULL",
+                "SELECT period, start_time, start_utc, wind_mw FROM system_conditions "
+                "WHERE date=? AND demand_mw IS NULL",
                 (ds,),
             ).fetchall()
-            cur = pd.DataFrame(rows, columns=["start_time", "wind_mw"])
+            cur = pd.DataFrame(rows, columns=["period", "start_time", "start_utc", "wind_mw"])
             cur["wind_mw"] = pd.to_numeric(cur["wind_mw"])              # NULL -> NaN
-            cur["demand_mw"] = cur["start_time"].map(by_time)           # unmatched -> NaN
+            # Rows stored before start_utc existed: derive it from the calendar
+            # date + local label (None, so unmatched, inside a clock-change hour).
+            cur["start_utc"] = [
+                u if u else (lambda t: iso_z(t) if t is not None else None)(calendar_label_to_utc(d, lab))
+                for u, lab in zip(cur["start_utc"], cur["start_time"])
+            ]
+            cur["demand_mw"] = cur["start_utc"].map(by_utc)             # unmatched -> NaN
             cur = cur[cur["demand_mw"].notna()].copy()
             cur["wind_pct"] = compute_wind_pct(cur["wind_mw"], cur["demand_mw"])
             for r in cur.itertuples(index=False):
                 filled += conn.execute(
                     "UPDATE system_conditions SET demand_mw=?, wind_pct=? "
-                    "WHERE date=? AND start_time=? AND demand_mw IS NULL",
-                    (float(r.demand_mw), None if pd.isna(r.wind_pct) else float(r.wind_pct), ds, r.start_time),
+                    "WHERE date=? AND period=? AND demand_mw IS NULL",
+                    (float(r.demand_mw), None if pd.isna(r.wind_pct) else float(r.wind_pct), ds, int(r.period)),
                 ).rowcount
         conn.commit()
 
@@ -353,13 +402,16 @@ def _run(args) -> int:
             return 0
 
         price_missing = missing_price_dates(conn, start, end)
+        price_wrong = wrong_price_counts(conn, start, end)
+        if price_wrong:
+            print(_label("price period count wrong", price_wrong))
         if result.wind_failed:
             print(_label("wind missing", result.wind_failed))
         if price_missing:
             print(_label("price missing", price_missing))
         # Always the last line. Empty-demand dates are expected gaps for --heal, not failures.
         print(_label("demand missing", result.demand_missing))
-        return 1 if (result.wind_failed or price_missing) else 0
+        return 1 if (result.wind_failed or price_missing or price_wrong) else 0
     finally:
         conn.close()
 
