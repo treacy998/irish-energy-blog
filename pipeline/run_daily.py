@@ -21,6 +21,7 @@ from scaffold import scaffold_daily
 from fetch import fetch_wind_and_demand, fetch_semo
 from bess import simulate_bess
 from storage import upload_charts_for_date
+from store import persist_day
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
@@ -140,6 +141,15 @@ def main():
         print(f"  ✓ EirGrid data fetched — {eirgrid_df['WindGeneration_pct'].mean():.1f}% avg wind")
     else:
         print("  – EirGrid fetch failed, continuing without wind data")
+
+    # Keep data/history.db current so the audit and rolling baselines never
+    # depend on a separate backfill. Idempotent; a failure here is loud but
+    # doesn't block the post.
+    try:
+        price_rows, cond_rows = persist_day(delivery_date, df, eirgrid_df)
+        print(f"  ✓ history.db: {price_rows} price rows, {cond_rows} system_conditions rows")
+    except Exception as e:
+        print(f"  ! history.db write FAILED ({e}) — backfill {date_str} with pipeline/store.py")
 
     bess_result = None
     if args.include_bess:
