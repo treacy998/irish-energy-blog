@@ -51,7 +51,9 @@ def load_week(monday: date, sunday: date) -> list[dict]:
         summary["date"] = d.isoformat()
         summary["weekday"] = d.strftime("%A")
 
-        eirgrid_df = fetch_wind_and_demand(d)
+        # The raw archive for a past day is what its daily post was written from;
+        # a weekly re-fetch must never replace one that already has rows.
+        eirgrid_df = fetch_wind_and_demand(d, overwrite_raw=False)
         if eirgrid_df is not None:
             eg = eirgrid_df.copy()
             eg["StartTime"] = eg["StartTime"].dt.strftime("%H:%M")
