@@ -9,6 +9,8 @@ from pathlib import Path
 from datetime import date
 from zoneinfo import ZoneInfo
 
+from trading_day import expected_periods, period_start_utc
+
 DUBLIN_TZ = ZoneInfo("Europe/Dublin")
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -45,14 +47,27 @@ def load_dam_data(filepath: Path) -> pd.DataFrame:
         ts = pd.Timestamp(ts_str)
         if ts.tzinfo is None:
             ts = ts.tz_localize("UTC")
-        ts_irish = ts.tz_convert(DUBLIN_TZ).tz_localize(None)
+        ts_utc = ts.tz_convert("UTC")
+        # The file's own timestamps are checked against the trading-day mapping
+        # (local 23:00 the evening before + 30 min x (n-1), in UTC), so a
+        # clock-change day with the wrong number or order of periods fails here.
+        if ts_utc != period_start_utc(delivery_date, period_num):
+            raise ValueError(
+                f"period {period_num} starts {ts_utc.isoformat()}, expected "
+                f"{period_start_utc(delivery_date, period_num).isoformat()} for {delivery_date}"
+            )
         price = float(val_str.replace(",", "."))
         records.append({
             "DeliveryDate": pd.Timestamp(delivery_date),
             "Period": period_num,
-            "StartTime": ts_irish.strftime("%H:%M"),
+            "StartTime": ts_utc.tz_convert(DUBLIN_TZ).strftime("%H:%M"),   # display label; repeats on the long day
+            "StartUTC": ts_utc,
             "DAMPrice_EUR_MWh": price,
         })
+
+    expected = expected_periods(delivery_date)
+    if len(records) != expected:
+        raise ValueError(f"{len(records)} periods for {delivery_date}, expected {expected}")
 
     return pd.DataFrame(records)
 
