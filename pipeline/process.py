@@ -57,6 +57,34 @@ def load_dam_data(filepath: Path) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
+# A wind mean needs most of the day behind it. EirGrid's demand feed is
+# intermittently empty, which leaves wind_pct NULL for some or all rows; a mean
+# over a handful of rows would read as a daily figure, so below this many
+# non-NULL rows (of 48 half-hours) the wind stats are omitted rather than shown.
+MIN_WIND_ROWS = 36
+
+
+def wind_summary(wind_pct: pd.Series, demand_mw: pd.Series | None = None) -> dict:
+    """wind_pct_mean/min/max (and demand_mean_mw) from the non-NULL rows only.
+
+    Returns {} when fewer than MIN_WIND_ROWS rows have a wind_pct. NULL rows are
+    skipped, never treated as zero and never filled.
+    """
+    pct = pd.to_numeric(wind_pct, errors="coerce").dropna()
+    if len(pct) < MIN_WIND_ROWS:
+        return {}
+    out = {
+        "wind_pct_mean": round(float(pct.mean()), 1),
+        "wind_pct_min": round(float(pct.min()), 1),
+        "wind_pct_max": round(float(pct.max()), 1),
+    }
+    if demand_mw is not None:
+        demand = pd.to_numeric(demand_mw, errors="coerce").dropna()
+        if len(demand):
+            out["demand_mean_mw"] = round(float(demand.mean()), 0)
+    return out
+
+
 def daily_summary(df: pd.DataFrame, target_date: date) -> dict:
     """
     Compute key daily metrics for a single day.
@@ -116,9 +144,13 @@ def daily_summary(df: pd.DataFrame, target_date: date) -> dict:
 
     # Wind data if available
     if "WindGeneration_pct" in day.columns:
-        summary["wind_pct_mean"] = round(day["WindGeneration_pct"].mean(), 1)
+        wind = wind_summary(day["WindGeneration_pct"])
+        if "wind_pct_mean" in wind:
+            summary["wind_pct_mean"] = wind["wind_pct_mean"]
     if "SystemDemand_MW" in day.columns:
-        summary["demand_mean_mw"] = round(day["SystemDemand_MW"].mean(), 0)
+        demand = day["SystemDemand_MW"].dropna()
+        if len(demand):
+            summary["demand_mean_mw"] = round(float(demand.mean()), 0)
 
     return summary
 

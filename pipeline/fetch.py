@@ -111,10 +111,14 @@ def fetch_wind_and_demand(
         StartTime            datetime (Irish local time, 30-min intervals)
         WindMW               float — wind generation in MW
         WindForecastMW       float — day-ahead wind forecast in MW (NaN where unavailable)
-        DemandMW             float — system demand in MW
-        WindGeneration_pct   float — wind as % of demand
+        DemandMW             float — system demand in MW (NaN where the demand feed was empty)
+        WindGeneration_pct   float — wind as % of demand (NaN where DemandMW is NaN)
 
-    Returns None if the fetch fails for any reason.
+    Returns None only if wind is unavailable. EirGrid's demand endpoint
+    intermittently returns {"Rows":[]} for minutes at a time while wind is
+    unaffected, so an empty demand feed yields the wind rows with DemandMW and
+    WindGeneration_pct NaN (stored as NULL) — never 0, never filled. Callers
+    that need a wind % must check WindGeneration_pct.notna().
     The pipeline continues without wind data if None is returned.
 
     The raw EirGrid JSON response for each area is archived to
@@ -137,28 +141,35 @@ def fetch_wind_and_demand(
 
 def combine_wind_and_demand(wind: pd.DataFrame | None, demand: pd.DataFrame | None) -> pd.DataFrame | None:
     """Build the 30-minute wind/demand frame from parsed wind and demand area rows
-    (from fetch_area or load_archived_area). Returns None if either is missing."""
-    if wind is None or demand is None:
+    (from fetch_area or load_archived_area).
+
+    Wind is required: returns None if it is missing. Demand is optional — if it
+    is None (feed empty) or has no usable rows, every wind row is kept with
+    DemandMW and WindGeneration_pct NaN. Demand is left-joined for the same
+    reason, so a wind row is never dropped for lack of a demand match."""
+    if wind is None:
         return None
 
-    wind_actual   = _resample_30min(wind[wind["field"] == "WIND_ACTUAL"], "WindMW")
+    wind_actual = _resample_30min(wind[wind["field"] == "WIND_ACTUAL"], "WindMW")
+    if wind_actual is None:
+        return None
     wind_forecast = _resample_30min(wind[wind["field"] == "WIND_FCAST"], "WindForecastMW")
-    demand        = _resample_30min(demand, "DemandMW")
+    demand_30     = _resample_30min(demand, "DemandMW") if demand is not None else None
 
-    if wind_actual is None or demand is None:
-        return None
-
-    # Merge on StartTime — forecast is left-joined since it may be absent for some periods
-    df = pd.merge(wind_actual, demand, on="StartTime", how="inner")
+    # Merge on StartTime — demand and forecast are left-joined since either may be absent
+    if demand_30 is not None:
+        df = pd.merge(wind_actual, demand_30, on="StartTime", how="left")
+    else:
+        df = wind_actual.copy()
+        df["DemandMW"] = float("nan")
     if wind_forecast is not None:
         df = pd.merge(df, wind_forecast, on="StartTime", how="left")
     else:
         df["WindForecastMW"] = pd.NA
 
-    # Calculate wind penetration %
-    df["WindGeneration_pct"] = (
-        (df["WindMW"] / df["DemandMW"].replace(0, pd.NA)) * 100
-    ).clip(0, 100).round(1)
+    # Wind penetration %. NaN demand stays NaN (never 0); zero demand is treated as missing.
+    demand_nonzero = df["DemandMW"].where(df["DemandMW"] != 0)
+    df["WindGeneration_pct"] = ((df["WindMW"] / demand_nonzero) * 100).clip(0, 100).round(1)
 
     return df
 

@@ -13,7 +13,7 @@ import numpy as np
 from pathlib import Path
 from datetime import date
 
-from process import load_dam_data, get_day_data, daily_summary
+from process import load_dam_data, get_day_data, daily_summary, wind_summary
 from charts_interactive import generate_interactive_charts
 
 # ── Palette ────────────────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ def chart_dam_price_profile(day_df: pd.DataFrame, summary: dict, outpath: Path):
 # ── Chart 2 — Price vs Wind ────────────────────────────────────────────────
 
 def chart_price_vs_wind(day_df: pd.DataFrame, summary: dict, outpath: Path):
-    if "WindGeneration_pct" not in day_df.columns:
+    if "WindGeneration_pct" not in day_df.columns or day_df["WindGeneration_pct"].isna().all():
         print("  Skipped price-vs-wind (no wind data)")
         return
 
@@ -533,11 +533,7 @@ def generate_daily_charts(data_filepath: Path, target_date: date, eirgrid_df=Non
         eg["StartTime"] = eg["StartTime"].dt.strftime("%H:%M")
         wind_cols = ["StartTime", "WindMW", "DemandMW", "WindGeneration_pct"]
         day_df = pd.merge(day_df, eg[wind_cols], on="StartTime", how="left")
-        if day_df["WindGeneration_pct"].notna().any():
-            summary["wind_pct_mean"] = round(day_df["WindGeneration_pct"].mean(), 1)
-            summary["wind_pct_min"] = round(float(day_df["WindGeneration_pct"].min()), 1)
-            summary["wind_pct_max"] = round(float(day_df["WindGeneration_pct"].max()), 1)
-            summary["demand_mean_mw"] = round(day_df["DemandMW"].mean(), 0)
+        summary.update(wind_summary(day_df["WindGeneration_pct"], day_df["DemandMW"]))
 
     print(f"\nGenerating charts for {date_str}...")
 

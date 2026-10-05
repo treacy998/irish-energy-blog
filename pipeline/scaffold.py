@@ -52,7 +52,8 @@ def find_data_file(target_date: date, explicit: Path = None) -> Path:
 def _build_data_table(day_df, eirgrid_df, date_str: str) -> str:
     """Return a collapsed markdown table of half-hourly data for the day."""
     cols = ["Period", "StartTime", "DAMPrice_EUR_MWh"]
-    has_wind = eirgrid_df is not None and "WindGeneration_pct" in day_df.columns
+    has_wind = (eirgrid_df is not None and "WindGeneration_pct" in day_df.columns
+                and day_df["WindGeneration_pct"].notna().any())
 
     header = "| Period | Time | Price (€/MWh) |"
     sep    = "|--------|------|--------------|"

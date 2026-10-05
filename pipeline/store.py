@@ -14,10 +14,13 @@ Design notes:
     Only an area whose archive is missing or has zero rows is fetched live,
     and that fetch fills the gap in data/eirgrid_raw/ without ever replacing
     an archive that has rows.
-  - system_conditions is expected to be sparse only in the sense that a date can
-    be entirely ABSENT (EirGrid fetch failed). Missing days must never appear as
-    zero-valued rows — a rolling baseline computed over silent zeros would read
-    a fetch failure as "no wind that day," which is a different and false claim.
+  - Wind is required, demand is not. EirGrid's demand endpoint intermittently
+    returns {"Rows":[]} for minutes at a time while wind is unaffected, so a date
+    with wind but no demand is stored with demand_mw and wind_pct NULL (never 0,
+    never filled) and can be healed later. A date is only ABSENT if wind is
+    unavailable. Missing days must never appear as zero-valued rows — a rolling
+    baseline computed over silent zeros would read a fetch failure as "no wind
+    that day," which is a different and false claim.
   - Idempotent: both tables are keyed on (date, period) with INSERT OR REPLACE,
     so re-running the backfill (or a daily incremental run) never duplicates rows.
 """
@@ -160,6 +163,8 @@ def backfill_system_conditions(
     Prints exactly one line per date: "<date> archive|api ok|FAIL rows=<n>"
     ("api" if any area needed the network). dry_run prints "<date> archive|api"
     and touches nothing.
+    A date with wind but an empty demand feed is stored with demand_mw and
+    wind_pct NULL and counts as "ok"; only a date with no usable wind fails.
     Returns (rows written, list of dates that failed).
     """
     import contextlib

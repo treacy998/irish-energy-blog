@@ -137,8 +137,10 @@ def main():
     step(3, TOTAL_STEPS, "Generating charts and scaffolding post...")
     print("  Fetching EirGrid wind and demand data…")
     eirgrid_df = fetch_wind_and_demand(delivery_date, out_dir=DATA_DIR)
-    if eirgrid_df is not None:
+    if eirgrid_df is not None and eirgrid_df["WindGeneration_pct"].notna().any():
         print(f"  ✓ EirGrid data fetched — {eirgrid_df['WindGeneration_pct'].mean():.1f}% avg wind")
+    elif eirgrid_df is not None:
+        print("  – EirGrid wind fetched but demand feed empty: wind stored, wind % unavailable")
     else:
         print("  – EirGrid fetch failed, continuing without wind data")
 
