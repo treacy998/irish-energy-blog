@@ -17,6 +17,7 @@ from datetime import date, timedelta
 from process import load_dam_data, get_day_data, daily_summary
 from trading_day import expected_periods
 from charts import generate_daily_charts
+from weekly_stats import MIN_N, ordinal
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CONTENT_DIR = Path(__file__).parent.parent / "site" / "content"
@@ -334,6 +335,174 @@ Write 2-3 paragraphs here:
     outpath.write_text(md)
     print(f"\nPost scaffolded: {outpath}")
     print(f"Next: open the file, write your commentary, push to git.")
+
+
+def _day_month(iso: str) -> str:
+    return date.fromisoformat(iso).strftime("%-d %b")
+
+
+def weekly_verdict_text(summary: dict) -> str:
+    """The post's opening sentence(s), generated from weekly_summary(): the rank first (it is a
+    fact), the baseline label second (it is derived from the rank), then week-on-week if the
+    previous week's mean is more than 10% away. With a suppressed baseline it says there is no
+    verdict instead of inventing one."""
+    t = summary["trailing"]
+    if t["suppressed"]:
+        parts = [f"No verdict this week: the store holds only {t['n']} complete earlier week{'' if t['n'] == 1 else 's'} and a "
+                 f"comparison needs {MIN_N['trailing']}, so the week is not ranked or labelled."]
+    else:
+        head = (f"Dearest of the last {t['rank_of']} weeks" if t["rank"] == 1
+                else f"{ordinal(t['rank'])} dearest of the last {t['rank_of']} weeks")
+        tail = (f"last dearer: week of {_day_month(t['dearest_since'])}" if t["dearest_since"]
+                else "no earlier week in the store was as dear")
+        parts = [f"{head}; {tail}.", f"Against the previous {t['n']} weeks: {summary['verdict_price']}."]
+    prev = summary["previous_week_mean"]
+    if prev and abs(summary["week_mean"] / prev - 1) > 0.10:
+        change = (summary["week_mean"] / prev - 1) * 100
+        parts.append(f"Week on week: {'up' if change > 0 else 'down'} {abs(change):.0f}%.")
+    return " ".join(parts)
+
+
+WEEKLY_CAVEAT = (
+    "> **This is the wholesale day-ahead price, not your bill.** Network charges, levies, supplier "
+    "margin and VAT are on top, and they differ by contract. A cheap week is not a reason to fix "
+    "your rate, and an expensive one is not a reason to panic."
+)
+
+
+def build_weekly_post(summary: dict, content_root: Path | None = None, force: bool = False) -> Path:
+    """Write <content_root>/weekly/<week_start>/index.md (draft: true) from weekly_summary().
+
+    The audit keys on the week_start front matter and reads the labelled table rows, so the
+    row labels here are the ones audit_posts.WEEKLY_ROWS expects. Refuses to overwrite an
+    existing post unless force=True (it may have hand-written commentary)."""
+    content_root = Path(content_root) if content_root else CONTENT_DIR
+    ws, we = date.fromisoformat(summary["week_start"]), date.fromisoformat(summary["week_end"])
+    outpath = content_root / "weekly" / summary["week_start"] / "index.md"
+    if outpath.exists() and not force:
+        raise FileExistsError(f"{outpath} exists; pass force=True to overwrite")
+
+    t, sea = summary["trailing"], summary["seasonal"]
+    verdict = weekly_verdict_text(summary)
+    chart_url = f"/charts/weekly/{summary['week_start']}.png"
+    title = (f"Weekly Analysis — {ws.strftime('%-d')}–{we.strftime('%-d %B %Y')}" if ws.month == we.month
+             else f"Weekly Analysis — {ws.strftime('%-d %B')}–{we.strftime('%-d %B %Y')}")
+
+    # (c) exactly two numbers: the week mean and the volatility verdict with its spread
+    if summary["verdict_volatility"] is not None:
+        vol_row = (f"| Volatility verdict (trailing) | {summary['verdict_volatility']} "
+                   f"(median daily spread €{summary['median_arb_spread']}/MWh) |")
+    else:
+        vol_row = (f"| Median daily spread | €{summary['median_arb_spread']}/MWh "
+                   f"(no volatility verdict: baseline too short) |")
+    key_table = "\n".join([
+        "| Measure | Value |", "|---|---|",
+        f"| Week mean (c/kWh) | {summary['week_mean_c_per_kwh']} |",
+        vol_row,
+    ])
+
+    compare_rows = []
+    if not t["suppressed"]:
+        compare_rows += [
+            f"| Rank vs trailing {t['n']} weeks (1 = dearest) | {t['rank']} of {t['rank_of']} |",
+            f"| Dearest since (trailing) | {t['dearest_since'] or 'none in the store'} |",
+            f"| Cheapest since (trailing) | {t['cheapest_since'] or 'none in the store'} |",
+            f"| Price verdict (trailing) | {t['verdict_price']} |",
+        ]
+    if sea and not sea["suppressed"]:
+        compare_rows += [
+            f"| Rank vs seasonal {sea['n']} weeks (1 = dearest) | {sea['rank']} of {sea['rank_of']} |",
+            f"| Dearest since (seasonal) | {sea['dearest_since'] or 'none in the seasonal weeks'} |",
+            f"| Cheapest since (seasonal) | {sea['cheapest_since'] or 'none in the seasonal weeks'} |",
+            f"| Price verdict (seasonal) | {sea['verdict_price']} |",
+        ]
+    compare_table = ("\n".join(["| Comparison | Value |", "|---|---|"] + compare_rows)
+                     if compare_rows else "")
+    seasonal_note = "" if sea else (
+        f"Same week last year: not available. {summary['seasonal_reason'].capitalize()}.")
+
+    day_rows = "\n".join(
+        f"| {date.fromisoformat(d).strftime('%a %-d %b')} | {m / 10:.2f} | {m:.2f} |"
+        for d, m in zip(summary["daily_dates"], summary["daily_means"]))
+    clock_note = ("" if summary["n_periods"] == 48 * len(summary["daily_dates"]) else
+                  f"\nThis week has {summary['n_periods']} half-hour periods rather than "
+                  f"{48 * len(summary['daily_dates'])}: it contains a clock-change day.\n")
+
+    if summary["wind_mw_mean"] is None:
+        wind_rows = "| Mean wind (MW) | n/a: no wind data in the store for this week |"
+    else:
+        wind_rows = f"| Mean wind (MW) | {summary['wind_mw_mean']} |"
+    if summary["wind_mw_trailing_median"] is None:
+        wind_rows += (f"\n| Trailing median wind (MW) | n/a: needs {MIN_N['trailing']} earlier weeks with "
+                      f"75% wind coverage, have {summary['wind_mw_trailing_n']} |")
+    else:
+        wind_rows += f"\n| Trailing median wind (MW) | {summary['wind_mw_trailing_median']} |"
+    wind_rows += f"\n| Wind coverage | {summary['wind_coverage'] * 100:.0f}% of periods have wind data |"
+
+    def above(level: str, n: int, med) -> str:
+        extra = f" (trailing median {med:g})" if med is not None else ""
+        return f"| Periods above €{level} | {n} of {summary['n_periods']}{extra} |"
+
+    md = f"""---
+title: "{title}"
+slug: "{summary['week_start']}"
+date: {we.isoformat()}
+week_start: {summary['week_start']}
+authors: ["Eoin"]
+tags: ["weekly-analysis", "I-SEM"]
+summary: "{verdict}"
+images: ["{chart_url.lstrip('/')}"]
+draft: true
+ShowToc: true
+---
+
+{verdict}
+
+![Weekly mean day-ahead price against the previous weeks]({chart_url})
+
+{key_table}
+
+{seasonal_note}
+
+## How this week compares
+
+{compare_table}
+
+## Daily means
+
+| Day | Mean (c/kWh) | Mean (€/MWh) |
+|-----|--------------|--------------|
+{day_rows}
+{clock_note}
+## Wind and price spikes
+
+| Measure | Value |
+|---|---|
+{wind_rows}
+{above('150', summary['periods_above_150'], summary['periods_above_150_trailing_median'])}
+{above('200', summary['periods_above_200'], summary['periods_above_200_trailing_median'])}
+
+{WEEKLY_CAVEAT}
+
+## Commentary
+
+<!--
+Write 2-3 paragraphs here:
+- What does the rank say, and what does the chart show about the direction of weekly prices?
+- What did wind (MW) and the daily spread add this week?
+- Did anything this week change what a business on a variable-rate contract would pay?
+-->
+
+## Methodology
+
+Day-ahead prices are SEMOpx market results; wind is EirGrid's reported wind generation in MW.
+The comparison uses the previous {t['n']} complete weeks, ranked by mean price, and is
+reproducible from the stored data.
+"""
+    outpath.parent.mkdir(parents=True, exist_ok=True)
+    outpath.write_text(md)
+    print(f"  Weekly draft scaffolded: {outpath}")
+    return outpath
 
 
 def scaffold_weekly(target_date: date):
