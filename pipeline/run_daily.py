@@ -5,7 +5,7 @@ run_daily.py — One-command daily workflow.
 Fetches SEMO DAM data automatically, generates charts, and scaffolds the post.
 
 Usage:
-    python pipeline/run_daily.py                      # auto-fetch latest DAM report
+    python pipeline/run_daily.py                      # yesterday's delivery date (Irish local)
     python pipeline/run_daily.py --date 2026-05-04    # fetch/backfill a specific date
     python pipeline/run_daily.py path/to/file.csv     # use a local CSV directly
 """
@@ -13,8 +13,9 @@ Usage:
 import argparse
 import subprocess
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from process import load_dam_data
 from scaffold import scaffold_daily
@@ -26,6 +27,16 @@ from store import persist_day
 DATA_DIR = Path(__file__).parent.parent / "data"
 CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
 CONTENT_DIR = Path(__file__).parent.parent / "site" / "content"
+
+
+def default_delivery_date(now: datetime | None = None) -> date:
+    """Yesterday's delivery date, by the Irish calendar.
+
+    SEMOpx's report for delivery day D only appears around 00:00 on D+1, after D
+    has ended, so a default of tomorrow's delivery can never be satisfied. The
+    run therefore targets the day that has just finished."""
+    now = now or datetime.now(ZoneInfo("Europe/Dublin"))
+    return now.date() - timedelta(days=1)
 
 
 def find_latest_data_file() -> Path:
@@ -58,7 +69,7 @@ def parse_args():
     group.add_argument(
         "--date",
         metavar="YYYY-MM-DD",
-        help="Delivery date to fetch/backfill (e.g. 2026-05-04). Defaults to latest available.",
+        help="Delivery date to fetch/backfill (e.g. 2026-05-04). Defaults to yesterday's delivery date.",
     )
     group.add_argument(
         "csv_file",
@@ -94,6 +105,9 @@ def main():
             print(f"  Error: --date must be YYYY-MM-DD, got '{args.date}'")
             sys.exit(1)
 
+    if target_date is None and not args.csv_file:
+        target_date = default_delivery_date()
+
     if args.csv_file:
         filepath = Path(args.csv_file)
         if not filepath.exists():
@@ -104,7 +118,7 @@ def main():
                 "Expected a file containing 'SEM-DA' in the name (ETS Market Results)."
             )
     else:
-        label = target_date.isoformat() if target_date else "latest"
+        label = target_date.isoformat()
         print(f"  Auto-fetching {label} EA-001 report from SEMOpx…")
         try:
             filepath = fetch_semo(delivery_date=target_date, out_dir=DATA_DIR)
@@ -124,7 +138,7 @@ def main():
     print(f"  Periods loaded: {len(df)}")
 
     # ── Validation gate: refuse to publish stale data from a cache fallback ──
-    expected_date = target_date or (date.today() + timedelta(days=1))
+    expected_date = target_date or default_delivery_date()
     if delivery_date != expected_date:
         print(f"\n  ERROR: stale data — got delivery date {delivery_date.isoformat()}, "
               f"expected {expected_date.isoformat()}.")
