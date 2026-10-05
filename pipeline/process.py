@@ -4,6 +4,8 @@ process.py — Clean raw SEMO/EirGrid data and produce analysis-ready summaries.
 Reads from data/ and outputs processed summaries used by charts.py and scaffold.py.
 """
 
+import math
+
 import pandas as pd
 from pathlib import Path
 from datetime import date
@@ -75,18 +77,24 @@ def load_dam_data(filepath: Path) -> pd.DataFrame:
 # A wind mean needs most of the day behind it. EirGrid's demand feed is
 # intermittently empty, which leaves wind_pct NULL for some or all rows; a mean
 # over a handful of rows would read as a daily figure, so below this many
-# non-NULL rows (of 48 half-hours) the wind stats are omitted rather than shown.
-MIN_WIND_ROWS = 36
+# non-NULL rows (75% of the day's half-hours) the wind stats are omitted rather
+# than shown. The day is 48 half-hours, or 50 / 46 on the clock-change days.
+MIN_WIND_FRACTION = 0.75
 
 
-def wind_summary(wind_pct: pd.Series, demand_mw: pd.Series | None = None) -> dict:
+def min_wind_rows(delivery_date: date) -> int:
+    """75% of expected_periods(delivery_date), rounded up: 36 of 48, 35 of 46, 38 of 50."""
+    return math.ceil(expected_periods(delivery_date) * MIN_WIND_FRACTION)   # 0.75 is exact in binary
+
+
+def wind_summary(wind_pct: pd.Series, demand_mw: pd.Series | None = None, *, delivery_date: date) -> dict:
     """wind_pct_mean/min/max (and demand_mean_mw) from the non-NULL rows only.
 
-    Returns {} when fewer than MIN_WIND_ROWS rows have a wind_pct. NULL rows are
-    skipped, never treated as zero and never filled.
+    Returns {} when fewer than min_wind_rows(delivery_date) rows have a wind_pct.
+    NULL rows are skipped, never treated as zero and never filled.
     """
     pct = pd.to_numeric(wind_pct, errors="coerce").dropna()
-    if len(pct) < MIN_WIND_ROWS:
+    if len(pct) < min_wind_rows(delivery_date):
         return {}
     out = {
         "wind_pct_mean": round(float(pct.mean()), 1),
@@ -159,7 +167,7 @@ def daily_summary(df: pd.DataFrame, target_date: date) -> dict:
 
     # Wind data if available
     if "WindGeneration_pct" in day.columns:
-        wind = wind_summary(day["WindGeneration_pct"])
+        wind = wind_summary(day["WindGeneration_pct"], delivery_date=target_date)
         if "wind_pct_mean" in wind:
             summary["wind_pct_mean"] = wind["wind_pct_mean"]
     if "SystemDemand_MW" in day.columns:

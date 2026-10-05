@@ -63,6 +63,18 @@ def test_period_out_of_range_raises():
         raise AssertionError((d, bad))
 
 
+def test_min_wind_rows_is_75_percent_of_expected_periods():
+    import pandas as pd
+    from process import min_wind_rows, wind_summary
+    cases = {date(2026, 3, 29): (46, 35), date(2026, 7, 8): (48, 36), date(2025, 10, 26): (50, 38)}
+    for d, (n, need) in cases.items():
+        assert expected_periods(d) == n and min_wind_rows(d) == need, d
+        enough = pd.Series([10.0] * need + [float("nan")] * (n - need))
+        short = pd.Series([10.0] * (need - 1) + [float("nan")] * (n - need + 1))
+        assert wind_summary(enough, delivery_date=d)["wind_pct_mean"] == 10.0
+        assert wind_summary(short, delivery_date=d) == {}
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in tests:
