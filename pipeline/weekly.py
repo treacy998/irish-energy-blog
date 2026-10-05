@@ -23,7 +23,7 @@ import pandas as pd
 from bess import simulate_bess
 from charts import _load_all_dam_data, chart_weekly_overview
 from fetch import fetch_wind_and_demand
-from process import daily_summary
+from process import daily_summary, wind_summary
 
 CONTENT_DIR = Path(__file__).parent.parent / "site" / "content"
 CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts" / "weekly"
@@ -58,8 +58,11 @@ def load_week(monday: date, sunday: date) -> list[dict]:
             eg = eirgrid_df.copy()
             eg["StartTime"] = eg["StartTime"].dt.strftime("%H:%M")
             merged = day_df.merge(eg[["StartTime", "WindGeneration_pct"]], on="StartTime", how="left")
-            if merged["WindGeneration_pct"].notna().any():
-                summary["wind_pct_mean"] = round(float(merged["WindGeneration_pct"].mean()), 1)
+            # Same 36-of-48 rule as the daily post: a day with too few wind rows
+            # gets no wind_pct_mean, so a thin day never drives the weekly figures.
+            wind = wind_summary(merged["WindGeneration_pct"])
+            if "wind_pct_mean" in wind:
+                summary["wind_pct_mean"] = wind["wind_pct_mean"]
 
         bess_result = simulate_bess(day_df)
         if bess_result:
