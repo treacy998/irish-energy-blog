@@ -34,10 +34,11 @@ from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 from process import load_dam_data
-from trading_day import calendar_label_to_utc, expected_periods, iso_z
+from trading_day import calendar_label_to_utc, expected_periods, iso_z, period_labels, period_starts_utc
 from fetch import (
-    AREA_FIELDS, archive_path, archive_row_count, combine_wind_and_demand,
-    compute_wind_pct, fetch_area, load_archived_area, resample_demand,
+    AREA_FIELDS, archive_path, archive_row_count, combine_for_trading_day,
+    compute_wind_pct, fetch_area, load_archived_area, load_archived_previous_day,
+    resample_demand,
 )
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -110,31 +111,50 @@ def upsert_market_prices(conn: sqlite3.Connection, df) -> int:
     return len(records)
 
 
-def upsert_system_conditions(conn: sqlite3.Connection, d: date, df) -> int:
-    """Upsert a fetch_wind_and_demand() DataFrame for date d into system_conditions.
-    Returns rows written. Does not commit.
+def condition_grid(d: date, df):
+    """One row per period of d's trading day (50/46/48), wind/demand joined on the
+    UTC instant of each period's start. A half-hour with no reading is NaN, never 0."""
+    import pandas as pd
 
-    period is the 1-based position within the EirGrid calendar day (00:00
-    local onward: 48 rows, 50 on the long day, 46 on the short one). It is NOT
-    SEMO's Period number, whose day starts at 23:00 the evening before; join
-    to market_prices on start_utc, never on period or the start_time label.
-    More rows than expected_periods(d) raises ValueError; fewer are stored as
-    they are (a gap is a gap, never filled)."""
-    if len(df) > expected_periods(d):
-        raise ValueError(f"{d}: {len(df)} condition rows, at most {expected_periods(d)} expected")
+    n = expected_periods(d)
+    grid = pd.DataFrame({
+        "Period": range(1, n + 1),
+        "StartTime": period_labels(d),
+        "StartUTC": pd.DatetimeIndex(period_starts_utc(d)).astype("datetime64[ns, UTC]"),
+    })
+    cols = ["WindMW", "WindForecastMW", "DemandMW", "WindGeneration_pct"]
+    have = df.assign(StartUTC=df["StartUTC"].astype("datetime64[ns, UTC]"))
+    for c in cols:
+        if c not in have.columns:
+            have[c] = float("nan")
+    return grid.merge(have[["StartUTC"] + cols], on="StartUTC", how="left")
+
+
+def upsert_system_conditions(conn: sqlite3.Connection, d: date, df) -> int:
+    """Replace date d's system_conditions with one row per trading-day period.
+    df is a fetch_wind_and_demand()/combine_for_trading_day() frame. Returns rows
+    written (expected_periods(d)). Does not commit.
+
+    period is the SEMO period number (1 = local 23:00 the evening before), so a
+    row lines up with market_prices on (date, period) and on start_utc. Periods
+    with no reading are stored with NULLs, never zeros. The date's rows are
+    deleted first so rows written under the older calendar-day numbering cannot
+    survive beside the new ones."""
+    grid = condition_grid(d, df)
     records = [
         (
             d.isoformat(),
-            i + 1,
-            row["StartTime"].strftime("%H:%M"),
+            int(row["Period"]),
+            row["StartTime"],
             float(row["WindMW"]) if pd_notna(row["WindMW"]) else None,
-            float(row["WindForecastMW"]) if pd_notna(row.get("WindForecastMW")) else None,
+            float(row["WindForecastMW"]) if pd_notna(row["WindForecastMW"]) else None,
             float(row["DemandMW"]) if pd_notna(row["DemandMW"]) else None,
             float(row["WindGeneration_pct"]) if pd_notna(row["WindGeneration_pct"]) else None,
             iso_z(row["StartUTC"]),
         )
-        for i, (_, row) in enumerate(df.sort_values("StartUTC").iterrows())
+        for _, row in grid.iterrows()
     ]
+    conn.execute("DELETE FROM system_conditions WHERE date=?", (d.isoformat(),))
     conn.executemany(
         "INSERT OR REPLACE INTO system_conditions "
         "(date, period, start_time, wind_mw, wind_forecast_mw, demand_mw, wind_pct, start_utc) "
@@ -239,7 +259,9 @@ def backfill_system_conditions(
                     if frames[area] is not None or attempt == tries - 1:
                         break
                     time.sleep(backoff * 2 ** attempt)
-            df = combine_wind_and_demand(frames.get("wind"), frames.get("demand"))
+            # Periods 1-2 (the evening before) come from the previous date's archive, offline.
+            prev_wind, prev_demand = load_archived_previous_day(d, out_dir)
+            df = combine_for_trading_day(d, frames.get("wind"), frames.get("demand"), prev_wind, prev_demand)
 
         if df is None or df.empty:
             failed.append(d.isoformat())
@@ -340,6 +362,12 @@ def heal_demand(
         if demand_30 is not None:
             by_utc = {iso_z(t): float(v)
                       for t, v in zip(demand_30["StartUTC"], demand_30["DemandMW"])}
+            # The evening-before periods (1-2) are in the previous date's demand, read offline.
+            prev_demand = load_archived_area(d - timedelta(days=1), "demand", out_dir)
+            prev_30 = resample_demand(prev_demand) if prev_demand is not None else None
+            if prev_30 is not None:
+                by_utc.update({iso_z(t): float(v) for t, v in zip(prev_30["StartUTC"], prev_30["DemandMW"])
+                               if iso_z(t) not in by_utc})
             rows = conn.execute(
                 "SELECT period, start_time, start_utc, wind_mw FROM system_conditions "
                 "WHERE date=? AND demand_mw IS NULL",
@@ -370,6 +398,74 @@ def heal_demand(
     return healed
 
 
+def rebuild_conditions(conn: sqlite3.Connection, start: date, end: date, out_dir: Path = DATA_DIR) -> int:
+    """Rebuild system_conditions for [start, end] from local archives only (no network).
+
+    Each date is replaced by one row per trading-day period with start_utc set,
+    through the same condition_grid/upsert path the daily run uses. A date with
+    no usable wind archive is left as it is and reported SKIP. Commits per date.
+    Prints one line per date: "<date> rebuilt rows=<n> wind_null=<n> demand_null=<n>".
+    Returns the number of dates rebuilt."""
+    import contextlib
+    import io
+
+    done = 0
+    d = start
+    while d <= end:
+        ds = d.isoformat()
+        with contextlib.redirect_stdout(io.StringIO()):
+            wind = load_archived_area(d, "wind", out_dir)
+            demand = load_archived_area(d, "demand", out_dir)
+            prev_wind, prev_demand = load_archived_previous_day(d, out_dir)
+            df = combine_for_trading_day(d, wind, demand, prev_wind, prev_demand)
+        if df is None or df.empty:
+            print(f"{ds} rebuild SKIP no usable wind archive", flush=True)
+        else:
+            n = upsert_system_conditions(conn, d, df)
+            conn.commit()
+            wn, dn = conn.execute(
+                "SELECT SUM(wind_mw IS NULL), SUM(demand_mw IS NULL) FROM system_conditions WHERE date=?", (ds,)
+            ).fetchone()
+            print(f"{ds} rebuilt rows={n} wind_null={wn} demand_null={dn}", flush=True)
+            done += 1
+        d += timedelta(days=1)
+    return done
+
+
+def rebuild_price_utc(conn: sqlite3.Connection, start: date, end: date, data_dir: Path = DATA_DIR) -> int:
+    """Set start_utc on market_prices for [start, end] from the local SEMO CSVs (no network).
+
+    Prices are loaded by process.load_dam_data(), the same parser backfill_market_prices
+    replays; where several files exist for one delivery date the last in name order wins,
+    as in that replay. Only start_utc is written, and only on a row whose (date, period,
+    start_time) matches the file, so a price is never touched. Commits per date.
+    Prints one line per date: "<date> prices start_utc rows=<file rows> updated=<n>".
+    Returns the number of dates processed."""
+    by_date = {}
+    for csv_path in sorted(data_dir.glob("MarketResult_SEM-DA_*.csv")):
+        try:
+            df = load_dam_data(csv_path)
+        except ValueError as e:
+            print(f"  [store] SKIP {csv_path.name}: {e}")
+            continue
+        by_date[df["DeliveryDate"].iloc[0].date()] = df
+    done = 0
+    for d in sorted(by_date):
+        if not start <= d <= end:
+            continue
+        df = by_date[d]
+        updated = 0
+        for _, row in df.iterrows():
+            updated += conn.execute(
+                "UPDATE market_prices SET start_utc=? WHERE date=? AND period=? AND start_time=?",
+                (iso_z(row["StartUTC"]), d.isoformat(), int(row["Period"]), row["StartTime"]),
+            ).rowcount
+        conn.commit()
+        print(f"{d.isoformat()} prices start_utc rows={len(df)} updated={updated}", flush=True)
+        done += 1
+    return done
+
+
 def pd_notna(value) -> bool:
     import pandas as pd
     return pd.notna(value)
@@ -385,6 +481,16 @@ def _run(args) -> int:
     try:
         if args.prices and not args.dry_run:
             print(f"market_prices: {backfill_market_prices(conn, DATA_DIR)} rows", flush=True)
+
+        if args.rebuild_prices or args.rebuild_conditions:
+            lo, hi = conn.execute("SELECT MIN(date), MAX(date) FROM market_prices").fetchone()
+            start = date.fromisoformat(args.start or lo)
+            end = date.fromisoformat(args.end or hi)
+            if args.rebuild_prices:
+                rebuild_price_utc(conn, start, end)
+            if args.rebuild_conditions:
+                rebuild_conditions(conn, start, end)
+            return 0
 
         if args.heal:
             lo, hi = conn.execute("SELECT MIN(date), MAX(date) FROM system_conditions").fetchone()
@@ -432,10 +538,17 @@ def main(argv=None) -> int:
     parser.add_argument("--heal", action="store_true",
                         help="Instead of a backfill, fill demand_mw/wind_pct on stored dates where "
                              "demand was empty (one request per date, no retries).")
+    parser.add_argument("--rebuild-conditions", action="store_true",
+                        help="Offline: rebuild system_conditions for --start/--end from data/eirgrid_raw, "
+                             "one row per trading-day period with start_utc set (replaces the date's rows).")
+    parser.add_argument("--rebuild-prices", action="store_true",
+                        help="Offline: set start_utc on market_prices for --start/--end from the local SEMO files.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Backfill: print which source each date would use. Heal: list the dates "
                              "that would be fetched. No network, no DB writes.")
     args = parser.parse_args(argv)
+    if args.dry_run and (args.rebuild_prices or args.rebuild_conditions):
+        parser.error("--dry-run does not apply to the rebuild flags")
     try:
         return _run(args)
     except Exception:
