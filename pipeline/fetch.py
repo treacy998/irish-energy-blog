@@ -14,6 +14,8 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 from pathlib import Path
 
+from trading_day import DUBLIN_TZ, eirgrid_local_to_utc
+
 DEFAULT_DATA_DIR = Path(__file__).parent.parent / "data"
 
 
@@ -108,7 +110,9 @@ def fetch_wind_and_demand(
     Fetch wind generation and demand for delivery_date from EirGrid.
 
     Returns a DataFrame with columns:
-        StartTime            datetime (Irish local time, 30-min intervals)
+        StartTime            datetime (Irish local time, 30-min intervals; display only —
+                             repeats 01:00–02:00 on the autumn change day)
+        StartUTC             datetime64[UTC] — the key to join on, unique per half-hour
         WindMW               float — wind generation in MW
         WindForecastMW       float — day-ahead wind forecast in MW (NaN where unavailable)
         DemandMW             float — system demand in MW (NaN where the demand feed was empty)
@@ -157,14 +161,15 @@ def combine_wind_and_demand(wind: pd.DataFrame | None, demand: pd.DataFrame | No
     wind_forecast = _resample_30min(wind[wind["field"] == "WIND_FCAST"], "WindForecastMW")
     demand_30     = _resample_30min(demand, "DemandMW") if demand is not None else None
 
-    # Merge on StartTime — demand and forecast are left-joined since either may be absent
+    # Merge on StartUTC (a local clock label repeats on the autumn change day) —
+    # demand and forecast are left-joined since either may be absent
     if demand_30 is not None:
-        df = pd.merge(wind_actual, demand_30, on="StartTime", how="left")
+        df = pd.merge(wind_actual, demand_30[["StartUTC", "DemandMW"]], on="StartUTC", how="left")
     else:
         df = wind_actual.copy()
         df["DemandMW"] = float("nan")
     if wind_forecast is not None:
-        df = pd.merge(df, wind_forecast, on="StartTime", how="left")
+        df = pd.merge(df, wind_forecast[["StartUTC", "WindForecastMW"]], on="StartUTC", how="left")
     else:
         df["WindForecastMW"] = pd.NA
 
@@ -181,7 +186,7 @@ def compute_wind_pct(wind_mw: pd.Series, demand_mw: pd.Series) -> pd.Series:
 
 
 def resample_demand(demand: pd.DataFrame) -> pd.DataFrame | None:
-    """30-minute StartTime/DemandMW rows from parsed demand area rows (None if unusable)."""
+    """30-minute StartTime/StartUTC/DemandMW rows from parsed demand area rows (None if unusable)."""
     return _resample_30min(demand, "DemandMW")
 
 
@@ -327,14 +332,25 @@ def _parse_area(data: dict, area: str, fields: list[str] | None = None) -> pd.Da
 
 
 def _resample_30min(df: pd.DataFrame, col_name: str) -> pd.DataFrame | None:
-    """Resample 15-minute EirGrid data to 30-minute SEMO periods."""
+    """Resample 15-minute EirGrid data to 30-minute SEMO periods.
+
+    EirGrid timestamps are Irish local clock time, so they are converted to UTC
+    first (see eirgrid_local_to_utc) and binned there; local time is derived
+    back from UTC for display only. Rows whose local label can't be placed
+    (the single-listed hour on the long day) are dropped, never guessed."""
     try:
-        df = df.set_index("StartTime").sort_index()
-        df = df["value"].resample("30min").mean()
-        df = df.reset_index()
-        df.columns = ["StartTime", col_name]
-        df = df.dropna()
-        return df
+        utc = eirgrid_local_to_utc(df["StartTime"])
+        unplaced = int(utc.isna().sum())
+        if unplaced:
+            print(f"  [fetch] {col_name}: {unplaced} row(s) in an ambiguous clock-change hour left unplaced")
+        series = pd.Series(df["value"].to_numpy(), index=pd.DatetimeIndex(utc.to_numpy(), tz="UTC"))
+        series = series[series.index.notna()].sort_index().resample("30min").mean().dropna()
+        out = pd.DataFrame({
+            "StartTime": series.index.tz_convert(DUBLIN_TZ).tz_localize(None),
+            "StartUTC": series.index,
+            col_name: series.to_numpy(),
+        })
+        return out
     except Exception as e:
         print(f"  [fetch] Resample failed: {e}")
         return None
