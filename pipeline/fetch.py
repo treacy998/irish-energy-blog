@@ -212,17 +212,21 @@ def load_archived_area(delivery_date: date, area: str, out_dir: Path | str = DEF
 
 
 def fetch_area(delivery_date: date, area: str, out_dir: Path | str = DEFAULT_DATA_DIR,
-               overwrite_raw: bool = True) -> pd.DataFrame | None:
-    """Live-fetch one area (wind or demand) for delivery_date, archiving the raw response."""
+               overwrite_raw: bool = True, raise_errors: bool = False) -> pd.DataFrame | None:
+    """Live-fetch one area (wind or demand) for delivery_date, archiving the raw response.
+
+    raise_errors=True re-raises a request error or a non-200 status instead of
+    printing it and returning None, so a caller can report why a fetch failed.
+    An empty or unparseable 200 response still returns None either way."""
     return _fetch_area(
         area, delivery_date.strftime("%d-%b-%Y"),   # e.g. "17-May-2026"
         raw_dir=archive_path(delivery_date, area, out_dir).parent,
-        fields=AREA_FIELDS[area], overwrite_raw=overwrite_raw,
+        fields=AREA_FIELDS[area], overwrite_raw=overwrite_raw, raise_errors=raise_errors,
     )
 
 
 def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: list[str] | None = None,
-                overwrite_raw: bool = True) -> pd.DataFrame | None:
+                overwrite_raw: bool = True, raise_errors: bool = False) -> pd.DataFrame | None:
     """Fetch a single area (wind or demand) from EirGrid API.
 
     fields restricts which FieldName values are kept (e.g. ["WIND_ACTUAL", "WIND_FCAST"]).
@@ -242,6 +246,8 @@ def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: l
             timeout=TIMEOUT,
         )
         resp.raise_for_status()
+        if raise_errors and resp.status_code != 200:
+            raise requests.HTTPError(f"HTTP {resp.status_code} (expected 200)", response=resp)
 
         try:
             data = resp.json()
@@ -265,9 +271,13 @@ def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: l
         return _parse_area(data, area, fields)
 
     except requests.RequestException as e:
+        if raise_errors:
+            raise
         print(f"  [fetch] EirGrid request failed for area={area}: {e}")
         return None
     except Exception as e:
+        if raise_errors:
+            raise
         print(f"  [fetch] Unexpected error fetching area={area}: {e}")
         return None
 

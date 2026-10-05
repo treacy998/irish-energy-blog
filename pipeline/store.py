@@ -256,7 +256,9 @@ def heal_demand(
     the same computation as the normal path. Raw demand.json is written only if
     the response has rows. Commits after every date.
 
-    Prints exactly one line per date: "<date> heal ok|still-empty rows_filled=<n>".
+    Prints exactly one line per date: "<date> heal ok|still-empty rows_filled=<n>",
+    or "<date> heal FAIL <exception class>: <message>" if the request raised or
+    returned a non-200 status (that date is skipped; the run continues).
     dry_run prints "<date> heal dry-run", makes no request and writes nothing.
     Returns the dates that were filled.
     """
@@ -278,9 +280,14 @@ def heal_demand(
             print(f"{ds} heal dry-run")
             continue
 
-        with contextlib.redirect_stdout(io.StringIO()):   # keep one line per date
-            demand = fetch_area(d, "demand", out_dir=out_dir, overwrite_raw=False)
-            demand_30 = resample_demand(demand) if demand is not None else None
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):   # keep one line per date
+                demand = fetch_area(d, "demand", out_dir=out_dir, overwrite_raw=False, raise_errors=True)
+                demand_30 = resample_demand(demand) if demand is not None else None
+        except Exception as e:
+            # A request error or non-200: say which, and carry on with the next date.
+            print(f"{ds} heal FAIL {type(e).__name__}: {' '.join(str(e).split())}", flush=True)
+            continue
 
         filled = 0
         if demand_30 is not None:
