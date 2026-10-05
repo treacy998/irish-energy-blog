@@ -119,6 +119,22 @@ def test_wind_is_not_imputed():
     assert early["wind_mw_mean"] is None and early["wind_coverage"] == 0.0
 
 
+def test_chart_and_text_inputs():
+    from weekly_stats import ordinal
+    conn = make_store()
+    r = weekly_summary(date(2026, 9, 28), conn)
+    t = r["trailing"]
+    assert len(t["means"]) == t["n"] == len(t["weeks"]) == 13
+    assert r["previous_week_mean"] == t["means"][0]                     # most recent first
+    assert r["same_week_last_year"] is None                             # 2025-09-29 is not in the store
+    r = weekly_summary(date(2026, 10, 19), conn)
+    assert r["same_week_last_year"]["week_start"] == "2025-10-20" and r["same_week_last_year"]["mean"] > 0
+    assert weekly_summary(date(2025, 10, 20), conn)["previous_week_mean"] is not None   # 13 Oct week is complete
+    assert weekly_summary(date(2025, 10, 13), conn)["previous_week_mean"] is None       # 6 Oct week starts before the store
+    assert [ordinal(n) for n in (1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 111)] == \
+        ["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st", "111th"]
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in tests:

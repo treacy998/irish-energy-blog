@@ -50,6 +50,13 @@ Definitions (stated once, here):
             block minus the cheapest, wherever they fall, so it is a measure of
             shape and says nothing about whether the spread could be traded.
 
+  Chart/text inputs  each baseline also returns "means", its weeks' means in the
+            order of "weeks" (most recent first), even when its rank and verdict are
+            suppressed: they are facts, not claims. "previous_week_mean" is the mean of
+            the week before the target (None if that week is incomplete) and
+            "same_week_last_year" is {"week_start", "mean"} for the week starting 364
+            days earlier (None if that week is not complete in the store).
+
   Wind      wind_mw_mean is the mean of the week's non-NULL wind_mw; wind_coverage
             is the share of the week's periods that have a wind_mw (nothing is
             imputed). wind_mw_trailing_median is the median of trailing weeks whose
@@ -173,13 +180,14 @@ def weekly_summary(week_start: date, conn: sqlite3.Connection) -> dict:
 
     def compare(kind: str, base: list[_Week], since_pool: list[_Week]) -> dict:
         n = len(base)
-        out = {"n": n, "weeks": [w.start.isoformat() for w in base], "suppressed": n < MIN_N[kind],
+        out = {"n": n, "weeks": [w.start.isoformat() for w in base], "means": [round(w.mean, 2) for w in base],
+               "suppressed": n < MIN_N[kind],
                "reason": None, "median_week_mean": round(statistics.median(w.mean for w in base), 2) if base else None,
                "rank": None, "rank_of": None, "percentile": None, "verdict_price": None,
                "dearest_since": None, "cheapest_since": None,
                "arb_rank": None, "arb_percentile": None, "verdict_volatility": None}
         if out["suppressed"]:
-            out["reason"] = f"only {n} complete {kind} baseline week(s), need {MIN_N[kind]}"
+            out["reason"] = f"only {n} complete {kind} baseline week{'' if n == 1 else 's'}, need {MIN_N[kind]}"
             return out
         means = [w.mean for w in base]
         out["rank"], out["rank_of"] = _rank(this.mean, means), n + 1
@@ -204,6 +212,8 @@ def weekly_summary(week_start: date, conn: sqlite3.Connection) -> dict:
         return (sum(vals) / len(vals) if vals else None), len(vals) / total
 
     wind_mean, wind_cov = wind(this)
+    centre = week_start - timedelta(days=SEASONAL_CENTRE_DAYS)
+    last_year = week(centre) if centre < week_start else None
     base_wind = [m for m, c in (wind(w) for w in trailing) if m is not None and c >= MIN_WIND_COVERAGE]
     daily = list(this.days)
     hi = max(range(7), key=lambda i: this.daily_means[i])
@@ -231,6 +241,9 @@ def weekly_summary(week_start: date, conn: sqlite3.Connection) -> dict:
         "wind_mw_trailing_median": round(statistics.median(base_wind), 1) if len(base_wind) >= MIN_N["trailing"] else None,
         "wind_mw_trailing_n": len(base_wind),
         "trailing": compare("trailing", trailing, earlier_all),
+        "previous_week_mean": round(week(week_start - timedelta(days=7)).mean, 2) if week(week_start - timedelta(days=7)) else None,
+        "same_week_last_year": ({"week_start": last_year.start.isoformat(), "mean": round(last_year.mean, 2)}
+                                if last_year else None),
         "seasonal_n": len(seasonal),
         "seasonal": None,
         "seasonal_reason": None,
@@ -238,13 +251,19 @@ def weekly_summary(week_start: date, conn: sqlite3.Connection) -> dict:
     if len(seasonal) >= MIN_N["seasonal"]:
         result["seasonal"] = compare("seasonal", seasonal, sorted(seasonal, key=lambda w: w.start, reverse=True))
     else:
-        result["seasonal_reason"] = (f"only {len(seasonal)} complete seasonal week(s) in the store "
+        result["seasonal_reason"] = (f"only {len(seasonal)} complete seasonal week{'' if len(seasonal) == 1 else 's'} in the store "
                                      f"(weeks starting {SEASONAL_CENTRE_DAYS} days earlier +/- "
                                      f"{SEASONAL_SPAN_WEEKS * 7} days), need {MIN_N['seasonal']}")
     # verdict_price / verdict_volatility mirror the trailing baseline at the top level
     result["verdict_price"] = result["trailing"]["verdict_price"]
     result["verdict_volatility"] = result["trailing"]["verdict_volatility"]
     return result
+
+
+def ordinal(n: int) -> str:
+    """1st, 2nd, 3rd, 4th ... 11th, 12th, 13th, 21st."""
+    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
 
 
 def seasonal_baseline_starts(conn: sqlite3.Connection, week_start: date) -> tuple[list[date], str | None]:
@@ -254,5 +273,5 @@ def seasonal_baseline_starts(conn: sqlite3.Connection, week_start: date) -> tupl
     starts = [centre + timedelta(days=7 * j) for j in range(-SEASONAL_SPAN_WEEKS, SEASONAL_SPAN_WEEKS + 1)]
     ok = [s for s in starts if s < week_start and _load_week(conn, s)[0] is not None]
     if len(ok) < MIN_N["seasonal"]:
-        return [], f"only {len(ok)} complete seasonal week(s), need {MIN_N['seasonal']}"
+        return [], f"only {len(ok)} complete seasonal week{'' if len(ok) == 1 else 's'}, need {MIN_N['seasonal']}"
     return ok, None
