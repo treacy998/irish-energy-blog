@@ -497,6 +497,76 @@ def chart_weekly_overview(day_summaries: list, week_start: date, week_end: date,
     print(f"  Saved: {outpath}")
 
 
+# ── Chart — Weekly mean vs recent weeks (called by weekly.py) ──────────────
+
+def weekly_chart(summary: dict, outpath: Path | None = None) -> Path:
+    """Static PNG of the weekly mean price: the trailing baseline's weeks plus the target
+    week (up to 14 bars), the target highlighted, in c/kWh with a €/MWh axis on the right.
+
+    Annotates the rank ("4th dearest of 14 weeks") when the baseline is long enough to rank
+    and, when the store has the same week last year (seasonal_n >= 4), marks that week's mean.
+    summary is weekly_stats.weekly_summary() output; nothing here assumes 7 days or 48 periods.
+    Default output: site/static/charts/weekly/<week_start>.png."""
+    from datetime import date as _date
+    from weekly_stats import ordinal
+
+    start = _date.fromisoformat(summary["week_start"])
+    end = _date.fromisoformat(summary["week_end"])
+    outpath = Path(outpath) if outpath else CHART_DIR / "weekly" / f"{summary['week_start']}.png"
+    outpath.parent.mkdir(parents=True, exist_ok=True)
+
+    t = summary["trailing"]
+    weeks = list(reversed(t["weeks"])) + [summary["week_start"]]          # oldest first, target last
+    means = list(reversed(t["means"])) + [summary["week_mean"]]
+    cents = [m / 10 for m in means]
+    x = list(range(len(weeks)))
+    last = x[-1]
+
+    fig, ax = plt.subplots(figsize=(FIG_W, FIG_H))
+    _style(ax, fig)
+    colors = [HIST_COLORS[1]] * last + [PRICE_LINE]
+    ax.bar(x, cents, color=colors, width=0.62, zorder=3)
+    for xi, c in zip(x, cents):
+        ax.text(xi, c + max(cents) * 0.012, f"{c:.1f}", ha="center", va="bottom", fontsize=8,
+                color=TEXT_PRI if xi == last else TEXT_SEC, fontweight="bold" if xi == last else "normal")
+    ax.set_xticks(x)
+    ax.set_xticklabels([_date.fromisoformat(w).strftime("%-d %b") for w in weeks],
+                       rotation=45, ha="right", color=TEXT_SEC, fontsize=8)
+    ax.set_xlabel("Week starting (Monday)", color=TEXT_SEC, fontsize=8.5)
+    ax.set_ylabel("Weekly mean day-ahead price, c/kWh", color=TEXT_SEC, fontsize=8.5)
+    ax.set_ylim(0, max(cents + [summary["same_week_last_year"]["mean"] / 10 if summary["same_week_last_year"] else 0]) * 1.22)
+    secax = ax.secondary_yaxis("right", functions=(lambda c: c * 10, lambda e: e / 10))
+    secax.set_ylabel("€ / MWh", color=TEXT_SEC, fontsize=8.5)
+    secax.tick_params(colors=TEXT_SEC, labelsize=8.5)
+
+    sw = summary["same_week_last_year"]
+    if summary["seasonal_n"] >= 4 and sw:
+        ax.plot([last], [sw["mean"] / 10], marker="D", markersize=9, markerfacecolor="none",
+                markeredgecolor=PEAK_COLOR, markeredgewidth=2, linestyle="none", zorder=6,
+                label=f"Same week last year ({_date.fromisoformat(sw['week_start']).strftime('%-d %b %Y')}): "
+                      f"{sw['mean'] / 10:.1f} c/kWh")
+        ax.legend(loc="upper left", fontsize=8, frameon=False, labelcolor=TEXT_SEC)
+
+    if t["rank"] is not None:
+        note = f"{ordinal(t['rank'])} dearest of {t['rank_of']} weeks"
+    else:
+        note = f"Too few earlier weeks to rank (have {t['n']})"
+    ax.annotate(note, xy=(last, cents[-1]), xytext=(0.985, 0.93), textcoords="axes fraction",
+                ha="right", va="top", fontsize=10, fontweight="bold", color=PRICE_LINE,
+                arrowprops=dict(arrowstyle="-", color=PRICE_LINE, alpha=0.5, linewidth=0.8))
+
+    _header(
+        fig,
+        f"Weekly mean price — week of {start.strftime('%-d %b')}–{end.strftime('%-d %b %Y')}",
+        f"Day-ahead market, {len(means) - 1} earlier weeks and this one (highlighted)  ·  c/kWh left, €/MWh right",
+    )
+    plt.tight_layout(rect=[0, 0, 1, 0.86])
+    fig.savefig(outpath, dpi=DPI, bbox_inches="tight", facecolor=BG)
+    plt.close(fig)
+    print(f"  Saved: {outpath}")
+    return outpath
+
+
 # ── Master function (called by scaffold.py) ────────────────────────────────
 
 def _load_all_dam_data() -> pd.DataFrame:
