@@ -70,6 +70,11 @@ def parse_args():
         action="store_true",
         help="Overwrite an existing post. By default the post is preserved if it already exists.",
     )
+    parser.add_argument(
+        "--include-bess",
+        action="store_true",
+        help="Run the BESS simulation and emit its charts and post section. Off by default.",
+    )
     return parser.parse_args()
 
 
@@ -136,23 +141,26 @@ def main():
     else:
         print("  – EirGrid fetch failed, continuing without wind data")
 
-    bess_result = simulate_bess(df)
-    if bess_result:
-        print(f"  ✓ BESS simulation: €{bess_result['gross_profit']:.0f} gross profit")
+    bess_result = None
+    if args.include_bess:
+        bess_result = simulate_bess(df)
+        if bess_result:
+            print(f"  ✓ BESS simulation: €{bess_result['gross_profit']:.0f} gross profit")
 
-    scaffold_daily(delivery_date, explicit_file=filepath, title=title, eirgrid_df=eirgrid_df, bess_result=bess_result, force=args.force)
+    # Snapshot mtimes so the summary counts files actually written this run,
+    # not files that were skipped because they already existed.
+    chart_day_dir = CHART_DIR / date_str
+    before = {p.name: p.stat().st_mtime_ns for p in chart_day_dir.glob("*")} if chart_day_dir.exists() else {}
+
+    scaffold_daily(delivery_date, explicit_file=filepath, title=title, eirgrid_df=eirgrid_df,
+                   bess_result=bess_result, force=args.force, include_bess=args.include_bess)
 
     # ── Upload charts to Vercel Blob (no-op if BLOB_READ_WRITE_TOKEN not set) ─
-    chart_day_dir = CHART_DIR / date_str
     upload_charts_for_date(chart_day_dir)
 
     # ── Done ─────────────────────────────────────────────────────────────────
-    chart_names = [
-        f"dam-{date_str}.png",
-        f"price-wind-{date_str}.png",
-        f"week-compare-{date_str}.png",
-    ]
-    charts_found = [n for n in chart_names if (chart_day_dir / n).exists()]
+    charts_written = [p.name for p in chart_day_dir.glob("*")
+                      if before.get(p.name) != p.stat().st_mtime_ns]
 
     # Open all interactive HTML charts in the browser
     html_charts = sorted(chart_day_dir.glob("*.html"))
@@ -166,8 +174,7 @@ def main():
     print(f"  Done — {delivery_date.strftime('%-d %B %Y')}")
     print(f"{'─'*52}")
     print(f"  Post:   site/content/daily/{date_str}/index.md")
-    if charts_found:
-        print(f"  Charts: {len(charts_found)} generated in site/static/charts/{date_str}/")
+    print(f"  Charts: {len(charts_written)} written to site/static/charts/{date_str}/")
     print(f"""
   Next steps:
     1. Write 2–3 paragraphs in the Commentary section of the post.

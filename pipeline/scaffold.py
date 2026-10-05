@@ -109,7 +109,9 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
     date_str = target_date.isoformat()
 
     # Generate charts and get summary stats
-    summary = generate_daily_charts(data_file, target_date, eirgrid_df=eirgrid_df, bess_result=bess_result, force=force)
+    # BESS charts (png + html) are only drawn when the section is included.
+    summary = generate_daily_charts(data_file, target_date, eirgrid_df=eirgrid_df,
+                                    bess_result=bess_result if include_bess else None, force=force)
 
     # Load day-level data for the table (same data used by charts)
     day_df = get_day_data(data_file, target_date)
