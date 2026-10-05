@@ -13,12 +13,16 @@ against the full inventory in audit_report.csv, not per-post as bugs surface.
 Run after any change to process.py / bess.py / scaffold.py to see which
 published posts the change invalidates:
 
-    python pipeline/audit/audit_posts.py [--allow-skips]
+    python pipeline/audit/audit_posts.py [--allow-skips] [--exact]
 
 Ground truth source: data/history.db (market_prices, system_conditions).
 A post with no ground truth in the store is skipped, listed with its reason,
 and makes the run exit non-zero unless --allow-skips is passed — a skip is
 an unaudited post, not a clean one.
+
+--exact sets the tolerance to 0 for integer-valued fields (INTEGER_FIELDS:
+counts, rank, percentile, days_since). Every other numeric field keeps the
+default ±1.0 tolerance, which would hide an off-by-one in a count.
 """
 
 import argparse
@@ -50,6 +54,13 @@ for _ in range(48):
     if m == 60:
         m = 0
         h = (h + 1) % 24
+
+
+# Integer-valued fields: with --exact these must match with tolerance 0.
+# Only the periods_above_* counts are extracted from posts today; rank,
+# percentile and days_since are listed so they are exact from the day an
+# extractor and ground-truth value for them exist.
+INTEGER_FIELDS = {"periods_above_150", "periods_above_200", "rank", "percentile", "days_since"}
 
 
 def period_index(t: str) -> int | None:
@@ -248,7 +259,7 @@ def extract_prose(lines, table_line_nos, frontmatter_range):
     return out
 
 
-def audit_post(post_path: Path, gt: dict) -> list:
+def audit_post(post_path: Path, gt: dict, exact: bool = False) -> list:
     text = post_path.read_text()
     lines = text.split("\n")
 
@@ -281,7 +292,8 @@ def audit_post(post_path: Path, gt: dict) -> list:
                              "" if match else "string_mismatch"])
         else:
             delta = round(val - computed, 2)
-            note = "" if abs(delta) <= 1.0 else "MISMATCH"
+            tol = 0.0 if exact and field in INTEGER_FIELDS else 1.0
+            note = "" if abs(delta) <= tol else "MISMATCH"
             results.append([surface, field, val, computed, delta, ln, note])
 
     # Structural check: does a published (charge_start, discharge_start) pair,
@@ -310,6 +322,9 @@ def main():
     parser = argparse.ArgumentParser(description="Audit published daily posts against data/history.db.")
     parser.add_argument("--allow-skips", action="store_true",
                         help="Exit 0 even if some posts had no ground truth and were skipped.")
+    parser.add_argument("--exact", action="store_true",
+                        help="Tolerance 0 for integer-valued fields (counts, rank, percentile, "
+                             "days_since); other fields keep ±1.0.")
     args = parser.parse_args()
 
     if not DB_PATH.exists():
@@ -342,7 +357,7 @@ def main():
         checked += 1
         if "wind_pct_mean" not in gt:
             no_conditions.append(post_dir.name)
-        for row in audit_post(idx, gt):
+        for row in audit_post(idx, gt, exact=args.exact):
             all_rows.append([d.isoformat()] + row)
 
     conn.close()
