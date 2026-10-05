@@ -95,7 +95,7 @@ def fetch_semo(delivery_date: date | str | None = None, out_dir: Path | str = "d
 
 
 def fetch_wind_and_demand(
-    delivery_date: date, out_dir: Path | str = DEFAULT_DATA_DIR
+    delivery_date: date, out_dir: Path | str = DEFAULT_DATA_DIR, overwrite_raw: bool = True
 ) -> pd.DataFrame | None:
     """
     Fetch wind generation and demand for delivery_date from EirGrid.
@@ -115,14 +115,18 @@ def fetch_wind_and_demand(
     published figures stay reproducible from disk even if EirGrid's
     historical window later ages the live query out.
 
+    overwrite_raw=False keeps any archive already on disk and only writes
+    missing files. Backfills use it so a re-fetch never replaces the raw JSON
+    a published post was written from.
+
     Note: EirGrid's demand endpoint does not return a forecast field for this
     region/chart combination (only SYSTEM_DEMAND) — there is no DemandForecastMW.
     """
     date_str = delivery_date.strftime("%d-%b-%Y")   # e.g. "17-May-2026"
     raw_dir = Path(out_dir) / "eirgrid_raw" / delivery_date.isoformat()
 
-    wind   = _fetch_area("wind",   date_str, raw_dir=raw_dir, fields=["WIND_ACTUAL", "WIND_FCAST"])
-    demand = _fetch_area("demand", date_str, raw_dir=raw_dir, fields=["SYSTEM_DEMAND"])
+    wind   = _fetch_area("wind",   date_str, raw_dir=raw_dir, fields=["WIND_ACTUAL", "WIND_FCAST"], overwrite_raw=overwrite_raw)
+    demand = _fetch_area("demand", date_str, raw_dir=raw_dir, fields=["SYSTEM_DEMAND"], overwrite_raw=overwrite_raw)
 
     if wind is None or demand is None:
         return None
@@ -149,7 +153,8 @@ def fetch_wind_and_demand(
     return df
 
 
-def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: list[str] | None = None) -> pd.DataFrame | None:
+def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: list[str] | None = None,
+                overwrite_raw: bool = True) -> pd.DataFrame | None:
     """Fetch a single area (wind or demand) from EirGrid API.
 
     fields restricts which FieldName values are kept (e.g. ["WIND_ACTUAL", "WIND_FCAST"]).
@@ -171,8 +176,10 @@ def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: l
         resp.raise_for_status()
 
         if raw_dir is not None:
-            raw_dir.mkdir(parents=True, exist_ok=True)
-            (raw_dir / f"{area}.json").write_text(resp.text)
+            raw_path = raw_dir / f"{area}.json"
+            if overwrite_raw or not raw_path.exists():
+                raw_dir.mkdir(parents=True, exist_ok=True)
+                raw_path.write_text(resp.text)
 
         data = resp.json()
 

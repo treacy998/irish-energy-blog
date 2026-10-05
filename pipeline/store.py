@@ -65,6 +65,69 @@ def build_db(db_path: Path = DB_PATH) -> sqlite3.Connection:
     return conn
 
 
+def upsert_market_prices(conn: sqlite3.Connection, df) -> int:
+    """Upsert a load_dam_data() DataFrame into market_prices. Returns rows written.
+    Does not commit."""
+    records = [
+        (
+            row["DeliveryDate"].date().isoformat(),
+            int(row["Period"]),
+            row["StartTime"],
+            float(row["DAMPrice_EUR_MWh"]),
+        )
+        for _, row in df.iterrows()
+    ]
+    conn.executemany(
+        "INSERT OR REPLACE INTO market_prices "
+        "(date, period, start_time, dam_price_eur_mwh) VALUES (?, ?, ?, ?)",
+        records,
+    )
+    return len(records)
+
+
+def upsert_system_conditions(conn: sqlite3.Connection, d: date, df) -> int:
+    """Upsert a fetch_wind_and_demand() DataFrame for date d into system_conditions.
+    Returns rows written. Does not commit."""
+    records = [
+        (
+            d.isoformat(),
+            i + 1,  # period: 1..48, half-hourly, matches SEMO's Period numbering
+            row["StartTime"].strftime("%H:%M"),
+            float(row["WindMW"]) if pd_notna(row["WindMW"]) else None,
+            float(row["WindForecastMW"]) if pd_notna(row.get("WindForecastMW")) else None,
+            float(row["DemandMW"]) if pd_notna(row["DemandMW"]) else None,
+            float(row["WindGeneration_pct"]) if pd_notna(row["WindGeneration_pct"]) else None,
+        )
+        for i, (_, row) in enumerate(df.sort_values("StartTime").iterrows())
+    ]
+    conn.executemany(
+        "INSERT OR REPLACE INTO system_conditions "
+        "(date, period, start_time, wind_mw, wind_forecast_mw, demand_mw, wind_pct) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        records,
+    )
+    return len(records)
+
+
+def persist_day(d: date, price_df, conditions_df=None, db_path: Path = DB_PATH) -> tuple[int, int]:
+    """Incremental write for one delivery date, used by run_daily.
+
+    Idempotent (same INSERT OR REPLACE keys as the backfill). conditions_df=None
+    — an EirGrid fetch failure — writes no system_conditions rows at all, never
+    zero-valued ones. Returns (price rows, condition rows).
+    """
+    conn = build_db(db_path)
+    try:
+        price_rows = upsert_market_prices(conn, price_df)
+        cond_rows = 0
+        if conditions_df is not None and not conditions_df.empty:
+            cond_rows = upsert_system_conditions(conn, d, conditions_df)
+        conn.commit()
+    finally:
+        conn.close()
+    return price_rows, cond_rows
+
+
 def backfill_market_prices(conn: sqlite3.Connection, data_dir: Path = DATA_DIR) -> int:
     """Replay every SEMO DAM CSV in data_dir. Returns rows written."""
     rows = 0
@@ -74,29 +137,14 @@ def backfill_market_prices(conn: sqlite3.Connection, data_dir: Path = DATA_DIR) 
         except ValueError as e:
             print(f"  [store] SKIP {csv_path.name}: {e}")
             continue
-
-        records = [
-            (
-                row["DeliveryDate"].date().isoformat(),
-                int(row["Period"]),
-                row["StartTime"],
-                float(row["DAMPrice_EUR_MWh"]),
-            )
-            for _, row in df.iterrows()
-        ]
-        conn.executemany(
-            "INSERT OR REPLACE INTO market_prices "
-            "(date, period, start_time, dam_price_eur_mwh) VALUES (?, ?, ?, ?)",
-            records,
-        )
-        rows += len(records)
+        rows += upsert_market_prices(conn, df)
     conn.commit()
     return rows
 
 
 def backfill_system_conditions(
     conn: sqlite3.Connection, start: date, end: date, out_dir: Path = DATA_DIR,
-    retries: int = 3, retry_delay: float = 2.0,
+    retries: int = 3, retry_delay: float = 2.0, overwrite_raw: bool = False,
 ) -> tuple[int, list[str]]:
     """
     Live-fetch wind/demand for every date in [start, end] via fetch_wind_and_demand.
@@ -104,6 +152,9 @@ def backfill_system_conditions(
     confirmed transient by retrying failed dates, which succeed within a few
     attempts — so each date gets `retries` attempts before being recorded failed.
     Returns (rows written, list of dates that failed / had no data).
+
+    Raw EirGrid JSON already in out_dir/eirgrid_raw/ is left alone unless
+    overwrite_raw=True: those files are what published posts were written from.
     """
     import time
 
@@ -113,7 +164,7 @@ def backfill_system_conditions(
     while d <= end:
         df = None
         for attempt in range(retries):
-            df = fetch_wind_and_demand(d, out_dir=out_dir)
+            df = fetch_wind_and_demand(d, out_dir=out_dir, overwrite_raw=overwrite_raw)
             if df is not None and not df.empty:
                 break
             if attempt < retries - 1:
@@ -123,25 +174,7 @@ def backfill_system_conditions(
             d += timedelta(days=1)
             continue
 
-        records = [
-            (
-                d.isoformat(),
-                i + 1,  # period: 1..48, half-hourly, matches SEMO's Period numbering
-                row["StartTime"].strftime("%H:%M"),
-                float(row["WindMW"]) if pd_notna(row["WindMW"]) else None,
-                float(row["WindForecastMW"]) if pd_notna(row.get("WindForecastMW")) else None,
-                float(row["DemandMW"]) if pd_notna(row["DemandMW"]) else None,
-                float(row["WindGeneration_pct"]) if pd_notna(row["WindGeneration_pct"]) else None,
-            )
-            for i, (_, row) in enumerate(df.sort_values("StartTime").iterrows())
-        ]
-        conn.executemany(
-            "INSERT OR REPLACE INTO system_conditions "
-            "(date, period, start_time, wind_mw, wind_forecast_mw, demand_mw, wind_pct) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            records,
-        )
-        rows += len(records)
+        rows += upsert_system_conditions(conn, d, df)
         d += timedelta(days=1)
 
     conn.commit()
