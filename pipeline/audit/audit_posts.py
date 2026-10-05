@@ -13,12 +13,15 @@ against the full inventory in audit_report.csv, not per-post as bugs surface.
 Run after any change to process.py / bess.py / scaffold.py to see which
 published posts the change invalidates:
 
-    python pipeline/audit/audit_posts.py
+    python pipeline/audit/audit_posts.py [--allow-skips]
 
 Ground truth source: data/history.db (market_prices, system_conditions).
-Falls back to skipping dates not yet in the store (prints to stderr).
+A post with no ground truth in the store is skipped, listed with its reason,
+and makes the run exit non-zero unless --allow-skips is passed — a skip is
+an unaudited post, not a clean one.
 """
 
+import argparse
 import csv
 import re
 import sqlite3
@@ -304,13 +307,20 @@ def audit_post(post_path: Path, gt: dict) -> list:
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Audit published daily posts against data/history.db.")
+    parser.add_argument("--allow-skips", action="store_true",
+                        help="Exit 0 even if some posts had no ground truth and were skipped.")
+    args = parser.parse_args()
+
     if not DB_PATH.exists():
         print(f"No {DB_PATH} — run pipeline/store.py first.", file=sys.stderr)
         sys.exit(1)
 
     conn = sqlite3.connect(DB_PATH)
     all_rows = []
-    skipped = []
+    checked = 0
+    skipped = []          # (post, reason)
+    no_conditions = []    # checked on prices only; wind/demand figures unverifiable
 
     for post_dir in sorted(POSTS_DIR.iterdir()):
         if not post_dir.is_dir():
@@ -321,13 +331,17 @@ def main():
             continue
         idx = post_dir / "index.md"
         if not idx.exists():
+            skipped.append((post_dir.name, "no index.md in post directory"))
             continue
 
         gt = load_ground_truth(conn, d)
         if gt is None:
-            skipped.append(post_dir.name)
+            skipped.append((post_dir.name, "no market_prices rows in history.db for this date"))
             continue
 
+        checked += 1
+        if "wind_pct_mean" not in gt:
+            no_conditions.append(post_dir.name)
         for row in audit_post(idx, gt):
             all_rows.append([d.isoformat()] + row)
 
@@ -341,9 +355,12 @@ def main():
     flagged = [r for r in all_rows if r[-1]]
     posts_with_issues = sorted({r[0] for r in flagged})
 
-    print(f"Audited {len(list(POSTS_DIR.iterdir())) - len(skipped)} posts against {DB_PATH}")
-    if skipped:
-        print(f"Skipped (no ground truth in DB): {len(skipped)} — {skipped}")
+    print(f"checked {checked} posts, skipped {len(skipped)} (against {DB_PATH})")
+    for name, reason in skipped:
+        print(f"  SKIPPED {name}: {reason}")
+    if no_conditions:
+        print(f"  {len(no_conditions)} checked post(s) have no system_conditions in the store, "
+              f"so wind/demand figures were not verified: {no_conditions}")
     print(f"Total extracted figures checked: {len(all_rows)}")
     print(f"Flagged rows: {len(flagged)}")
     print(f"Posts with at least one flagged row: {len(posts_with_issues)}")
@@ -360,6 +377,11 @@ def main():
         print(f"  {note:30s} {n}")
     print()
     print(f"Full report: {REPORT_PATH}")
+
+    if skipped and not args.allow_skips:
+        print(f"\nFAIL: {len(skipped)} post(s) skipped without ground truth "
+              f"(pass --allow-skips to accept).", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
