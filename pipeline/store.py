@@ -27,6 +27,7 @@ Design notes:
 
 import sqlite3
 import sys
+import time
 import traceback
 from pathlib import Path
 from datetime import date, timedelta
@@ -37,7 +38,7 @@ from process import load_dam_data
 from trading_day import calendar_label_to_utc, expected_periods, iso_z, period_labels, period_starts_utc
 from fetch import (
     AREA_FIELDS, archive_path, archive_row_count, combine_for_trading_day,
-    compute_wind_pct, fetch_area, load_archived_area, load_archived_previous_day,
+    compute_wind_pct, fetch_area, fetch_semo, load_archived_area, load_archived_previous_day,
     resample_demand,
 )
 
@@ -398,6 +399,45 @@ def heal_demand(
     return healed
 
 
+def backfill_prices(conn: sqlite3.Connection, start: date, end: date, data_dir: Path = DATA_DIR,
+                    sleep_s: float = 1.0) -> list[str]:
+    """Prices only: fetch each SEMO DA report for [start, end] and upsert market_prices.
+
+    For each delivery date, fetch_semo() downloads the file into data_dir (skipping
+    the download if it is already there), load_dam_data() parses it and checks
+    every period against the trading-day mapping, and upsert_market_prices() writes
+    it with start_utc. Idempotent (INSERT OR REPLACE). Commits per date; sleeps
+    sleep_s between dates. Nothing else is touched: no wind or demand requests.
+
+    Prints one line per date: "<date> ok|FAIL rows=<n> expected=<n>", where expected
+    is expected_periods(date): 48, or 50 / 46 on the clock-change days. A FAIL
+    (no report on the endpoint, a parse or period-count error, a request error)
+    prints its reason to stderr and the run carries on. Returns the FAIL dates."""
+    failed = []
+    d = start
+    while d <= end:
+        want = expected_periods(d)
+        rows = 0
+        try:
+            df = load_dam_data(fetch_semo(d, out_dir=data_dir))
+            if df["DeliveryDate"].iloc[0].date() != d:
+                raise ValueError(f"file is for {df['DeliveryDate'].iloc[0].date()}, not {d}")
+            rows = upsert_market_prices(conn, df)
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            print(f"  [store] {d.isoformat()}: {type(e).__name__}: {e}", file=sys.stderr)
+            rows = 0
+        ok = rows == want
+        if not ok:
+            failed.append(d.isoformat())
+        print(f"{d.isoformat()} {'ok' if ok else 'FAIL'} rows={rows} expected={want}", flush=True)
+        d += timedelta(days=1)
+        if d <= end and sleep_s:
+            time.sleep(sleep_s)
+    return failed
+
+
 def rebuild_conditions(conn: sqlite3.Connection, start: date, end: date, out_dir: Path = DATA_DIR) -> int:
     """Rebuild system_conditions for [start, end] from local archives only (no network).
 
@@ -482,6 +522,10 @@ def _run(args) -> int:
         if args.prices and not args.dry_run:
             print(f"market_prices: {backfill_market_prices(conn, DATA_DIR)} rows", flush=True)
 
+        if args.backfill_prices:
+            failed = backfill_prices(conn, date.fromisoformat(args.start), date.fromisoformat(args.end))
+            return 1 if failed else 0
+
         if args.rebuild_prices or args.rebuild_conditions:
             lo, hi = conn.execute("SELECT MIN(date), MAX(date) FROM market_prices").fetchone()
             start = date.fromisoformat(args.start or lo)
@@ -538,6 +582,10 @@ def main(argv=None) -> int:
     parser.add_argument("--heal", action="store_true",
                         help="Instead of a backfill, fill demand_mw/wind_pct on stored dates where "
                              "demand was empty (one request per date, no retries).")
+    parser.add_argument("--backfill-prices", action="store_true",
+                        help="Prices only: fetch the SEMO DA report for each date in --start..--end (both "
+                             "required) and upsert market_prices. Idempotent, commits per date, 1 s between "
+                             "dates; exit 0 only if no date FAILed.")
     parser.add_argument("--rebuild-conditions", action="store_true",
                         help="Offline: rebuild system_conditions for --start/--end from data/eirgrid_raw, "
                              "one row per trading-day period with start_utc set (replaces the date's rows).")
@@ -547,8 +595,10 @@ def main(argv=None) -> int:
                         help="Backfill: print which source each date would use. Heal: list the dates "
                              "that would be fetched. No network, no DB writes.")
     args = parser.parse_args(argv)
-    if args.dry_run and (args.rebuild_prices or args.rebuild_conditions):
-        parser.error("--dry-run does not apply to the rebuild flags")
+    if args.dry_run and (args.rebuild_prices or args.rebuild_conditions or args.backfill_prices):
+        parser.error("--dry-run does not apply to the rebuild/backfill-prices flags")
+    if args.backfill_prices and not (args.start and args.end):
+        parser.error("--backfill-prices needs both --start and --end")
     try:
         return _run(args)
     except Exception:
