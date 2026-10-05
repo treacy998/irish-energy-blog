@@ -26,6 +26,13 @@ post, field, published AND recomputed value all agree, so a figure that moves
 again is new, not known. Known flags are printed under "known (baselined)";
 the run exits 1 only for flagged rows that are not in the baseline.
 
+Weekly posts (site/content/weekly/<slug>/index.md) are audited when their front
+matter has `week_start: YYYY-MM-DD` (a Monday). Their figures are read from the
+labelled table rows in WEEKLY_ROWS below and compared with weekly_stats.weekly_summary();
+pipeline/audit/fixtures/weekly_2026-09-28.md shows the format. A baseline that
+weekly_summary suppresses has no ground truth, so a post that publishes a rank or
+verdict from it is flagged. Weekly posts without week_start are listed, not audited.
+
 --exact sets the tolerance to 0 for integer-valued fields (INTEGER_FIELDS:
 counts, rank, percentile, days_since). Every other numeric field keeps the
 default ±1.0 tolerance, which would hide an off-by-one in a count.
@@ -45,12 +52,14 @@ sys.path.insert(0, str(ROOT / "pipeline"))
 import pandas as pd
 from process import daily_summary
 from bess import simulate_bess
+from weekly_stats import weekly_summary
 from trading_day import calendar_label_to_utc, expected_periods, period_label_indices, period_start_utc
 
 DB_PATH = ROOT / "data" / "history.db"
 POSTS_DIR = ROOT / "site" / "content" / "daily"
 REPORT_PATH = ROOT / "audit_report.csv"
 KNOWN_PATH = Path(__file__).parent / "audit_known.csv"
+WEEKLY_DIR = ROOT / "site" / "content" / "weekly"
 
 # Period order is index order within the trading day, taken from
 # trading_day (local 23:00 start, 30-minute steps in UTC): 48 periods, or 50 /
@@ -61,7 +70,8 @@ KNOWN_PATH = Path(__file__).parent / "audit_known.csv"
 # Only the periods_above_* counts are extracted from posts today; rank,
 # percentile and days_since are listed so they are exact from the day an
 # extractor and ground-truth value for them exist.
-INTEGER_FIELDS = {"periods_above_150", "periods_above_200", "period_count", "rank", "percentile", "days_since"}
+INTEGER_FIELDS = {"periods_above_150", "periods_above_200", "period_count", "rank", "percentile", "days_since",
+                  "trailing_rank", "trailing_rank_of", "seasonal_rank", "seasonal_rank_of"}
 
 
 def load_ground_truth(conn: sqlite3.Connection, d: date) -> dict | None:
@@ -294,6 +304,114 @@ def load_known(path: Path = KNOWN_PATH) -> dict:
                 for r in csv.DictReader(f)}
 
 
+def compare_findings(findings, gt: dict, exact: bool) -> list:
+    """[surface, field, published, computed, delta, line, note] for each (surface, field, value, line).
+    Tolerance is 1.0, or 0 for INTEGER_FIELDS under --exact; strings must match exactly."""
+    results = []
+    for surface, field, val, ln in findings:
+        computed = gt.get(field)
+        if computed is None:
+            results.append([surface, field, val, "N/A", "", ln, "no_ground_truth"])
+            continue
+        if isinstance(val, str) or isinstance(computed, str):
+            match = str(val) == str(computed)
+            results.append([surface, field, val, computed, "" if match else "MISMATCH", ln,
+                             "" if match else "string_mismatch"])
+        else:
+            delta = round(val - computed, 2)
+            tol = 0.0 if exact and field in INTEGER_FIELDS else 1.0
+            note = "" if abs(delta) <= tol else "MISMATCH"
+            results.append([surface, field, val, computed, delta, ln, note])
+    return results
+
+
+# (label prefix, field, kind): longest prefixes first. kinds: num = first number in the value
+# cell; rank = "<n> of <m>" -> <field> and <field>_of; date = an ISO date; text = the cell, lowercased.
+WEEKLY_ROWS = [
+    ("Week mean (c/kWh)", "week_mean_c_per_kwh", "num"),
+    ("Week mean", "week_mean", "num"),
+    ("Periods above €150", "periods_above_150", "num"),
+    ("Periods above €200", "periods_above_200", "num"),
+    ("Median daily arb spread", "median_arb_spread", "num"),
+    ("Mean wind (MW)", "wind_mw_mean", "num"),
+    ("Wind coverage", "wind_coverage_pct", "num"),
+    ("Rank vs trailing", "trailing_rank", "rank"),
+    ("Dearest since (trailing)", "trailing_dearest_since", "date"),
+    ("Cheapest since (trailing)", "trailing_cheapest_since", "date"),
+    ("Price verdict (trailing)", "trailing_verdict_price", "text"),
+    ("Volatility verdict (trailing)", "trailing_verdict_volatility", "text"),
+    ("Rank vs seasonal", "seasonal_rank", "rank"),
+    ("Dearest since (seasonal)", "seasonal_dearest_since", "date"),
+    ("Cheapest since (seasonal)", "seasonal_cheapest_since", "date"),
+    ("Price verdict (seasonal)", "seasonal_verdict_price", "text"),
+    ("Volatility verdict (seasonal)", "seasonal_verdict_volatility", "text"),
+]
+ISO_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def weekly_ground_truth(summary: dict) -> dict:
+    """Flatten weekly_summary() into the field names WEEKLY_ROWS uses. A suppressed
+    baseline contributes no fields, so a published figure from it has no ground truth."""
+    gt = {k: summary[k] for k in ("week_mean", "week_mean_c_per_kwh", "periods_above_150", "periods_above_200",
+                                  "median_arb_spread", "wind_mw_mean")}
+    gt["wind_coverage_pct"] = round(summary["wind_coverage"] * 100, 1)
+    for kind in ("trailing", "seasonal"):
+        b = summary[kind]
+        if b is None or b["suppressed"]:
+            continue
+        gt[f"{kind}_rank"], gt[f"{kind}_rank_of"] = b["rank"], b["rank_of"]
+        gt[f"{kind}_dearest_since"], gt[f"{kind}_cheapest_since"] = b["dearest_since"], b["cheapest_since"]
+        gt[f"{kind}_verdict_price"] = b["verdict_price"]
+        gt[f"{kind}_verdict_volatility"] = b["verdict_volatility"]
+    return gt
+
+
+def extract_weekly_rows(lines) -> list:
+    out = []
+    for i, line in enumerate(lines, start=1):
+        if "|" not in line:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 2:
+            continue
+        label = cells[0].strip("* ").strip()
+        for prefix, field, kind in WEEKLY_ROWS:
+            if not label.startswith(prefix):
+                continue
+            val = cells[1]
+            if kind == "num":
+                nm = EUR_RE.search(val) or NUM_RE.search(val)
+                if nm:
+                    out.append(("weekly:table", field, float(nm.group(1) if nm.lastindex else nm.group(0)), i))
+            elif kind == "rank":
+                nm = re.search(r"(\d+)\s+of\s+(\d+)", val)
+                if nm:
+                    out.append(("weekly:table", field, float(nm.group(1)), i))
+                    out.append(("weekly:table", field + "_of", float(nm.group(2)), i))
+            elif kind == "date":
+                nm = ISO_DATE_RE.search(val)
+                if nm:
+                    out.append(("weekly:table", field, nm.group(0), i))
+            else:
+                out.append(("weekly:table", field, val.strip("* ").lower(), i))
+            break
+    return out
+
+
+def audit_weekly_post(post_path: Path, gt: dict, exact: bool = False) -> list:
+    return compare_findings(extract_weekly_rows(post_path.read_text().split("\n")), gt, exact)
+
+
+def weekly_start_of(post_path: Path):
+    """week_start from the front matter, or None."""
+    text = post_path.read_text()
+    m = re.match(r"---\n(.*?)\n---", text, re.S)
+    if not m:
+        return None
+    ws = re.search(r"^week_start:\s*[\"']?(\d{4}-\d{2}-\d{2})", m.group(1), re.M)
+    return date.fromisoformat(ws.group(1)) if ws else None
+
+
 def audit_post(post_path: Path, gt: dict, exact: bool = False) -> list:
     text = post_path.read_text()
     lines = text.split("\n")
@@ -315,21 +433,7 @@ def audit_post(post_path: Path, gt: dict, exact: bool = False) -> list:
     findings.extend(extract_inline_summary(lines))
     findings.extend(extract_prose(lines, table_line_nos, fm_range))
 
-    results = []
-    for surface, field, val, ln in findings:
-        computed = gt.get(field)
-        if computed is None:
-            results.append([surface, field, val, "N/A", "", ln, "no_ground_truth"])
-            continue
-        if isinstance(val, str) or isinstance(computed, str):
-            match = str(val) == str(computed)
-            results.append([surface, field, val, computed, "" if match else "MISMATCH", ln,
-                             "" if match else "string_mismatch"])
-        else:
-            delta = round(val - computed, 2)
-            tol = 0.0 if exact and field in INTEGER_FIELDS else 1.0
-            note = "" if abs(delta) <= tol else "MISMATCH"
-            results.append([surface, field, val, computed, delta, ln, note])
+    results = compare_findings(findings, gt, exact)
 
     # Structural check: does a published (charge_start, discharge_start) pair,
     # from any surface, respect discharge-after-charge in array-index order?
@@ -403,6 +507,25 @@ def main():
         for row in audit_post(idx, gt, exact=args.exact):
             all_rows.append([d.isoformat()] + row)
 
+    weekly_unaudited = []
+    if WEEKLY_DIR.exists():
+        for wdir in sorted(WEEKLY_DIR.iterdir()):
+            idx = wdir / "index.md"
+            if not (wdir.is_dir() and idx.exists()):
+                continue
+            ws = weekly_start_of(idx)
+            if ws is None:
+                weekly_unaudited.append(wdir.name)
+                continue
+            try:
+                summary = weekly_summary(ws, conn)
+            except ValueError as e:
+                skipped.append((f"weekly/{wdir.name}", str(e)))
+                continue
+            checked += 1
+            for row in audit_weekly_post(idx, weekly_ground_truth(summary), exact=args.exact):
+                all_rows.append([f"weekly:{ws.isoformat()}"] + row)
+
     conn.close()
 
     with open(REPORT_PATH, "w", newline="") as f:
@@ -421,6 +544,9 @@ def main():
     print(f"checked {checked} posts, skipped {len(skipped)} (against {DB_PATH})")
     for name, reason in skipped:
         print(f"  SKIPPED {name}: {reason}")
+    if weekly_unaudited:
+        print(f"  {len(weekly_unaudited)} weekly post(s) have no week_start front matter and were not audited: "
+              f"{weekly_unaudited}")
     if no_conditions:
         print(f"  {len(no_conditions)} checked post(s) have no system_conditions in the store, "
               f"so wind/demand figures were not verified: {no_conditions}")
