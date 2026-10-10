@@ -59,7 +59,7 @@ sys.path.insert(0, str(ROOT / "pipeline"))
 import pandas as pd
 from process import daily_summary
 from bess import simulate_bess
-from weekly_stats import weekly_summary
+from weekly_stats import weekly_summary, verdict_sentence
 from trading_day import calendar_label_to_utc, expected_periods, period_label_indices, period_start_utc
 
 DB_PATH = ROOT / "data" / "history.db"
@@ -357,6 +357,10 @@ WEEKLY_ROWS = [
     ("Volatility verdict (seasonal)", "seasonal_verdict_volatility", "verdict_spread"),
 ]
 ISO_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+# The opening verdict sentence: "Inside the recent range, at the top end." or, outside the normal band
+# (and in posts written before 2026-10-10), "Against the previous 13 weeks: dearer."
+VERDICT_SENTENCE_RE = re.compile(r"Inside the recent range, (?:at the top end|mid-range|at the bottom end)\.|"
+                                 r"Against the previous \d+ weeks: [a-z ]+\.")
 
 
 def weekly_ground_truth(summary: dict) -> dict:
@@ -372,6 +376,8 @@ def weekly_ground_truth(summary: dict) -> dict:
         gt[f"{kind}_rank"], gt[f"{kind}_rank_of"] = b["rank"], b["rank_of"]
         gt[f"{kind}_dearest_since"], gt[f"{kind}_cheapest_since"] = b["dearest_since"], b["cheapest_since"]
         gt[f"{kind}_verdict_price"] = b["verdict_price"]
+        if kind == "trailing":
+            gt["trailing_verdict_sentence"] = verdict_sentence(b)
         gt[f"{kind}_verdict_volatility"] = b["verdict_volatility"]
     return gt
 
@@ -382,6 +388,9 @@ def extract_weekly_rows(lines) -> list:
         if "|" not in line:
             # The opening rank sentence: "4th dearest of the last 14 weeks" / "Dearest of the last 14 weeks".
             m = re.search(r"(?:\b(\d+)(?:st|nd|rd|th) dearest|\b(Dearest)) of the last (\d+) weeks", line)
+            vm = VERDICT_SENTENCE_RE.search(line)
+            if vm:
+                out.append(("weekly:sentence", "trailing_verdict_sentence", vm.group(0), i))
             if m:
                 out.append(("weekly:sentence", "trailing_rank", float(m.group(1)) if m.group(1) else 1.0, i))
                 out.append(("weekly:sentence", "trailing_rank_of", float(m.group(3)), i))

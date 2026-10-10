@@ -121,6 +121,19 @@ def test_numbers_outside_the_commentary_section_are_not_this_checks_business():
         assert audit_posts.commentary_numbers("## Other\n\nInvented 999 here.\n") == []
 
 
+def test_verdict_sentence_is_audited_old_wording_flags():
+    with tempfile.TemporaryDirectory() as t:
+        path, summary, gt = make_post(Path(t))
+        assert flags(audit_posts.audit_weekly_post(path, gt)) == []
+        text = path.read_text()
+        want = gt["trailing_verdict_sentence"]
+        assert want in text
+        path.write_text(text.replace(want, "Against the previous 13 weeks: normal."))
+        got = flags(audit_posts.audit_weekly_post(path, gt))
+        assert {f for f, *_ in got} == {"trailing_verdict_sentence"}
+        assert got[0][1:3] == ("Against the previous 13 weeks: normal.", want)
+
+
 def test_empty_section_flag():
     fm = "---\ntitle: x\ndraft: false\n---\n\n"
     broker = ("## Broker Takeaway\n\n<!-- hint\nspanning lines -->\n\n"

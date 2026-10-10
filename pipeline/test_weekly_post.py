@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import weekly
 from charts import weekly_chart
 from scaffold import build_weekly_post, weekly_verdict_text
+from weekly_stats import verdict_sentence
 from test_weekly_stats import make_store
 from weekly_stats import weekly_summary
 
@@ -32,7 +33,20 @@ def test_verdict_text_rank_first_then_label():
     text = weekly_verdict_text(s)
     t = s["trailing"]
     assert text.startswith(f"{t['rank']}") and "dearest of the last 14 weeks; last dearer: week of" in text
-    assert text.index("dearest of the last") < text.index(s["verdict_price"])
+    assert text.index("dearest of the last") < text.index("Inside the recent range")
+    assert verdict_sentence(t) in text and "Against the previous" not in text
+
+
+def test_verdict_sentence_bands():
+    base = {"verdict_price": "normal", "n": 13}
+    cases = {20.0: "at the bottom end", 35.0: "at the bottom end", 35.1: "mid-range", 64.9: "mid-range",
+             65.0: "at the top end", 80.0: "at the top end"}
+    for pct, where in cases.items():
+        assert verdict_sentence({**base, "percentile": pct}) == f"Inside the recent range, {where}.", pct
+    # outside 20-80 the existing wording stays, after the rank sentence
+    assert verdict_sentence({"verdict_price": "dearer", "n": 13, "percentile": 85}) == "Against the previous 13 weeks: dearer."
+    assert verdict_sentence({"verdict_price": "unusually cheaper", "n": 13, "percentile": 2}) == \
+        "Against the previous 13 weeks: unusually cheaper."
 
 
 def test_verdict_text_suppressed_says_so_and_invents_nothing():

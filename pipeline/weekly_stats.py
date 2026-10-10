@@ -131,6 +131,17 @@ def _percentile(value: float, base: list[float]) -> float:
     return 100.0 * (below + 0.5 * ties) / len(base)
 
 
+def verdict_sentence(b: dict) -> str:
+    """The post's band sentence for one unsuppressed baseline. Inside the 20-80 'normal' band it says where
+    in the recent range the week sits (>=65 top end, <=35 bottom end, else mid-range); outside it keeps the
+    dearer/cheaper wording. Single source for the post text and the audit."""
+    if b["verdict_price"] == "normal":
+        pct = b["percentile"]
+        where = "at the top end" if pct >= 65 else "at the bottom end" if pct <= 35 else "mid-range"
+        return f"Inside the recent range, {where}."
+    return f"Against the previous {b['n']} weeks: {b['verdict_price']}."
+
+
 def _verdict(pct: float, high: str, low: str) -> str:
     if pct > 95:
         return f"unusually {high}"
