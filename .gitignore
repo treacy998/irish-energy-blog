@@ -41,3 +41,6 @@ backfill.log
 *.db-journal
 heal.log
 rebuild.log
+
+# nightly.sh logs
+logs/
