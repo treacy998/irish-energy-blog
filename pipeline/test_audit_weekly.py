@@ -68,6 +68,59 @@ def test_corrupted_rank_in_the_opening_sentence_is_flagged():
         assert "trailing_rank" in {f for f, *_ in flags(audit_posts.audit_weekly_post(path, gt))}
 
 
+def with_commentary(path: Path, body: str) -> None:
+    text = path.read_text()
+    start = text.index("## Commentary")
+    end = text.index("## Methodology")
+    path.write_text(text[:start] + "## Commentary\n\n" + body + "\n\n" + text[end:])
+
+
+def unverified(path: Path, summary: dict, gt: dict) -> list:
+    rows = audit_posts.audit_weekly_post(path, gt, summary=summary)
+    return [(r[2], r[5]) for r in rows if r[-1] == "unverified_commentary_number"]
+
+
+def test_invented_commentary_numbers_are_flagged_and_real_ones_are_not():
+    with tempfile.TemporaryDirectory() as t:
+        path, summary, gt = make_post(Path(t))
+        tr = summary["trailing"]
+        from weekly_stats import ordinal
+        mean, c = summary["week_mean"], summary["week_mean_c_per_kwh"]
+        wind = summary["wind_mw_mean"]
+        body = (
+            f"At {c} c/kWh (€{mean}/MWh) this was the {ordinal(tr['rank'])} dearest of the last {tr['rank_of']} weeks, "
+            f"since the week of {tr['dearest_since']}. Wind averaged {wind:.0f} MW, and {summary['periods_above_150']} "
+            f"periods cleared above €150. The week ended on 4 October 2026, a Sunday, after Thursday 1 October.\n\n"
+            f"Thursday peaked at €412.55/MWh and demand was 57% of capacity.\n"
+        )
+        with_commentary(path, body)
+        got = unverified(path, summary, gt)
+        assert [tok for tok, _ in got] == ["412.55", "57"], got
+        # the first paragraph alone is clean
+        with_commentary(path, body.split("\n\n")[0])
+        assert unverified(path, summary, gt) == []
+
+
+def test_commentary_precision_and_exemptions():
+    with tempfile.TemporaryDirectory() as t:
+        path, summary, gt = make_post(Path(t))
+        mean = summary["week_mean"]
+        wrong_precision = f"{mean + 0.01:.2f}"
+        body = (f"Mean €{mean:,.2f} and {mean:.0f} and {mean:.1f}; not {wrong_precision}. "
+                "See [the comparison](/compare?x=99) and 2026 vs 2025, the 5th, 3rd October, October 7.\n"
+                "<!-- 12345 is a note to self -->\n")
+        with_commentary(path, body)
+        assert [tok for tok, _ in unverified(path, summary, gt)] == [wrong_precision]
+
+
+def test_numbers_outside_the_commentary_section_are_not_this_checks_business():
+    with tempfile.TemporaryDirectory() as t:
+        path, summary, gt = make_post(Path(t))
+        with_commentary(path, "No figures here.")
+        assert unverified(path, summary, gt) == []
+        assert audit_posts.commentary_numbers("## Other\n\nInvented 999 here.\n") == []
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in tests:

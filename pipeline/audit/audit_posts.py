@@ -31,7 +31,10 @@ matter has `week_start: YYYY-MM-DD` (a Monday). Their figures are read from the
 labelled table rows in WEEKLY_ROWS below and compared with weekly_stats.weekly_summary();
 pipeline/audit/fixtures/weekly_2026-09-28.md shows the format. A baseline that
 weekly_summary suppresses has no ground truth, so a post that publishes a rank or
-verdict from it is flagged. Weekly posts without week_start are listed, not audited.
+verdict from it is flagged.
+Weekly posts without week_start are listed, not audited. Every number in an audited weekly
+post's "## Commentary" section must match a weekly_summary figure at the precision written, or
+it is flagged unverified_commentary_number (dates, years, ordinals and HTML comments are exempt).
 
 --exact sets the tolerance to 0 for integer-valued fields (INTEGER_FIELDS:
 counts, rank, percentile, days_since) in daily posts. Every other numeric field keeps the
@@ -412,10 +415,100 @@ def extract_weekly_rows(lines) -> list:
     return out
 
 
-def audit_weekly_post(post_path: Path, gt: dict, exact: bool = True) -> list:
+# ── Commentary numbers ───────────────────────────────────────────────────────
+# Every number the author writes in a weekly post's "## Commentary" section must equal some
+# weekly_summary() figure at the precision it is written with (18.42 must be 18.42, 1743 may
+# be 1743.1 rounded). Dates, years, ordinals and the text of HTML comments are not figures.
+COMMENTARY_HEADING_RE = re.compile(r"^##\s+Commentary\s*$")
+_MONTH = (r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|"
+          r"Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)")
+_ORD = r"(?:st|nd|rd|th)"
+COMMENTARY_NOT_FIGURES = [
+    re.compile(r"\]\([^)]*\)"),                                    # link targets
+    re.compile(r"https?://\S+"),
+    re.compile(r"\b\d{4}-\d{2}-\d{2}\b"),                           # ISO dates
+    re.compile(rf"\b\d{{1,2}}{_ORD}?\s+{_MONTH}\b"),                # 5 October, 28th Sep
+    re.compile(rf"\b{_MONTH}\s+\d{{1,2}}{_ORD}?\b"),                # October 5
+    re.compile(rf"\b\d+{_ORD}\b"),                                 # ordinals: 4th
+]
+COMMENTARY_NUMBER_RE = re.compile(r"(?<![\w.])-?\d+(?:,\d{3})*(?:\.\d+)?")
+# weekly_summary keys whose €/MWh values the post also shows in c/kWh (÷ 10)
+_PRICE_KEYS = {"week_mean", "previous_week_mean", "median_arb_spread", "daily_means", "mean", "means",
+               "median_week_mean"}
+
+
+def summary_figures(summary: dict) -> list:
+    """Every number weekly_summary() holds, plus the forms the post prints: €/MWh ÷ 10 as c/kWh,
+    wind coverage as a percentage, the week-on-week change in percent. Absolute values: a
+    spread written as 'minus €8' still matches 8."""
+    out = []
+
+    def walk(v, key=None):
+        if isinstance(v, bool) or v is None or isinstance(v, str):
+            return
+        if isinstance(v, (int, float)):
+            out.append(abs(float(v)))
+            if key in _PRICE_KEYS:
+                out.append(abs(v) / 10)
+        elif isinstance(v, dict):
+            for k, x in v.items():
+                walk(x, k)
+        elif isinstance(v, (list, tuple)):
+            for x in v:
+                walk(x, key)
+
+    walk(summary)
+    out += [150.0, 200.0]                           # the €/MWh thresholds behind periods_above_150 / _200
+    if summary.get("wind_coverage") is not None:
+        out.append(summary["wind_coverage"] * 100)
+    prev = summary.get("previous_week_mean")
+    if prev:
+        out.append(abs(summary["week_mean"] / prev - 1) * 100)
+    return out
+
+
+def _matches_at_precision(token: str, figures: list) -> bool:
+    text = token.replace(",", "").lstrip("-")
+    decimals = len(text.split(".")[1]) if "." in text else 0
+    return any(f"{f:.{decimals}f}" == f"{float(text):.{decimals}f}" for f in figures)
+
+
+def commentary_numbers(text: str) -> list:
+    """[(token, line_number)] for each figure-like number in the '## Commentary' section."""
+    text = re.sub(r"<!--.*?-->", lambda m: "\n" * m.group(0).count("\n"), text, flags=re.S)
+    out, inside = [], False
+    for ln, line in enumerate(text.split("\n"), start=1):
+        if line.startswith("#"):
+            inside = bool(COMMENTARY_HEADING_RE.match(line))
+            continue
+        if not inside:
+            continue
+        for rx in COMMENTARY_NOT_FIGURES:
+            line = rx.sub(lambda m: " " * len(m.group(0)), line)
+        for m in COMMENTARY_NUMBER_RE.finditer(line):
+            token = m.group(0)
+            if re.fullmatch(r"(?:19|20)\d\d", token):                  # a year
+                continue
+            out.append((token, ln))
+    return out
+
+
+def audit_commentary(post_path: Path, summary: dict) -> list:
+    """audit rows ([surface, field, published, computed, delta, line, note]) for every commentary
+    number that matches no weekly_summary figure."""
+    figures = summary_figures(summary)
+    return [["weekly:commentary", "unverified_commentary_number", token, "N/A", "", ln, "unverified_commentary_number"]
+            for token, ln in commentary_numbers(post_path.read_text()) if not _matches_at_precision(token, figures)]
+
+
+def audit_weekly_post(post_path: Path, gt: dict, exact: bool = True, summary: dict | None = None) -> list:
     """Rank, count (periods_above_*), since and verdict fields are exact by default: a weekly
-    post's rank is a fact, so a rank of 5 where the store says 4 is a flag, with or without --exact."""
-    return compare_findings(extract_weekly_rows(post_path.read_text().split("\n")), gt, exact)
+    post's rank is a fact, so a rank of 5 where the store says 4 is a flag, with or without --exact.
+    With summary given, the commentary section's numbers are checked against it too."""
+    rows = compare_findings(extract_weekly_rows(post_path.read_text().split("\n")), gt, exact)
+    if summary is not None:
+        rows += audit_commentary(post_path, summary)
+    return rows
 
 
 def weekly_start_of(post_path: Path):
@@ -545,7 +638,7 @@ def main():
                 skipped.append((f"weekly/{wdir.name}", str(e)))
                 continue
             checked += 1
-            for row in audit_weekly_post(idx, weekly_ground_truth(summary)):
+            for row in audit_weekly_post(idx, weekly_ground_truth(summary), summary=summary):
                 all_rows.append([f"weekly:{ws.isoformat()}"] + row)
 
     conn.close()
