@@ -561,6 +561,24 @@ def store_write_problem(db_path: Path | None = None, must_exist: bool = True) ->
     return None
 
 
+def day_is_stored(d: date, db_path: Path | None = None) -> bool:
+    """True if market_prices already holds d in full: expected_periods(d) rows, none with a NULL
+    price. Read-only (mode=ro), so it works on a chmod 444 database."""
+    db = Path(db_path or DB_PATH)
+    if not db.exists():
+        return False
+    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    try:
+        n, nulls = conn.execute(
+            "SELECT COUNT(*), COALESCE(SUM(dam_price_eur_mwh IS NULL), 0) FROM market_prices WHERE date=?",
+            (d.isoformat(),)).fetchone()
+    except sqlite3.Error:
+        return False
+    finally:
+        conn.close()
+    return n == expected_periods(d) and nulls == 0
+
+
 def catch_up_store(db_path: Path | None = None, data_dir: Path = DATA_DIR, now: datetime | None = None,
                    sleep_s: float = 1.0, max_dates: int = 14, heal_days: int = 14) -> int:
     """Store only: no posts, no charts, no BESS. Fetch prices and conditions for every delivery

@@ -155,6 +155,36 @@ def test_run_daily_exits_nonzero_when_the_post_is_refused_and_still_stores():
         assert sqlite3.connect(db).execute("SELECT COUNT(*) FROM market_prices WHERE date='2026-10-05'").fetchone()[0] == 48
 
 
+def test_read_only_store_that_already_holds_the_day_is_skipped_quietly():
+    with tempfile.TemporaryDirectory() as t:
+        db = seeded_db(Path(t))
+        from store import persist_day
+        persist_day(DAY, price_df(DAY), conditions_df(DAY), db_path=db)       # the nightly run got there first
+        os.chmod(db, 0o444)
+        before = sqlite3.connect(db).execute("SELECT COUNT(*), SUM(dam_price_eur_mwh) FROM market_prices").fetchone()
+        def must_not_be_called(*a, **k):
+            raise AssertionError("persist_day called for a day the store already holds")
+        code, out, scaffolded = run_main(db, persist=must_not_be_called)
+        assert code is None and len(scaffolded) == 1, (code, out)
+        assert "STORE NOT WRITABLE" not in out and "STORE WRITE FAILED" not in out, out
+        assert "already stored" in out and "already holds 2026-10-05 in full" in out, out
+        assert sqlite3.connect(db).execute("SELECT COUNT(*), SUM(dam_price_eur_mwh) FROM market_prices").fetchone() == before
+
+
+def test_a_partial_day_is_not_treated_as_stored():
+    with tempfile.TemporaryDirectory() as t:
+        db = seeded_db(Path(t))
+        from store import day_is_stored, persist_day
+        persist_day(DAY, price_df(DAY), None, db_path=db)
+        conn = sqlite3.connect(db)
+        conn.execute("DELETE FROM market_prices WHERE date=? AND period=48", (DAY.isoformat(),))
+        conn.commit(); conn.close()
+        assert not day_is_stored(DAY, db) and not day_is_stored(date(2026, 10, 6), db) and day_is_stored(date(2026, 10, 4), db)
+        os.chmod(db, 0o444)
+        code, out, _ = run_main(db)
+        assert code == 1 and "STORE NOT WRITABLE" in out and "STORE WRITE FAILED 2026-10-05" in out, out
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in tests:

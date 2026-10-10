@@ -23,7 +23,7 @@ from scaffold import PostExistsError, scaffold_daily
 from fetch import fetch_wind_and_demand, fetch_semo
 from bess import simulate_bess
 from storage import upload_charts_for_date
-from store import catch_up_store, persist_day, store_write_problem
+from store import catch_up_store, day_is_stored, persist_day, store_write_problem
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
@@ -113,10 +113,19 @@ def main():
     TOTAL_STEPS = 3
 
     # Before anything else: a store that can't be written must be loud now, not after the post.
+    # A store that is read-only is only a problem if this day still has to be written; the
+    # nightly --store-only run normally has it already and leaves the file at 444.
     store_problem = store_write_problem(args.db, must_exist=False)
     store_failed = False
     if store_problem:
-        print(f"STORE NOT WRITABLE: {store_problem}")
+        try:
+            early = date.fromisoformat(args.date) if args.date else (None if args.csv_file else default_delivery_date())
+        except ValueError:
+            early = None
+        if early is not None and day_is_stored(early, args.db):
+            print(f"  store is read-only but {early.isoformat()} is already stored; not writing it again")
+        else:
+            print(f"STORE NOT WRITABLE: {store_problem}")
 
     # ── Step 1: find / fetch data file ───────────────────────────────────────
     step(1, TOTAL_STEPS, "Finding data file...")
@@ -186,7 +195,9 @@ def main():
     # depend on a separate backfill. Idempotent. A failure doesn't stop the post
     # (it is generated below) but is printed as STORE WRITE FAILED and makes the
     # run exit nonzero at the end.
-    if store_problem:
+    if day_is_stored(delivery_date, args.db):
+        print(f"  history.db already holds {date_str} in full; not rewritten")
+    elif store_problem:
         store_failed = True
         print(f"STORE WRITE FAILED {date_str}: {store_problem}")
     else:
