@@ -300,11 +300,19 @@ def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: l
 
         if raw_dir is not None:
             raw_path = raw_dir / f"{area}.json"
-            # overwrite_raw=True (run_daily) archives whatever EirGrid said, even an
-            # empty response. overwrite_raw=False (backfill, heal) only archives a
-            # response that has rows, and only where the archive is missing or has
-            # none — an empty response is not a record worth writing.
-            if overwrite_raw or (has_rows and archive_row_count(raw_path) == 0):
+            # An archive that has rows is never replaced by a response that has none, in any
+            # mode: EirGrid's feeds go empty for minutes at a time, and an empty answer is not
+            # a better record than the data the store and the posts were built from.
+            # overwrite_raw=True (run_daily's default) otherwise archives whatever EirGrid said,
+            # including an empty response where there is no archive yet (a record of the failed
+            # fetch). overwrite_raw=False (backfill, heal) only archives a response that has
+            # rows, and only where the archive is missing or has none.
+            existing_rows = archive_row_count(raw_path)
+            if has_rows and (overwrite_raw or existing_rows == 0):
+                write_raw = True
+            else:
+                write_raw = overwrite_raw and existing_rows == 0
+            if write_raw:
                 raw_dir.mkdir(parents=True, exist_ok=True)
                 raw_path.write_text(resp.text)
 
