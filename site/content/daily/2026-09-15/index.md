@@ -63,16 +63,6 @@ draft: false
 
 **Cheap window:** €158.24/MWh  ·  **Dear window:** €250.69/MWh  ·  **Spread:** €92.45/MWh  — the actual cheapest and dearest 2-hour blocks of the day, wherever they fall on the clock
 
-## Broker Takeaway
-
-<!-- Price spiked to €254/MWh at 18:30 — useful for explaining exposure on variable-rate contracts — spot ≠ forward, educate don't signal. -->
-
-**Renewing:**
-
-**On variable:**
-
-**Already fixed:**
-
 ## Commentary
 
 Steady wind all day (29.7-54.7%) and the price shape ignored it. The cheapest block of the day, €157-160 from 11:30 to 15:30, came when wind was at its lowest (~30%).
