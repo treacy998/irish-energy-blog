@@ -519,12 +519,15 @@ def _label(name: str, dates: list[str]) -> str:
     return f"{name}: {len(dates)} dates: {','.join(dates) if dates else 'none'}"
 
 
-def store_write_problem(db_path: Path | None = None) -> str | None:
+def store_write_problem(db_path: Path | None = None, must_exist: bool = True) -> str | None:
     """Why the store can't be written, or None if it can. SQLite needs the file writable and,
-    for its journal, the directory; a chmod 444 file fails here instead of mid-transaction."""
+    for its journal, the directory; a chmod 444 file fails here instead of mid-transaction.
+    must_exist=False accepts a missing file (the first write creates it) if its directory is writable."""
     db = Path(db_path or DB_PATH)
     if not db.exists():
-        return f"{db} does not exist"
+        if must_exist:
+            return f"{db} does not exist"
+        return None if os.access(db.parent, os.W_OK) else f"{db.parent} is not writable"
     if not os.access(db, os.W_OK):
         return f"{db} is not writable (mode {oct(db.stat().st_mode & 0o777)})"
     if not os.access(db.parent, os.W_OK):

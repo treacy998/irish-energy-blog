@@ -23,7 +23,7 @@ from scaffold import scaffold_daily
 from fetch import fetch_wind_and_demand, fetch_semo
 from bess import simulate_bess
 from storage import upload_charts_for_date
-from store import catch_up_store, persist_day
+from store import catch_up_store, persist_day, store_write_problem
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
@@ -96,9 +96,9 @@ def parse_args():
              "days. Exit 0 only if nothing is missing but, possibly, yesterday's price.",
     )
     parser.add_argument("--db", type=Path, default=None, metavar="PATH",
-                        help="History database (default: data/history.db). For --store-only and tests.")
+                        help="History database (default: data/history.db).")
     parser.add_argument("--data-dir", type=Path, default=None, metavar="DIR",
-                        help="Where SEMO files and eirgrid_raw/ live (default: data/). For tests.")
+                        help="Where SEMO files and eirgrid_raw/ live (default: data/). --store-only only.")
     args = parser.parse_args()
     if args.store_only and (args.date or args.csv_file or args.force or args.include_bess):
         parser.error("--store-only takes none of --date, CSV_FILE, --force, --include-bess")
@@ -110,6 +110,12 @@ def main():
     if args.store_only:
         sys.exit(catch_up_store(args.db, args.data_dir or DATA_DIR))
     TOTAL_STEPS = 3
+
+    # Before anything else: a store that can't be written must be loud now, not after the post.
+    store_problem = store_write_problem(args.db, must_exist=False)
+    store_failed = False
+    if store_problem:
+        print(f"STORE NOT WRITABLE: {store_problem}")
 
     # ── Step 1: find / fetch data file ───────────────────────────────────────
     step(1, TOTAL_STEPS, "Finding data file...")
@@ -176,13 +182,19 @@ def main():
         print("  – EirGrid fetch failed, continuing without wind data")
 
     # Keep data/history.db current so the audit and rolling baselines never
-    # depend on a separate backfill. Idempotent; a failure here is loud but
-    # doesn't block the post.
-    try:
-        price_rows, cond_rows = persist_day(delivery_date, df, eirgrid_df)
-        print(f"  ✓ history.db: {price_rows} price rows, {cond_rows} system_conditions rows")
-    except Exception as e:
-        print(f"  ! history.db write FAILED ({e}) — backfill {date_str} with pipeline/store.py")
+    # depend on a separate backfill. Idempotent. A failure doesn't stop the post
+    # (it is generated below) but is printed as STORE WRITE FAILED and makes the
+    # run exit nonzero at the end.
+    if store_problem:
+        store_failed = True
+        print(f"STORE WRITE FAILED {date_str}: {store_problem}")
+    else:
+        try:
+            price_rows, cond_rows = persist_day(delivery_date, df, eirgrid_df, db_path=args.db)
+            print(f"  ✓ history.db: {price_rows} price rows, {cond_rows} system_conditions rows")
+        except Exception as e:
+            store_failed = True
+            print(f"STORE WRITE FAILED {date_str}: {type(e).__name__}: {e}")
 
     bess_result = None
     if args.include_bess:
@@ -229,6 +241,10 @@ def main():
     3. Publish:
        git add . && git commit -m "Daily briefing {date_str}" && git push
 """)
+    if store_failed:
+        print(f"STORE WRITE FAILED {date_str}: the post was generated but history.db was not updated; "
+              f"fix the store, then run: python pipeline/run_daily.py --store-only")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
