@@ -121,6 +121,30 @@ def test_numbers_outside_the_commentary_section_are_not_this_checks_business():
         assert audit_posts.commentary_numbers("## Other\n\nInvented 999 here.\n") == []
 
 
+def test_empty_section_flag():
+    fm = "---\ntitle: x\ndraft: false\n---\n\n"
+    broker = ("## Broker Takeaway\n\n<!-- hint\nspanning lines -->\n\n"
+              "**Renewing:**\n\n**On variable:**\n\n**Already fixed:**\n\n")
+    got = audit_posts.empty_sections(fm + "## Price Profile\n\ntext\n\n" + broker + "## Commentary\n\nwords\n")
+    assert [h for h, _ in got] == ["Broker Takeaway"]
+    assert audit_posts.empty_sections(fm + "## Commentary\n\n<!-- note -->\n\n## Methodology\n\nbody\n") == \
+        [("Commentary", 6)]
+    # a label with content is not empty; a trailing empty heading at EOF is
+    assert audit_posts.empty_sections(fm + "## Broker Takeaway\n\n**Renewing:** call now\n\n**On variable:**\n") == []
+    assert [h for h, _ in audit_posts.empty_sections(fm + "## Last\n")] == ["Last"]
+    # the weekly Commentary placeholder is exempt only while draft: true
+    draft = "---\ntitle: x\ndraft: true\n---\n\n## Commentary\n\n<!-- todo -->\n\n## Methodology\n\nbody\n"
+    assert audit_posts.empty_sections(draft) == []
+    assert [h for h, _ in audit_posts.empty_sections(draft.replace("draft: true", "draft: false"))] == ["Commentary"]
+    assert [h for h, _ in audit_posts.empty_sections(draft.replace("Commentary", "Other"))] == ["Other"]
+
+
+def test_generated_weekly_draft_has_no_empty_section_flag():
+    with tempfile.TemporaryDirectory() as t:
+        path, summary, gt = make_post(Path(t))
+        assert audit_posts.audit_empty_sections(path) == []
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in tests:

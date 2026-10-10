@@ -32,6 +32,9 @@ labelled table rows in WEEKLY_ROWS below and compared with weekly_stats.weekly_s
 pipeline/audit/fixtures/weekly_2026-09-28.md shows the format. A baseline that
 weekly_summary suppresses has no ground truth, so a post that publishes a rank or
 verdict from it is flagged.
+Every post (daily and weekly) is also checked for empty_section: a ## or ### heading with no visible body
+before the next heading (HTML comments and bare "**Label:**" lines don't count; the weekly Commentary
+placeholder is exempt while draft: true).
 Weekly posts without week_start are listed, not audited. Every number in an audited weekly
 post's "## Commentary" section must match a weekly_summary figure at the precision written, or
 it is flagged unverified_commentary_number (dates, years, ordinals and HTML comments are exempt).
@@ -493,6 +496,40 @@ def commentary_numbers(text: str) -> list:
     return out
 
 
+HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
+BARE_LABEL_RE = re.compile(r"^\s*\*\*[^*\n]+:\*\*\s*$", re.M)   # "**Renewing:**" with nothing after it
+
+
+def empty_sections(text: str) -> list:
+    """(heading, line) for every ## / ### heading with no visible body before the next heading.
+    HTML comments, whitespace and bare "**Label:**" lines do not count as body. The weekly post's
+    Commentary placeholder is exempt while the post is still draft: true."""
+    lines = text.split("\n")
+    body_start = 0
+    fm = re.match(r"---\n(.*?)\n---\n", text, re.S)
+    is_draft = bool(fm and re.search(r"^draft:\s*true\b", fm.group(1), re.M))
+    if fm:
+        body_start = text[:fm.end()].count("\n")
+    heads = [(i, m.group(2).strip()) for i, l in enumerate(lines) if i >= body_start
+             and (m := re.match(r"^(#{2,3})\s+(.+?)\s*$", l))]
+    rows = []
+    for n, (i, title) in enumerate(heads):
+        end = heads[n + 1][0] if n + 1 < len(heads) else len(lines)
+        # a comment can span lines, so strip comments from the whole section, not per line
+        body = BARE_LABEL_RE.sub("", HTML_COMMENT_RE.sub("", "\n".join(lines[i + 1:end])))
+        if body.strip():
+            continue
+        if is_draft and title == "Commentary":
+            continue
+        rows.append((title, i + 1))
+    return rows
+
+
+def audit_empty_sections(post_path: Path) -> list:
+    return [[f"section:{title}", "empty_section", title, "N/A", "", ln, "empty_section"]
+            for title, ln in empty_sections(post_path.read_text())]
+
+
 def audit_commentary(post_path: Path, summary: dict) -> list:
     """audit rows ([surface, field, published, computed, delta, line, note]) for every commentary
     number that matches no weekly_summary figure."""
@@ -508,7 +545,7 @@ def audit_weekly_post(post_path: Path, gt: dict, exact: bool = True, summary: di
     rows = compare_findings(extract_weekly_rows(post_path.read_text().split("\n")), gt, exact)
     if summary is not None:
         rows += audit_commentary(post_path, summary)
-    return rows
+    return rows + audit_empty_sections(post_path)
 
 
 def weekly_start_of(post_path: Path):
@@ -542,7 +579,7 @@ def audit_post(post_path: Path, gt: dict, exact: bool = False) -> list:
     findings.extend(extract_inline_summary(lines))
     findings.extend(extract_prose(lines, table_line_nos, fm_range))
 
-    results = compare_findings(findings, gt, exact)
+    results = compare_findings(findings, gt, exact) + audit_empty_sections(post_path)
 
     # Structural check: does a published (charge_start, discharge_start) pair,
     # from any surface, respect discharge-after-charge in array-index order?
