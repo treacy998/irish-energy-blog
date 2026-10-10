@@ -43,8 +43,22 @@
       {{ end }}
       <div class="min-h-0 min-w-0 max-w-prose grow">
         {{ .Content | emojify }}
-        {{ $weeklies := sort (where site.RegularPages "Section" "weekly") "Date" "desc" }}
-        {{ with $weeklies }}
+        {{ $day := .Date.Format "2006-01-02" }}
+        {{ $matches := slice }}
+        {{ range where site.RegularPages "Section" "weekly" }}
+          {{ $weekly := . }}
+          {{ with .Params.week_start }}
+            {{ $start := (time .).Format "2006-01-02" }}
+            {{ $end := ((time .).AddDate 0 0 6).Format "2006-01-02" }}
+            {{ if and (le $start $day) (le $day $end) }}
+              {{ $matches = $matches | append $weekly }}
+            {{ end }}
+          {{ end }}
+        {{ end }}
+        {{ if gt (len $matches) 1 }}
+          {{ errorf "daily %s matches %d weeklies by week_start" .File.Path (len $matches) }}
+        {{ end }}
+        {{ with $matches }}
           {{ with index . 0 }}
             <p>For the week-level picture and what it means if you're buying, see
               <a href="{{ .RelPermalink }}">{{ .Title }}</a>.</p>
