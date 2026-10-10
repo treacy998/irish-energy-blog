@@ -442,12 +442,31 @@ def backfill_prices(conn: sqlite3.Connection, start: date, end: date, data_dir: 
     return failed
 
 
+def _would_lose_values(stored: dict, grid) -> bool:
+    """True if any stored non-NULL wind/forecast/demand would become NULL in the rebuilt grid.
+    stored is {period: (wind_mw, wind_forecast_mw, demand_mw)}; grid is condition_grid()'s frame."""
+    for row in grid.itertuples(index=False):
+        old = stored.get(int(row.Period))
+        if old is None:
+            continue
+        new = (row.WindMW, row.WindForecastMW, row.DemandMW)
+        if any(o is not None and not pd_notna(n) for o, n in zip(old, new)):
+            return True
+    return False
+
+
 def rebuild_conditions(conn: sqlite3.Connection, start: date, end: date, out_dir: Path = DATA_DIR) -> int:
     """Rebuild system_conditions for [start, end] from local archives only (no network).
 
     Each date is replaced by one row per trading-day period with start_utc set,
     through the same condition_grid/upsert path the daily run uses. A date with
     no usable wind archive is left as it is and reported SKIP. Commits per date.
+
+    A date is never made poorer: if the rebuild would turn a stored non-NULL wind,
+    forecast or demand value into NULL (its own archive, or the previous day's for
+    periods 1-2, is empty or missing), the store's rows are kept and the date is
+    reported "<date> rebuild SKIPPED archive empty, store kept". The run carries on.
+
     Prints one line per date: "<date> rebuilt rows=<n> wind_null=<n> demand_null=<n>".
     Returns the number of dates rebuilt."""
     import contextlib
@@ -462,8 +481,15 @@ def rebuild_conditions(conn: sqlite3.Connection, start: date, end: date, out_dir
             demand = load_archived_area(d, "demand", out_dir)
             prev_wind, prev_demand = load_archived_previous_day(d, out_dir)
             df = combine_for_trading_day(d, wind, demand, prev_wind, prev_demand)
+        stored = {r[0]: r[1:] for r in conn.execute(
+            "SELECT period, wind_mw, wind_forecast_mw, demand_mw FROM system_conditions WHERE date=?", (ds,))}
         if df is None or df.empty:
-            print(f"{ds} rebuild SKIP no usable wind archive", flush=True)
+            if any(v is not None for vals in stored.values() for v in vals):
+                print(f"{ds} rebuild SKIPPED archive empty, store kept", flush=True)
+            else:
+                print(f"{ds} rebuild SKIP no usable wind archive", flush=True)
+        elif _would_lose_values(stored, condition_grid(d, df)):
+            print(f"{ds} rebuild SKIPPED archive empty, store kept", flush=True)
         else:
             n = upsert_system_conditions(conn, d, df)
             conn.commit()
