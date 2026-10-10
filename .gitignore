@@ -44,3 +44,6 @@ rebuild.log
 
 # nightly.sh logs
 logs/
+
+# any log
+*.log
