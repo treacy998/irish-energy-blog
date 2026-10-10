@@ -105,6 +105,17 @@ def classify_day_type(summary: dict) -> str:
     return "flat"
 
 
+def build_broker_section(renewing: str = "", on_variable: str = "", already_fixed: str = "") -> str:
+    """The Broker Takeaway section, or "" unless at least one label has real text. The daily
+    scaffold has no source for this text (it is written by hand), so it never emits the section:
+    an empty heading with three bare labels renders as a blank block on the live page."""
+    parts = [("Renewing", renewing), ("On variable", on_variable), ("Already fixed", already_fixed)]
+    if not any(text.strip() for _, text in parts):
+        return ""
+    body = "\n\n".join(f"**{label}:** {text.strip()}".rstrip() for label, text in parts)
+    return f"\n## Broker Takeaway\n\n{body}\n"
+
+
 class PostExistsError(FileExistsError):
     """An existing post would be overwritten and --force was not given."""
 
@@ -275,33 +286,7 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
 
     storage_prompt_line = "- Was it a good day for storage?\n" if include_bess else ""
 
-    day_type = classify_day_type(summary)
-    guardrail = "spot ≠ forward, educate don't signal"
-    if day_type == "wide-spread":
-        spread_value = summary.get("peak_offpeak_spread")
-        spread_label = "Peak/off-peak spread" if spread_value is not None else "Price range"
-        if spread_value is None:
-            spread_value = summary["price_range"]
-        cue = f"{spread_label} hit €{spread_value:.0f}/MWh today — good context for demand flexibility and storage conversations — {guardrail}."
-    elif day_type == "spike":
-        cue = f"Price spiked to €{summary['peak_price']:.0f}/MWh at {summary['peak_time']} — useful for explaining exposure on variable-rate contracts — {guardrail}."
-    elif day_type == "wind-cheap":
-        cue = f"Wind at {summary['wind_pct_mean']:.0f}% pushed the average down to €{summary['mean_price']:.0f}/MWh — good example of renewables lowering average cost — {guardrail}."
-
-    if day_type == "flat":
-        broker_section = ""
-    else:
-        broker_section = f"""
-## Broker Takeaway
-
-<!-- {cue} -->
-
-**Renewing:**
-
-**On variable:**
-
-**Already fixed:**
-"""
+    broker_section = build_broker_section()
 
     # Generate markdown
     md = f"""---
