@@ -34,8 +34,9 @@ weekly_summary suppresses has no ground truth, so a post that publishes a rank o
 verdict from it is flagged. Weekly posts without week_start are listed, not audited.
 
 --exact sets the tolerance to 0 for integer-valued fields (INTEGER_FIELDS:
-counts, rank, percentile, days_since). Every other numeric field keeps the
-default ±1.0 tolerance, which would hide an off-by-one in a count.
+counts, rank, percentile, days_since) in daily posts. Every other numeric field keeps the
+default ±1.0 tolerance, which would hide an off-by-one in a count. Weekly posts need no
+flag: their rank, since, verdict and count fields are always compared exactly.
 """
 
 import argparse
@@ -411,7 +412,9 @@ def extract_weekly_rows(lines) -> list:
     return out
 
 
-def audit_weekly_post(post_path: Path, gt: dict, exact: bool = False) -> list:
+def audit_weekly_post(post_path: Path, gt: dict, exact: bool = True) -> list:
+    """Rank, count (periods_above_*), since and verdict fields are exact by default: a weekly
+    post's rank is a fact, so a rank of 5 where the store says 4 is a flag, with or without --exact."""
     return compare_findings(extract_weekly_rows(post_path.read_text().split("\n")), gt, exact)
 
 
@@ -481,8 +484,8 @@ def main():
                         help="Audit the posts under DIR/daily and DIR/weekly instead of site/content "
                              "(a missing subdirectory is treated as having no posts).")
     parser.add_argument("--exact", action="store_true",
-                        help="Tolerance 0 for integer-valued fields (counts, rank, percentile, "
-                             "days_since); other fields keep ±1.0.")
+                        help="Daily posts: tolerance 0 for integer-valued fields (counts, rank, percentile, "
+                             "days_since); other fields keep ±1.0. Weekly posts are always exact.")
     args = parser.parse_args()
     posts_dir, weekly_dir = POSTS_DIR, WEEKLY_DIR
     if args.content_root:
@@ -542,7 +545,7 @@ def main():
                 skipped.append((f"weekly/{wdir.name}", str(e)))
                 continue
             checked += 1
-            for row in audit_weekly_post(idx, weekly_ground_truth(summary), exact=args.exact):
+            for row in audit_weekly_post(idx, weekly_ground_truth(summary)):
                 all_rows.append([f"weekly:{ws.isoformat()}"] + row)
 
     conn.close()
