@@ -10,6 +10,7 @@ Usage:
     python pipeline/scaffold.py 2026-04-13 weekly  # weekly post template
 """
 
+import re
 import sys
 from pathlib import Path
 from datetime import date, timedelta
@@ -102,6 +103,33 @@ def classify_day_type(summary: dict) -> str:
     if wind_pct is not None and wind_pct >= 55 and summary["mean_price"] <= 55:
         return "wind-cheap"
     return "flat"
+
+
+class PostExistsError(FileExistsError):
+    """An existing post would be overwritten and --force was not given."""
+
+
+def _front_matter_and_body(text: str) -> tuple[str, str]:
+    m = re.match(r"---\n(.*?)\n---\n", text, re.S)
+    return (m.group(1), text[m.end():]) if m else ("", text)
+
+
+def check_post_overwrite(outpath: Path, new_md: str, force: bool = False) -> None:
+    """Raise PostExistsError unless outpath can be (re)written without losing anything.
+
+    An existing post may be rewritten only when it is still a draft (draft: true) and its body
+    is exactly what the scaffold would write now. A published post (draft: false) or one whose
+    body differs from the scaffold output has been edited or released, so only force=True
+    overwrites it. A missing file is always fine."""
+    if force or not outpath.exists():
+        return
+    old_fm, old_body = _front_matter_and_body(outpath.read_text())
+    _, new_body = _front_matter_and_body(new_md)
+    is_draft = re.search(r"^draft:\s*true\s*$", old_fm, re.M) is not None
+    if is_draft and old_body == new_body:
+        return
+    why = "it is published (draft is not true)" if not is_draft else "its body differs from the scaffold output"
+    raise PostExistsError(f"{outpath} exists and {why}; refusing to overwrite it. Pass --force to replace it.")
 
 
 def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = None, eirgrid_df=None, bess_result=None, force: bool = False, include_bess: bool = False):
@@ -327,11 +355,7 @@ Write 2-3 paragraphs here:
     outdir.mkdir(parents=True, exist_ok=True)
     outpath = outdir / "index.md"
 
-    if outpath.exists() and not force:
-        print(f"\nPost already exists — skipping scaffold to preserve your edits: {outpath}")
-        print(f"Charts were regenerated. Use --force to overwrite the post.")
-        return
-
+    check_post_overwrite(outpath, md, force)
     outpath.write_text(md)
     print(f"\nPost scaffolded: {outpath}")
     print(f"Next: open the file, write your commentary, push to git.")

@@ -19,7 +19,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from process import load_dam_data
-from scaffold import scaffold_daily
+from scaffold import PostExistsError, scaffold_daily
 from fetch import fetch_wind_and_demand, fetch_semo
 from bess import simulate_bess
 from storage import upload_charts_for_date
@@ -81,7 +81,8 @@ def parse_args():
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Overwrite an existing post. By default the post is preserved if it already exists.",
+        help="Overwrite an existing post and regenerate its charts. Without it an existing post is only rewritten "
+             "if it is still draft: true with a body identical to the scaffold output; otherwise the run refuses.",
     )
     parser.add_argument(
         "--include-bess",
@@ -207,8 +208,13 @@ def main():
     chart_day_dir = CHART_DIR / date_str
     before = {p.name: p.stat().st_mtime_ns for p in chart_day_dir.glob("*")} if chart_day_dir.exists() else {}
 
-    scaffold_daily(delivery_date, explicit_file=filepath, title=title, eirgrid_df=eirgrid_df,
-                   bess_result=bess_result, force=args.force, include_bess=args.include_bess)
+    post_refused = False
+    try:
+        scaffold_daily(delivery_date, explicit_file=filepath, title=title, eirgrid_df=eirgrid_df,
+                       bess_result=bess_result, force=args.force, include_bess=args.include_bess)
+    except PostExistsError as e:
+        post_refused = True
+        print(f"\nPOST NOT WRITTEN: {e}")
 
     # ── Upload charts to Vercel Blob (no-op if BLOB_READ_WRITE_TOKEN not set) ─
     upload_charts_for_date(chart_day_dir)
@@ -244,6 +250,7 @@ def main():
     if store_failed:
         print(f"STORE WRITE FAILED {date_str}: the post was generated but history.db was not updated; "
               f"fix the store, then run: python pipeline/run_daily.py --store-only")
+    if store_failed or post_refused:
         sys.exit(1)
 
 

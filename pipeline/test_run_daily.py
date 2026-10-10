@@ -12,6 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 import run_daily
+from scaffold import PostExistsError, check_post_overwrite
 from test_store_only import conditions_df, price_df
 
 DAY = date(2026, 10, 5)
@@ -84,6 +85,74 @@ def test_persist_exception_prints_date_and_exception_and_exits_nonzero():
         assert code == 1 and len(scaffolded) == 1, (code, out)
         assert "STORE WRITE FAILED 2026-10-05: OperationalError: database is locked" in out, out
         assert "STORE NOT WRITABLE" not in out
+
+
+def post(draft: str, body: str) -> str:
+    return f"---\ntitle: \"t\"\ndraft: {draft}\n---\n\n{body}\n"
+
+
+def refuses(path: Path, new_md: str, force=False) -> bool:
+    try:
+        check_post_overwrite(path, new_md, force)
+        return False
+    except PostExistsError:
+        return True
+
+
+def test_overwrite_guard_on_a_temp_content_tree():
+    with tempfile.TemporaryDirectory() as t:
+        out = Path(t) / "site" / "content" / "daily" / "2026-10-05" / "index.md"
+        out.parent.mkdir(parents=True)
+        scaffold = post("false", "## Commentary\n\n<!-- Write 2-3 paragraphs -->")
+        assert not refuses(out, scaffold)                                    # no file yet
+        out.write_text(post("true", "## Commentary\n\n<!-- Write 2-3 paragraphs -->"))
+        assert not refuses(out, scaffold)                                    # untouched draft: rewritable
+        out.write_text(post("true", "## Commentary\n\nWind collapsed on Thursday."))
+        edited = out.read_text()
+        assert refuses(out, scaffold) and out.read_text() == edited          # draft, but you wrote in it
+        out.write_text(post("false", "## Commentary\n\n<!-- Write 2-3 paragraphs -->"))
+        assert refuses(out, scaffold)                                        # published, body identical
+        out.write_text(post("false", "## Commentary\n\nWritten and published."))
+        published = out.read_text()
+        assert refuses(out, scaffold) and out.read_text() == published       # published and edited
+        assert not refuses(out, scaffold, force=True)                        # --force is the only way through
+
+
+def test_run_daily_exits_nonzero_when_the_post_is_refused_and_still_stores():
+    with tempfile.TemporaryDirectory() as t:
+        db = seeded_db(Path(t))
+        saved = run_daily.scaffold_daily
+        def refuse(*a, **k):
+            raise PostExistsError("site/content/daily/2026-10-05/index.md exists and it is published; refusing")
+        code, out, _ = None, "", None
+        try:
+            # run_main replaces scaffold_daily, so wrap: install the refusing stub after its own stub is set
+            import contextlib as cl, io as _io
+            names = ("fetch_semo", "load_dam_data", "fetch_wind_and_demand", "upload_charts_for_date", "CHART_DIR")
+            keep = {n: getattr(run_daily, n) for n in names}
+            run_daily.fetch_semo = lambda delivery_date=None, out_dir=None: Path("MarketResult_SEM-DA_fake.csv")
+            run_daily.load_dam_data = lambda p: price_df(DAY)
+            run_daily.fetch_wind_and_demand = lambda d, out_dir=None: conditions_df(d)
+            run_daily.upload_charts_for_date = lambda p: None
+            run_daily.CHART_DIR = Path(t) / "charts"
+            run_daily.scaffold_daily = refuse
+            buf, argv = _io.StringIO(), sys.argv
+            sys.argv = ["run_daily.py", "--date", DAY.isoformat(), "--db", str(db)]
+            try:
+                with cl.redirect_stdout(buf):
+                    try:
+                        run_daily.main()
+                    except SystemExit as e:
+                        code = e.code
+            finally:
+                sys.argv = argv
+            out = buf.getvalue()
+            for n, v in keep.items():
+                setattr(run_daily, n, v)
+        finally:
+            run_daily.scaffold_daily = saved
+        assert code == 1 and "POST NOT WRITTEN: " in out and "STORE" not in out, (code, out)
+        assert sqlite3.connect(db).execute("SELECT COUNT(*) FROM market_prices WHERE date='2026-10-05'").fetchone()[0] == 48
 
 
 if __name__ == "__main__":
