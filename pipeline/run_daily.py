@@ -8,6 +8,7 @@ Usage:
     python pipeline/run_daily.py                      # yesterday's delivery date (Irish local)
     python pipeline/run_daily.py --date 2026-05-04    # fetch/backfill a specific date
     python pipeline/run_daily.py path/to/file.csv     # use a local CSV directly
+    python pipeline/run_daily.py --store-only         # history.db only: catch up to yesterday, then heal
 """
 
 import argparse
@@ -22,7 +23,7 @@ from scaffold import scaffold_daily
 from fetch import fetch_wind_and_demand, fetch_semo
 from bess import simulate_bess
 from storage import upload_charts_for_date
-from store import persist_day
+from store import catch_up_store, persist_day
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CHART_DIR = Path(__file__).parent.parent / "site" / "static" / "charts"
@@ -87,11 +88,27 @@ def parse_args():
         action="store_true",
         help="Run the BESS simulation and emit its charts and post section. Off by default.",
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--store-only",
+        action="store_true",
+        help="Update data/history.db only (no posts, charts or BESS): fetch prices and conditions from the "
+             "store's last date +1 through yesterday (max 14 dates), then heal NULL demand over the last 14 "
+             "days. Exit 0 only if nothing is missing but, possibly, yesterday's price.",
+    )
+    parser.add_argument("--db", type=Path, default=None, metavar="PATH",
+                        help="History database (default: data/history.db). For --store-only and tests.")
+    parser.add_argument("--data-dir", type=Path, default=None, metavar="DIR",
+                        help="Where SEMO files and eirgrid_raw/ live (default: data/). For tests.")
+    args = parser.parse_args()
+    if args.store_only and (args.date or args.csv_file or args.force or args.include_bess):
+        parser.error("--store-only takes none of --date, CSV_FILE, --force, --include-bess")
+    return args
 
 
 def main():
     args = parse_args()
+    if args.store_only:
+        sys.exit(catch_up_store(args.db, args.data_dir or DATA_DIR))
     TOTAL_STEPS = 3
 
     # ── Step 1: find / fetch data file ───────────────────────────────────────

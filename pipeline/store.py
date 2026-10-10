@@ -25,12 +25,16 @@ Design notes:
     so re-running the backfill (or a daily incremental run) never duplicates rows.
 """
 
+import contextlib
+import io
+import os
 import sqlite3
 import sys
 import time
 import traceback
 from pathlib import Path
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -38,8 +42,8 @@ from process import load_dam_data
 from trading_day import calendar_label_to_utc, expected_periods, iso_z, period_labels, period_starts_utc
 from fetch import (
     AREA_FIELDS, archive_path, archive_row_count, combine_for_trading_day,
-    compute_wind_pct, fetch_area, fetch_semo, load_archived_area, load_archived_previous_day,
-    resample_demand,
+    compute_wind_pct, fetch_area, fetch_semo, fetch_wind_and_demand, load_archived_area,
+    load_archived_previous_day, resample_demand,
 )
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -513,6 +517,107 @@ def pd_notna(value) -> bool:
 
 def _label(name: str, dates: list[str]) -> str:
     return f"{name}: {len(dates)} dates: {','.join(dates) if dates else 'none'}"
+
+
+def store_write_problem(db_path: Path | None = None) -> str | None:
+    """Why the store can't be written, or None if it can. SQLite needs the file writable and,
+    for its journal, the directory; a chmod 444 file fails here instead of mid-transaction."""
+    db = Path(db_path or DB_PATH)
+    if not db.exists():
+        return f"{db} does not exist"
+    if not os.access(db, os.W_OK):
+        return f"{db} is not writable (mode {oct(db.stat().st_mode & 0o777)})"
+    if not os.access(db.parent, os.W_OK):
+        return f"{db.parent} is not writable (SQLite cannot create its journal)"
+    return None
+
+
+def catch_up_store(db_path: Path | None = None, data_dir: Path = DATA_DIR, now: datetime | None = None,
+                   sleep_s: float = 1.0, max_dates: int = 14, heal_days: int = 14) -> int:
+    """Store only: no posts, no charts, no BESS. Fetch prices and conditions for every delivery
+    date from MAX(market_prices.date)+1 through yesterday (Irish calendar), oldest first, at most
+    max_dates per run, sleep_s apart, each written with persist_day. Then one heal pass over the
+    last heal_days days. A missed run self-heals: the next one starts from the store's max date.
+
+    Raw EirGrid archives are fetched with overwrite_raw=False, so an archive that has rows is
+    never replaced. A date whose price fails stops the run, so the store never gains a hole
+    behind its max date.
+
+    One line per date. Exit code: 0 = nothing missing, or only yesterday's price is not
+    published yet; 1 = an older price is missing (or more dates remain than max_dates);
+    2 = the store is not writable, or an exception (including any failure other than
+    'no report yet' for yesterday) was raised."""
+    db = Path(db_path or DB_PATH)
+    problem = store_write_problem(db)
+    if problem:
+        print(f"STORE NOT WRITABLE: {problem}", flush=True)
+        return 2
+    yesterday = (now or datetime.now(ZoneInfo("Europe/Dublin"))).date() - timedelta(days=1)
+
+    conn = build_db(db)
+    try:
+        last = conn.execute("SELECT MAX(date) FROM market_prices").fetchone()[0]
+    finally:
+        conn.close()
+    if last is None:
+        print("store has no market_prices rows; seed it with store.py --backfill-prices first", flush=True)
+        return 2
+
+    todo, d = [], date.fromisoformat(last) + timedelta(days=1)
+    while d <= yesterday:
+        todo.append(d)
+        d += timedelta(days=1)
+    rc = 0
+    if len(todo) > max_dates:
+        print(f"{len(todo)} dates behind; fetching the oldest {max_dates} this run", flush=True)
+        rc = 1
+        todo = todo[:max_dates]
+    if not todo:
+        print(f"store is current through {last}", flush=True)
+
+    for i, d in enumerate(todo):
+        if i and sleep_s:
+            time.sleep(sleep_s)
+        ds = d.isoformat()
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):     # keep one line per date
+                price_df = load_dam_data(fetch_semo(d, out_dir=data_dir))
+            if price_df["DeliveryDate"].iloc[0].date() != d:
+                raise ValueError(f"file is for {price_df['DeliveryDate'].iloc[0].date()}, not {d}")
+        except Exception as e:
+            reason = f"{type(e).__name__}: {' '.join(str(e).split())}"
+            if d == yesterday and isinstance(e, FileNotFoundError):     # fetch_semo: no such report yet
+                print(f"{ds} price not published yet ({reason})", flush=True)
+            else:
+                print(f"{ds} price FAIL ({reason}); stopping, later dates would leave a hole", flush=True)
+                rc = max(rc, 2 if d == yesterday else 1)
+            break
+        try:
+            cond_note = ""
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    conditions = fetch_wind_and_demand(d, out_dir=data_dir, overwrite_raw=False)
+            except Exception as e:
+                conditions, cond_note = None, f" conditions-error {type(e).__name__}: {' '.join(str(e).split())}"
+            price_rows, cond_rows = persist_day(d, price_df, conditions, db_path=db)
+            if conditions is None and not cond_note:
+                cond_note = " wind unavailable"
+            print(f"{ds} ok price_rows={price_rows} cond_rows={cond_rows}{cond_note}", flush=True)
+        except Exception as e:
+            print(f"STORE WRITE FAILED {ds}: {e}", flush=True)
+            return 2
+
+    try:
+        conn = build_db(db)
+        try:
+            heal_demand(conn, yesterday - timedelta(days=heal_days - 1), yesterday, out_dir=data_dir)
+        finally:
+            conn.close()
+    except Exception as e:
+        traceback.print_exc()
+        print(f"heal pass raised {type(e).__name__}: {e}", flush=True)
+        return 2
+    return rc
 
 
 def _run(args) -> int:
