@@ -141,9 +141,49 @@ def test_wind_unavailable_stores_prices_and_says_so():
     with tempfile.TemporaryDirectory() as t:
         h = Harness(Path(t), wind_ok=False)
         rc, out = h.run()
-        assert rc == 0 and "cond_rows=0 wind unavailable" in out, out
+        assert rc == 1 and "cond_rows=0 wind unavailable" in out, out
+        assert out.rstrip().endswith("WIND STILL MISSING: 2026-10-08"), out        # yesterday's wind is a real failure
         n = sqlite3.connect(h.db).execute("SELECT COUNT(*) FROM system_conditions WHERE date='2026-10-05'").fetchone()[0]
         assert n == 0                                       # no zero-valued rows
+
+
+def null_demand(h, ds):
+    c = sqlite3.connect(h.db)
+    c.execute("UPDATE system_conditions SET demand_mw=NULL, wind_pct=NULL WHERE date=?", (ds,))
+    c.commit()
+    c.close()
+
+
+def test_demand_still_missing_after_three_days_is_nonzero_but_recent_gaps_are_warnings():
+    with tempfile.TemporaryDirectory() as t:
+        h = Harness(Path(t))
+        null_demand(h, "2026-10-04")                         # 4 days before yesterday (2026-10-08)
+        rc, out = h.run()
+        assert rc == 1 and "DEMAND STILL MISSING: 2026-10-04" in out, (rc, out)
+        assert "WIND STILL MISSING" not in out
+    with tempfile.TemporaryDirectory() as t:
+        h = Harness(Path(t))
+        h.run()
+        null_demand(h, "2026-10-06")                         # 2 days before yesterday: heal may yet fill it
+        null_demand(h, "2026-10-08")
+        rc, out = h.run()
+        assert rc == 0 and "STILL MISSING" not in out, (rc, out)
+
+
+def test_autumn_change_day_keeps_its_four_unplaceable_half_hours_without_failing():
+    with tempfile.TemporaryDirectory() as t:
+        h = Harness(Path(t), last=date(2026, 10, 25))
+        conn = sqlite3.connect(h.db)
+        rows = conn.execute("SELECT period FROM system_conditions WHERE date='2026-10-25' ORDER BY period").fetchall()
+        assert len(rows) == 50
+        def null_n(n):
+            conn.execute("UPDATE system_conditions SET demand_mw=NULL WHERE date='2026-10-25'")
+            conn.execute("UPDATE system_conditions SET demand_mw=4000 WHERE date='2026-10-25' AND period > ?", (n,))
+        null_n(4)
+        assert store.persistent_gaps(conn, date(2026, 10, 30))[0] == []
+        null_n(5)
+        assert store.persistent_gaps(conn, date(2026, 10, 30))[0] == ["2026-10-25"]
+        conn.close()
 
 
 def test_read_only_store_fails_loudly_and_fetches_nothing():

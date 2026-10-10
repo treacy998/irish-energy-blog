@@ -579,6 +579,32 @@ def day_is_stored(d: date, db_path: Path | None = None) -> bool:
     return n == expected_periods(d) and nulls == 0
 
 
+PERSISTENT_GAP_DAYS = 3
+
+
+def persistent_gaps(conn: sqlite3.Connection, yesterday: date, heal_days: int = 14) -> tuple[list[str], bool]:
+    """What the heal pass could not fix. (dates, wind_missing): dates in the heal window at least
+    PERSISTENT_GAP_DAYS before yesterday that still have a NULL demand_mw row, and whether yesterday's
+    wind is missing (prices stored for it, but no conditions row or a NULL wind_mw). A single flaky
+    heal is normal; demand still empty after three days is not. The 50-period autumn day keeps
+    its 4 repeated-hour half-hours NULL for ever (EirGrid lists that hour once), so up to 4 NULL rows
+    on such a day are not a gap."""
+    lo = (yesterday - timedelta(days=heal_days - 1)).isoformat()
+    hi = (yesterday - timedelta(days=PERSISTENT_GAP_DAYS)).isoformat()
+    dates = []
+    for ds, n in conn.execute("SELECT date, COUNT(*) FROM system_conditions WHERE date BETWEEN ? AND ? "
+                              "AND demand_mw IS NULL GROUP BY date ORDER BY date", (lo, hi)).fetchall():
+        if expected_periods(date.fromisoformat(ds)) == 50 and n <= 4:
+            continue
+        dates.append(ds)
+    y = yesterday.isoformat()
+    priced = conn.execute("SELECT COUNT(*) FROM market_prices WHERE date=?", (y,)).fetchone()[0]
+    have_wind = conn.execute("SELECT COUNT(*) FROM system_conditions WHERE date=? AND wind_mw IS NOT NULL",
+                             (y,)).fetchone()[0]
+    null_wind = conn.execute("SELECT COUNT(*) FROM system_conditions WHERE date=? AND wind_mw IS NULL", (y,)).fetchone()[0]
+    return dates, bool(priced) and (have_wind == 0 or null_wind > 0)
+
+
 def catch_up_store(db_path: Path | None = None, data_dir: Path = DATA_DIR, now: datetime | None = None,
                    sleep_s: float = 1.0, max_dates: int = 14, heal_days: int = 14) -> int:
     """Store only: no posts, no charts, no BESS. Fetch prices and conditions for every delivery
@@ -593,7 +619,9 @@ def catch_up_store(db_path: Path | None = None, data_dir: Path = DATA_DIR, now: 
     One line per date. Exit code: 0 = nothing missing, or only yesterday's price is not
     published yet; 1 = an older price is missing (or more dates remain than max_dates);
     2 = the store is not writable, or an exception (including any failure other than
-    'no report yet' for yesterday) was raised."""
+    'no report yet' for yesterday) was raised. After the heal pass, 1 also means demand is still
+    NULL on a date at least 3 days before yesterday ("DEMAND STILL MISSING"), or yesterday's wind
+    is missing ("WIND STILL MISSING"); a single heal FAIL line stays a warning."""
     db = Path(db_path or DB_PATH)
     problem = store_write_problem(db)
     if problem:
@@ -658,12 +686,19 @@ def catch_up_store(db_path: Path | None = None, data_dir: Path = DATA_DIR, now: 
         conn = build_db(db)
         try:
             heal_demand(conn, yesterday - timedelta(days=heal_days - 1), yesterday, out_dir=data_dir)
+            gap_dates, wind_missing = persistent_gaps(conn, yesterday, heal_days)
         finally:
             conn.close()
     except Exception as e:
         traceback.print_exc()
         print(f"heal pass raised {type(e).__name__}: {e}", flush=True)
         return 2
+    if gap_dates:
+        print(f"DEMAND STILL MISSING: {', '.join(gap_dates)}", flush=True)
+        rc = max(rc, 1)
+    if wind_missing:
+        print(f"WIND STILL MISSING: {yesterday.isoformat()}", flush=True)
+        rc = max(rc, 1)
     return rc
 
 
