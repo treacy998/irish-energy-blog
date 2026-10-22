@@ -9,8 +9,11 @@ ci_daily.py — one unattended daily run, for GitHub Actions (.github/workflows/
    changes. This is what makes the evening retry a no-op after a morning success.
 2. data/ is gitignored, so a runner has no history. With --restore-raw, take the 6 days before the target
    and the previous day's EirGrid archive from the raw repo (pipeline/raw_archive.py), which is the
-   source of truth for published figures; a failure there fails the run. Whatever is still missing is
-   fetched from SEMOpx
+   source of truth for published figures; a failure there fails the run. The target day's own raw files
+   are restored too if the archive holds them (an earlier run archived them, then died before the content
+   push): the post is then generated from those bytes and nothing is fetched afresh for the day, so the
+   later raw push cannot see a differing hash. Only an area with nothing archived is fetched. Whatever is
+   still missing is fetched from SEMOpx
    (the 7-day week-compare chart needs them; a missing one is a failure, not a quietly shorter chart)
    and the previous day's EirGrid archive (a missing one leaves two half-hours NaN, as by design).
 3. Run run_daily.py --date <date> unchanged. Its stale-data gate and fetch.py's fail-closed paths
@@ -96,7 +99,8 @@ def main():
     charts_dir = Path(CONTENT_DIR.parent / "static" / "charts" / iso)
     charts_existed = charts_dir.exists()
     env = {**os.environ, "CI": "1"}
-    proc = subprocess.Popen([sys.executable, str(Path(__file__).parent / "run_daily.py"), "--date", iso],
+    proc = subprocess.Popen([sys.executable, str(Path(__file__).parent / "run_daily.py"), "--date", iso,
+                             "--prefer-archived-raw"],
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
     for line in proc.stdout:
         print(line, end="")

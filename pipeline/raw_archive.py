@@ -95,11 +95,14 @@ def clone(remote: str, dest: Path, sparse: list[str] | None = None) -> bool:
 
 
 def needed_paths(target: date) -> list[str]:
-    """What a run for `target` reads from history: the SEMOpx files of the 6 days before it and the
-    previous day's EirGrid archive. The target day itself is always fetched live."""
+    """What a run for `target` reads from the archive: the SEMOpx files of the 6 days before it and the
+    previous day's EirGrid archive, plus the target day's own SEMOpx file and EirGrid archive. The
+    latter two exist only if an earlier run archived them and died before publishing; the run then
+    generates from those bytes instead of fetching afresh (see ci_daily.py)."""
     pats = [f"/data/MarketResult_SEM-DA_PWR-MRC-D+1_{(target - timedelta(days=k + 1)):%Y%m%d}*.csv"
-            for k in range(1, HISTORY_DAYS + 1)]
+            for k in range(0, HISTORY_DAYS + 1)]
     pats.append(f"/data/eirgrid_raw/{target - timedelta(days=1)}/*")
+    pats.append(f"/data/eirgrid_raw/{target}/*")
     return pats
 
 

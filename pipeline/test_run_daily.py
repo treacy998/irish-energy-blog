@@ -27,7 +27,7 @@ def run_main(db: Path, argv_extra=(), persist=None) -> tuple[object, str, list]:
     saved = {n: getattr(run_daily, n) for n in names}
     run_daily.fetch_semo = lambda delivery_date=None, out_dir=None: Path("MarketResult_SEM-DA_fake.csv")
     run_daily.load_dam_data = lambda p: price_df(DAY)
-    run_daily.fetch_wind_and_demand = lambda d, out_dir=None: conditions_df(d)
+    run_daily.fetch_wind_and_demand = lambda d, out_dir=None, **k: conditions_df(d)
     run_daily.scaffold_daily = lambda *a, **k: scaffolded.append((a, k))
     run_daily.upload_charts_for_date = lambda p: None
     run_daily.CHART_DIR = db.parent / "charts"
@@ -132,7 +132,7 @@ def test_run_daily_exits_nonzero_when_the_post_is_refused_and_still_stores():
             keep = {n: getattr(run_daily, n) for n in names}
             run_daily.fetch_semo = lambda delivery_date=None, out_dir=None: Path("MarketResult_SEM-DA_fake.csv")
             run_daily.load_dam_data = lambda p: price_df(DAY)
-            run_daily.fetch_wind_and_demand = lambda d, out_dir=None: conditions_df(d)
+            run_daily.fetch_wind_and_demand = lambda d, out_dir=None, **k: conditions_df(d)
             run_daily.upload_charts_for_date = lambda p: None
             run_daily.CHART_DIR = Path(t) / "charts"
             run_daily.scaffold_daily = refuse

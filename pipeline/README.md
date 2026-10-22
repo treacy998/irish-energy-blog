@@ -63,8 +63,11 @@ date is computed by the Irish calendar in Python, so UTC vs IST does not matter.
   (`pipeline/raw_archive.py`). It is append-only: a file already there is never replaced, and a
   differing one fails the run. Order in the job: restore history from it, generate, build and check,
   **push raw, then push content**; if the raw push fails the content is never pushed. A run that dies
-  between the two leaves raw files without a post; the retry's fresh EirGrid fetch must then match them,
-  or the push fails loudly and needs a look. One-off seeding from a local `data/`:
+  between the two leaves raw files without a post. The retry does not race them: `--restore-raw` also
+  restores the target day's own SEMOpx file and EirGrid archive, and `ci_daily.py` runs
+  `run_daily.py --prefer-archived-raw`, which generates from the archived bytes and fetches an area live
+  only if nothing is archived for it. The retry's post is byte-identical and the raw push finds every
+  file already there (`pipeline/test_ci_retry.py` simulates the death with a local bare repo). One-off seeding from a local `data/`:
   `python pipeline/raw_archive.py seed` (about 380 MB, `history.db` excluded), then `verify` clones fresh
   and runs `sha256sum -c` against the manifest. The manifest holds one stray non-data line
   (`data/.claude/settings.local.json`), which `verify` reports and skips.
