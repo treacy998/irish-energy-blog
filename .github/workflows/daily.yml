@@ -37,9 +37,16 @@ jobs:
       # authored as the owner's GitHub-verified identity, or Vercel may refuse to deploy them.
       GIT_COMMIT_NAME: ${{ vars.GIT_COMMIT_NAME }}
       GIT_COMMIT_EMAIL: ${{ vars.GIT_COMMIT_EMAIL }}
+      # Private raw-data repo (pipeline/raw_archive.py): owner/name, defaults to treacy998/inis-energy-data.
+      # The matching secret DATA_REPO_TOKEN (fine-grained PAT, that repo only, Contents read+write) is
+      # given only to the steps that use it, not to the whole job.
+      DATA_REPO: ${{ vars.DATA_REPO }}
     steps:
-      - name: Require the commit identity variables
+      - name: Require the commit identity variables and the raw-repo token
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
         run: |
+          [ -n "$DATA_REPO_TOKEN" ] || { echo "::error::secret DATA_REPO_TOKEN is not set"; exit 1; }
           [ -n "$GIT_COMMIT_NAME" ] && [ -n "$GIT_COMMIT_EMAIL" ] \
             || { echo "::error::repo variables GIT_COMMIT_NAME and GIT_COMMIT_EMAIL must both be set"; exit 1; }
 
@@ -61,11 +68,12 @@ jobs:
         env:
           INPUT_DATE: ${{ inputs.date }}
           ALLOW_NO_WIND: ${{ inputs.allow_no_wind }}
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
         run: |
           args=()
           [ -n "$INPUT_DATE" ] && args+=(--date "$INPUT_DATE")
           [ "$ALLOW_NO_WIND" = "true" ] && args+=(--allow-no-wind)
-          python pipeline/ci_daily.py "${args[@]}"
+          python pipeline/ci_daily.py --restore-raw "${args[@]}"
 
       - name: Install Hugo
         if: steps.gen.outputs.status == 'generated'
@@ -78,6 +86,13 @@ jobs:
         run: |
           "$RUNNER_TEMP/hugo" --source site -d "$RUNNER_TEMP/public"
           python pipeline/ci_verify_render.py "${{ steps.gen.outputs.date }}" "$RUNNER_TEMP/public"
+
+      # Raw first: if this fails the job stops here and the content is never pushed.
+      - name: Archive the raw data
+        if: steps.gen.outputs.status == 'generated'
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: python pipeline/raw_archive.py push --date "${{ steps.gen.outputs.date }}"
 
       - name: Commit and push
         if: steps.gen.outputs.status == 'generated'

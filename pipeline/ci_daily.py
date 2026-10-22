@@ -7,7 +7,10 @@ ci_daily.py — one unattended daily run, for GitHub Actions (.github/workflows/
 
 1. If site/content/daily/<date>/index.md is already in the checkout, stop: exit 0, no network, no
    changes. This is what makes the evening retry a no-op after a morning success.
-2. data/ is gitignored, so a runner has no history. Fetch the 6 days before the target from SEMOpx
+2. data/ is gitignored, so a runner has no history. With --restore-raw, take the 6 days before the target
+   and the previous day's EirGrid archive from the raw repo (pipeline/raw_archive.py), which is the
+   source of truth for published figures; a failure there fails the run. Whatever is still missing is
+   fetched from SEMOpx
    (the 7-day week-compare chart needs them; a missing one is a failure, not a quietly shorter chart)
    and the previous day's EirGrid archive (a missing one leaves two half-hours NaN, as by design).
 3. Run run_daily.py --date <date> unchanged. Its stale-data gate and fetch.py's fail-closed paths
@@ -31,6 +34,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from run_daily import CONTENT_DIR, DATA_DIR, default_delivery_date
 from fetch import archive_path, archive_row_count, fetch_area, fetch_semo
+import raw_archive
 from update_manifest import ManifestConflict, update_manifest
 
 HISTORY_DAYS = 6  # chart_week_comparison: the target day plus the 6 before it
@@ -58,6 +62,8 @@ def semo_file(delivery: date) -> Path | None:
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1].strip())
     ap.add_argument("--date", metavar="YYYY-MM-DD", help="Delivery date (default: yesterday, Irish calendar).")
+    ap.add_argument("--restore-raw", action="store_true",
+                    help="First restore the history this run needs from the raw repo (fails closed).")
     ap.add_argument("--allow-no-wind", action="store_true",
                     help="Publish even if EirGrid wind/demand is incomplete for the day.")
     args = ap.parse_args()
@@ -69,6 +75,9 @@ def main():
         print(f"{post.relative_to(CONTENT_DIR.parent.parent)} already exists; nothing to do.")
         emit("noop", target)
         return
+
+    if args.restore_raw:
+        raw_archive.cmd_restore(argparse.Namespace(date=iso, remote=raw_archive.remote_url(None)))
 
     history = [target - timedelta(days=k) for k in range(HISTORY_DAYS, 0, -1)]
     for d in history:
