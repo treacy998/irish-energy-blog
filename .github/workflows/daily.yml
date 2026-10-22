@@ -32,7 +32,17 @@ jobs:
   daily:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Repo variables (Settings > Secrets and variables > Actions > Variables). Commits must be
+      # authored as the owner's GitHub-verified identity, or Vercel may refuse to deploy them.
+      GIT_COMMIT_NAME: ${{ vars.GIT_COMMIT_NAME }}
+      GIT_COMMIT_EMAIL: ${{ vars.GIT_COMMIT_EMAIL }}
     steps:
+      - name: Require the commit identity variables
+        run: |
+          [ -n "$GIT_COMMIT_NAME" ] && [ -n "$GIT_COMMIT_EMAIL" ] \
+            || { echo "::error::repo variables GIT_COMMIT_NAME and GIT_COMMIT_EMAIL must both be set"; exit 1; }
+
       - uses: actions/checkout@v4
         with:
           submodules: true   # site/themes/congo; the Hugo build fails without it

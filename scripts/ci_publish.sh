@@ -13,9 +13,11 @@ if git diff --cached --quiet; then
     echo "no changes to commit for $D"
     exit 0
 fi
-git -c user.name="${GIT_COMMIT_NAME:-github-actions[bot]}" \
-    -c user.email="${GIT_COMMIT_EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}" \
-    commit -q -m "Daily briefing $D (CI)"
+# daily.yml sets these from repo variables and fails early if they are empty. Locally, use git's own identity.
+ident=()
+[ -n "${GIT_COMMIT_NAME:-}" ] && ident+=(-c "user.name=$GIT_COMMIT_NAME")
+[ -n "${GIT_COMMIT_EMAIL:-}" ] && ident+=(-c "user.email=$GIT_COMMIT_EMAIL")
+git "${ident[@]}" commit -q -m "Daily briefing $D (CI)"
 echo "committed daily briefing $D"
 if [ "${PUSH:-0}" = 1 ]; then
     git pull --rebase origin "$BRANCH"
