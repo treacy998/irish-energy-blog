@@ -12,6 +12,7 @@ Usage:
 """
 
 import argparse
+import os
 import subprocess
 import sys
 from datetime import date, datetime, timedelta
@@ -234,9 +235,9 @@ def main():
     charts_written = [p.name for p in chart_day_dir.glob("*")
                       if before.get(p.name) != p.stat().st_mtime_ns]
 
-    # Open all interactive HTML charts in the browser
+    # Open all interactive HTML charts in the browser (not on a headless CI runner)
     html_charts = sorted(chart_day_dir.glob("*.html"))
-    if html_charts:
+    if html_charts and not os.environ.get("CI"):
         print(f"\n  Opening {len(html_charts)} interactive charts in browser...")
         for html in html_charts:
             subprocess.Popen(["xdg-open", str(html)],

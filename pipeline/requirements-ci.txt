@@ -1,0 +1,8 @@
+# Direct dependencies of the daily pipeline (run_daily.py and what it imports), pinned to the
+# versions the local venv runs. Used by .github/workflows/daily.yml. Not named requirements.txt
+# on purpose: a root-level one changes how Vercel detects and builds this repo.
+requests==2.34.2
+pandas==3.0.3
+numpy==2.4.4
+matplotlib==3.10.9
+plotly==6.7.0

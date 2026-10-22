@@ -1,0 +1,64 @@
+name: daily
+
+# Manual only for now. When the schedule is switched on, use two attempts a day, wide enough that
+# UTC vs IST never matters: run_daily targets "yesterday" by the Irish calendar (Europe/Dublin), and
+# both times below fall after Irish midnight and before the next one in summer (IST) and winter (GMT).
+# The second attempt is a no-op when the first succeeded (see pipeline/ci_daily.py).
+#
+#   schedule:
+#     - cron: "30 6 * * *"    # morning attempt: 06:30 UTC = 07:30 IST / 06:30 GMT
+#     - cron: "30 18 * * *"   # evening retry:   18:30 UTC = 19:30 IST / 18:30 GMT
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Delivery date YYYY-MM-DD (blank = yesterday, Irish calendar)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pipeline/requirements-ci.txt
+
+      - run: pip install -r pipeline/requirements-ci.txt
+
+      # Fails the job if the stale-data gate or any fetch.py fail-closed path trips; nothing is committed then.
+      - name: Generate the daily post
+        id: gen
+        env:
+          INPUT_DATE: ${{ inputs.date }}
+        run: python pipeline/ci_daily.py ${INPUT_DATE:+--date "$INPUT_DATE"}
+
+      - name: Install Hugo
+        if: steps.gen.outputs.status == 'generated'
+        run: |
+          curl -sL https://github.com/gohugoio/hugo/releases/download/v0.146.0/hugo_extended_0.146.0_linux-amd64.tar.gz \
+            | tar -xz -C "$RUNNER_TEMP" hugo
+
+      - name: Build the site and check the new page
+        if: steps.gen.outputs.status == 'generated'
+        run: |
+          "$RUNNER_TEMP/hugo" --source site -d "$RUNNER_TEMP/public"
+          python pipeline/ci_verify_render.py "${{ steps.gen.outputs.date }}" "$RUNNER_TEMP/public"
+
+      - name: Commit and push
+        if: steps.gen.outputs.status == 'generated'
+        env:
+          PUSH: "1"
+        run: scripts/ci_publish.sh "${{ steps.gen.outputs.date }}"
