@@ -1,9 +1,15 @@
 """
 weekly.py — Build the weekly-post draft: weekly_summary -> weekly_chart -> build_weekly_post.
 
-Everything comes from data/history.db (prices and wind MW), read-only. There is no
-EirGrid or SEMOpx request here, so no raw archive under data/ can be fetched over or
-replaced by this script. The post is written with draft: true and needs a human read.
+Everything comes from data/history.db (prices and wind MW). Building is read-only; it makes
+no EirGrid or SEMOpx request of its own. The post is written with draft: true and needs a human read.
+
+Before it builds, main() checks the week for gaps (a day without all its prices, or a day with too
+little demand for a wind % to be published) and, if there are any, asks for the store to be brought
+current (scripts/nightly.sh, which takes the lock, backs the store up and keeps it read-only
+afterwards), at most REFRESH_ATTEMPTS times, then re-checks. That is a catch-up of the same store the
+nightly job maintains, with the same fail-closed fetchers (raw EirGrid archives with rows are never
+replaced). The completeness check below is unchanged: a week whose final day is still short is refused.
 
 A week is Monday to Sunday of delivery dates. The script refuses to build a week whose
 final day is not in the store, and weekly_summary() raises if any other day is missing
@@ -16,8 +22,11 @@ Usage:
 """
 
 import argparse
+import os
 import sqlite3
+import subprocess
 import sys
+import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -26,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import store
 from charts import CHART_DIR, weekly_chart
 from scaffold import CONTENT_DIR, build_weekly_post
+from process import min_wind_rows
 from trading_day import expected_periods
 from weekly_stats import weekly_summary
 
@@ -42,6 +52,56 @@ def last_complete_week(now: datetime | None = None) -> date:
     today = (now or datetime.now(ZoneInfo("Europe/Dublin"))).date()
     last_sunday = today - timedelta(days=(today.weekday() + 1) % 7 or 7)
     return last_sunday - timedelta(days=6)
+
+
+REFRESH_ATTEMPTS = 3
+REFRESH_WAIT_S = 120      # EirGrid's demand feed flips empty/non-empty within minutes; retries seconds apart don't help
+NIGHTLY = Path(__file__).parent.parent / "scripts" / "nightly.sh"
+
+
+def week_gaps(db: Path, monday: date) -> list[str]:
+    """Days of the week starting `monday` that are not publishable as they stand: fewer prices than
+    expected, or fewer non-NULL wind_pct rows than a daily post needs (process.min_wind_rows)."""
+    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    try:
+        gaps = []
+        for i in range(7):
+            d = monday + timedelta(days=i)
+            ds = d.isoformat()
+            prices = conn.execute("SELECT COUNT(*) FROM market_prices WHERE date=?", (ds,)).fetchone()[0]
+            wind = conn.execute("SELECT COUNT(*) FROM system_conditions WHERE date=? AND wind_pct IS NOT NULL",
+                                (ds,)).fetchone()[0]
+            if prices != expected_periods(d):
+                gaps.append(f"{ds} prices {prices}/{expected_periods(d)}")
+            elif wind < min_wind_rows(d):
+                gaps.append(f"{ds} demand {wind}/{min_wind_rows(d)} rows needed")
+        return gaps
+    finally:
+        conn.close()
+
+
+def refresh_store(db: Path) -> int:
+    """Bring the store current through the guarded nightly path. Returns its exit code."""
+    env = {**os.environ, "HISTORY_DB": str(db)}
+    return subprocess.run(["bash", str(NIGHTLY)], env=env).returncode
+
+
+def ensure_week_current(db: Path, monday: date, refresh=refresh_store, attempts: int = REFRESH_ATTEMPTS,
+                        wait_s: float = REFRESH_WAIT_S) -> list[str]:
+    """Re-check the week and, while it has gaps, refresh the store (at most `attempts` times, wait_s
+    apart). Returns the gaps still present. Never alters the completeness check that follows."""
+    gaps = week_gaps(db, monday)
+    for n in range(1, attempts + 1):
+        if not gaps:
+            break
+        print(f"weekly: gaps in the week of {monday}: {'; '.join(gaps)}; refreshing the store "
+              f"({n}/{attempts})", file=sys.stderr)
+        rc = refresh(db)
+        print(f"weekly: refresh exit {rc}", file=sys.stderr)
+        gaps = week_gaps(db, monday)
+        if gaps and n < attempts:
+            time.sleep(wait_s)
+    return gaps
 
 
 def build_weekly_draft(any_date_in_week: date, db_path: Path | None = None, content_root: Path | None = None,
@@ -80,6 +140,14 @@ def main(argv=None) -> int:
     parser.add_argument("--chart-dir", type=Path, help="Chart root (default: site/static/charts).")
     args = parser.parse_args(argv)
     target = date.fromisoformat(args.date) if args.date else last_complete_week()
+    monday = iso_week_bounds(target)[0]
+    post = Path(args.content_root or CONTENT_DIR) / "weekly" / monday.isoformat() / "index.md"
+    # Refresh only the real store, and only when a post is going to be built. A --db override is a test
+    # or a copy; nightly.sh would back up and rewrite the real one.
+    if args.db is None and Path(store.DB_PATH).exists() and (args.force or not post.exists()):
+        remaining = ensure_week_current(Path(store.DB_PATH), monday)
+        if remaining:
+            print(f"weekly: gaps remain after refreshing: {'; '.join(remaining)}", file=sys.stderr)
     try:
         post = build_weekly_draft(target, args.db, args.content_root, args.chart_dir, args.force)
     except (ValueError, FileExistsError) as e:
