@@ -69,8 +69,7 @@ date is computed by the Irish calendar in Python, so UTC vs IST does not matter.
   only if nothing is archived for it. The retry's post is byte-identical and the raw push finds every
   file already there (`pipeline/test_ci_retry.py` simulates the death with a local bare repo). One-off seeding from a local `data/`:
   `python pipeline/raw_archive.py seed` (about 380 MB, `history.db` excluded), then `verify` clones fresh
-  and runs `sha256sum -c` against the manifest. The manifest holds one stray non-data line
-  (`data/.claude/settings.local.json`), which `verify` reports and skips.
+  and runs `sha256sum -c` against the manifest. `verify` reports and skips any entry that is not raw data.
 - **History.** A run restores the 6 prior days of SEMOpx files and the previous day's EirGrid archive
   from the raw repo (`--restore-raw`; failure fails the run), and fetches from SEMOpx whatever is still
   missing. A missing day fails the run: the 7-day chart would otherwise be quietly wrong.

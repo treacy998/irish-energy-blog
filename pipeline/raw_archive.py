@@ -197,7 +197,7 @@ def cmd_seed(args):
 
 def cmd_verify(args):
     """Fresh clone, then sha256sum -c against the blog repo's manifest. Entries that are not raw data
-    (the manifest holds one stray Claude settings file) are reported, not checked."""
+    are reported, not checked."""
     entries = manifest_entries()
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t) / "raw"
