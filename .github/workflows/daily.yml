@@ -15,6 +15,11 @@ on:
         description: "Delivery date YYYY-MM-DD (blank = yesterday, Irish calendar)"
         required: false
         type: string
+      allow_no_wind:
+        description: "Publish even if EirGrid wind/demand is incomplete for the day"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -45,7 +50,12 @@ jobs:
         id: gen
         env:
           INPUT_DATE: ${{ inputs.date }}
-        run: python pipeline/ci_daily.py ${INPUT_DATE:+--date "$INPUT_DATE"}
+          ALLOW_NO_WIND: ${{ inputs.allow_no_wind }}
+        run: |
+          args=()
+          [ -n "$INPUT_DATE" ] && args+=(--date "$INPUT_DATE")
+          [ "$ALLOW_NO_WIND" = "true" ] && args+=(--allow-no-wind)
+          python pipeline/ci_daily.py "${args[@]}"
 
       - name: Install Hugo
         if: steps.gen.outputs.status == 'generated'
