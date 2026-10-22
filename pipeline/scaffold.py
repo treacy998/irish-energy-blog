@@ -380,14 +380,15 @@ WEEKLY_CAVEAT = (
 
 
 def build_weekly_post(summary: dict, content_root: Path | None = None, force: bool = False) -> Path:
-    """Write <content_root>/weekly/<week_start>/index.md (draft: true) from weekly_summary().
+    """Write <content_root>/weekly/<week_end>/index.md (draft: true) from weekly_summary(). The directory is
+    named by the last day of the week (the Sunday), like the post's date; week_start stays in the front matter.
 
     The audit keys on the week_start front matter and reads the labelled table rows, so the
     row labels here are the ones audit_posts.WEEKLY_ROWS expects. Refuses to overwrite an
     existing post unless force=True (it may have hand-written commentary)."""
     content_root = Path(content_root) if content_root else CONTENT_DIR
     ws, we = date.fromisoformat(summary["week_start"]), date.fromisoformat(summary["week_end"])
-    outpath = content_root / "weekly" / summary["week_start"] / "index.md"
+    outpath = content_root / "weekly" / summary["week_end"] / "index.md"
     if outpath.exists() and not force:
         raise FileExistsError(f"{outpath} exists; pass force=True to overwrite")
 

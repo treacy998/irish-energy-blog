@@ -80,7 +80,7 @@ def test_post_contents_order_and_rules():
     with tempfile.TemporaryDirectory() as tmp:
         post = build_weekly_post(s, Path(tmp))
         md = post.read_text()
-        assert post == Path(tmp) / "weekly" / "2026-09-28" / "index.md"
+        assert post == Path(tmp) / "weekly" / "2026-10-04" / "index.md"
         assert "draft: true" in md and "week_start: 2026-09-28" in md
         body = md.split("---\n", 2)[2]
         assert body.index("dearest of the last") < body.index("![") < body.index("Week mean (c/kWh)") \

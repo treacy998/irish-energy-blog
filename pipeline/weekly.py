@@ -111,7 +111,7 @@ def build_weekly_draft(any_date_in_week: date, db_path: Path | None = None, cont
     Raises ValueError if the store lacks the week's final day (or any other day), and
     FileExistsError if the post exists and force is False (before anything is written)."""
     monday, sunday = iso_week_bounds(any_date_in_week)
-    post = Path(content_root or CONTENT_DIR) / "weekly" / monday.isoformat() / "index.md"
+    post = Path(content_root or CONTENT_DIR) / "weekly" / sunday.isoformat() / "index.md"
     if post.exists() and not force:
         raise FileExistsError(f"{post} exists; use --force to overwrite")
 
@@ -141,7 +141,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     target = date.fromisoformat(args.date) if args.date else last_complete_week()
     monday = iso_week_bounds(target)[0]
-    post = Path(args.content_root or CONTENT_DIR) / "weekly" / monday.isoformat() / "index.md"
+    post = Path(args.content_root or CONTENT_DIR) / "weekly" / iso_week_bounds(target)[1].isoformat() / "index.md"
     # Refresh only the real store, and only when a post is going to be built. A --db override is a test
     # or a copy; nightly.sh would back up and rewrite the real one.
     if args.db is None and Path(store.DB_PATH).exists() and (args.force or not post.exists()):
