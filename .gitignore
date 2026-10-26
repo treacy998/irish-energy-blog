@@ -47,3 +47,4 @@ logs/
 
 # any log
 *.log
+.env.local
