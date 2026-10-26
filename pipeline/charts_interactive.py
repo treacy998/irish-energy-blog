@@ -10,6 +10,8 @@ import numpy as np
 from pathlib import Path
 from datetime import date
 
+from trading_day import clock_change_note, period_keys, period_labels
+
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -47,14 +49,30 @@ def _base_layout(title: str, subtitle: str) -> dict:
     )
 
 
-def _period_to_label(periods):
-    # I-SEM period 1 = 23:00; each period is 30 min
-    return [f"{((23*60 + (p-1)*30) % 1440) // 60:02d}:{((23*60 + (p-1)*30) % 1440) % 60:02d}" for p in periods]
+def _delivery_date(day_df: pd.DataFrame) -> date:
+    return day_df["DeliveryDate"].iloc[0].date()
 
 
-def _full_day_categoryarray():
-    """All 48 period labels in I-SEM day order (23:00 … 22:30)."""
-    return _period_to_label(range(1, 49))
+def _period_keys(day_df: pd.DataFrame) -> list[str]:
+    """Axis key of each row's period, from the day's trading-day mapping (unique per period)."""
+    keys = period_keys(_delivery_date(day_df))
+    return [keys[p - 1] for p in day_df["Period"].values]
+
+
+def _with_note(subtitle: str, delivery_date: date) -> str:
+    note = clock_change_note(delivery_date)
+    return f"{subtitle}  ·  {note}" if note else subtitle
+
+
+def _set_time_axis(fig: go.Figure, delivery_date: date):
+    """Category order for the day's periods (23:00 … 22:30 local; 50 or 46 on a clock-change day).
+    On the long day a label repeats, so ticks show the label for the key."""
+    keys, labels = period_keys(delivery_date), period_labels(delivery_date)
+    fig.update_xaxes(categoryarray=keys, categoryorder="array")
+    if keys != labels:
+        idx = sorted(set(range(0, len(keys), 4)) | {i for i, k in enumerate(keys) if k.endswith("(2nd)")
+                                                    and labels[i].endswith(":00")})
+        fig.update_xaxes(tickmode="array", tickvals=[keys[i] for i in idx], ticktext=[labels[i] for i in idx])
 
 
 def _save(fig: go.Figure, outpath: Path):
@@ -66,7 +84,7 @@ def _save(fig: go.Figure, outpath: Path):
 
 def chart_dam_price_profile(day_df: pd.DataFrame, summary: dict, outpath: Path):
     x      = (day_df["Period"].values - 1).tolist()
-    labels = _period_to_label(day_df["Period"].values)
+    labels = _period_keys(day_df)
     prices = day_df["DAMPrice_EUR_MWh"].values.tolist()
     mean   = summary["mean_price"]
 
@@ -87,8 +105,9 @@ def chart_dam_price_profile(day_df: pd.DataFrame, summary: dict, outpath: Path):
         annotation_font_color=MEAN_LINE,
     )
 
-    peak_label = _period_to_label([summary["peak_period"]])[0]
-    min_label  = _period_to_label([summary["min_period"]])[0]
+    all_keys   = period_keys(_delivery_date(day_df))
+    peak_label = all_keys[summary["peak_period"] - 1]
+    min_label  = all_keys[summary["min_period"] - 1]
 
     fig.add_trace(go.Scatter(
         x=[peak_label], y=[summary["peak_price"]],
@@ -114,9 +133,9 @@ def chart_dam_price_profile(day_df: pd.DataFrame, summary: dict, outpath: Path):
 
     fig.update_layout(**_base_layout(
         f"I-SEM Day-Ahead Market — {summary['date']}",
-        "Half-hourly DAM clearing prices  |  €/MWh  |  Irish time",
+        _with_note("Half-hourly DAM clearing prices  |  €/MWh  |  Irish time", _delivery_date(day_df)),
     ))
-    fig.update_xaxes(categoryarray=_full_day_categoryarray(), categoryorder="array")
+    _set_time_axis(fig, _delivery_date(day_df))
     _save(fig, outpath)
 
 
@@ -127,7 +146,7 @@ def chart_price_vs_wind(day_df: pd.DataFrame, summary: dict, outpath: Path):
         print("  Skipped interactive price-vs-wind (no wind data)")
         return
 
-    labels = _period_to_label(day_df["Period"].values)
+    labels = _period_keys(day_df)
     prices = day_df["DAMPrice_EUR_MWh"].values.tolist()
     wind   = day_df["WindGeneration_pct"].values.tolist()
 
@@ -151,12 +170,13 @@ def chart_price_vs_wind(day_df: pd.DataFrame, summary: dict, outpath: Path):
 
     layout = _base_layout(
         f"Price vs Wind Generation — {summary['date']}",
-        "DAM price (€/MWh, green)  ·  wind share (%, brown dashed)  ·  Irish time",
+        _with_note("DAM price (€/MWh, green)  ·  wind share (%, brown dashed)  ·  Irish time",
+                   _delivery_date(day_df)),
     )
     layout.setdefault("yaxis", {}).update(title="€/MWh", gridcolor=GRID)
     layout["yaxis2"] = dict(title="Wind %", ticksuffix="%", range=[0, 105], gridcolor=GRID)
     fig.update_layout(**layout)
-    fig.update_xaxes(categoryarray=_full_day_categoryarray(), categoryorder="array")
+    _set_time_axis(fig, _delivery_date(day_df))
     _save(fig, outpath)
 
 
@@ -173,11 +193,16 @@ def chart_week_comparison(df: pd.DataFrame, target_date: date, outpath: Path):
 
     fig = go.Figure()
     hist_idx = 0
+    target_keys = set(period_keys(target_date))
 
     for d in recent_dates:
         day    = df[df["DeliveryDate"].dt.date == d]
-        labels = _period_to_label(day["Period"].values)
-        prices = day["DAMPrice_EUR_MWh"].values.tolist()
+        # Align on the local clock label; a period with no counterpart on the target day
+        # (e.g. the repeated hour of an earlier long day) has no place on its axis.
+        keys   = _period_keys(day)
+        keep   = [k in target_keys for k in keys]
+        labels = [k for k, ok in zip(keys, keep) if ok]
+        prices = day["DAMPrice_EUR_MWh"].values[keep].tolist()
 
         if d == target_date:
             fig.add_trace(go.Scatter(
@@ -202,9 +227,9 @@ def chart_week_comparison(df: pd.DataFrame, target_date: date, outpath: Path):
 
     fig.update_layout(**_base_layout(
         f"Week in Context — {target_date}",
-        "Last 7 days overlaid  ·  today (green) vs prior days  ·  click legend to toggle",
+        _with_note("Last 7 days overlaid  ·  today (green) vs prior days  ·  click legend to toggle", target_date),
     ))
-    fig.update_xaxes(categoryarray=_full_day_categoryarray(), categoryorder="array")
+    _set_time_axis(fig, target_date)
     _save(fig, outpath)
 
 
@@ -234,7 +259,7 @@ def chart_price_duration(day_df: pd.DataFrame, date_str: str, outpath: Path):
 
     fig.update_layout(**_base_layout(
         f"Price Duration Curve — {date_str}",
-        "48 half-hourly periods ranked high to low  |  €/MWh",
+        f"{len(sorted_prices)} half-hourly periods ranked high to low  |  €/MWh",
     ))
     fig.update_xaxes(title="Periods ranked high → low")
     _save(fig, outpath)
@@ -284,7 +309,7 @@ def chart_spread_tracker(day_df: pd.DataFrame, date_str: str, outpath: Path):
 
 def chart_bess_dispatch(day_df: pd.DataFrame, bess_result: dict, date_str: str, outpath: Path):
     prices = day_df["DAMPrice_EUR_MWh"].values.tolist()
-    labels = _period_to_label(day_df["Period"].values)
+    labels = _period_keys(day_df)
     c_idx  = bess_result["charge_periods"]
     d_idx  = bess_result["discharge_periods"]
 
@@ -316,7 +341,7 @@ def chart_bess_dispatch(day_df: pd.DataFrame, bess_result: dict, date_str: str, 
         f"BESS Dispatch Signal — {date_str}",
         f"Charge {b['charge_start']} €{b['charge_mean']:.0f}/MWh  ·  Discharge {b['discharge_start']} €{b['discharge_mean']:.0f}/MWh  ·  Gross profit €{b['gross_profit']:.0f}",
     ))
-    fig.update_xaxes(categoryarray=_full_day_categoryarray(), categoryorder="array")
+    _set_time_axis(fig, _delivery_date(day_df))
     _save(fig, outpath)
 
 

@@ -55,6 +55,28 @@ def period_labels(delivery_date: date) -> list[str]:
     return [local_label(t) for t in period_starts_utc(delivery_date)]
 
 
+def period_keys(delivery_date: date) -> list[str]:
+    """One unique key per period, for chart axes. Equal to period_labels except that the
+    second pass of the repeated hour on the long day is "01:00 (2nd)", so a category or
+    dict keyed on it keeps both passes."""
+    seen: set[str] = set()
+    keys = []
+    for label in period_labels(delivery_date):
+        keys.append(f"{label} (2nd)" if label in seen else label)
+        seen.add(label)
+    return keys
+
+
+def clock_change_note(delivery_date: date) -> str:
+    """Short chart-subtitle note for a 50- or 46-period day; empty on a 48-period day."""
+    n = expected_periods(delivery_date)
+    if n == 50:
+        return "clocks go back: 01:00–02:00 occurs twice, 50 periods"
+    if n == 46:
+        return "clocks go forward: 01:00–02:00 does not occur, 46 periods"
+    return ""
+
+
 def iso_z(instant_utc) -> str:
     """Stable text form for storage: 2025-10-25T22:00:00Z."""
     return pd.Timestamp(instant_utc).tz_convert("UTC").strftime("%Y-%m-%dT%H:%M:%SZ")

@@ -207,6 +207,16 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
         f"  ·  **Median** €{summary['median_price']}/MWh"
         f"  ·  **Periods above €150:** {summary['periods_above_150']} of {n_periods} ({pct_48(summary['periods_above_150'])})"
     )
+    if n_periods == 50:
+        price_profile_stats += (
+            "\n\n*Clocks go back on this date, so the trading day is 25 hours long: 50 half-hour periods, "
+            "with 01:00–02:00 Irish time occurring twice. The chart labels both passes.*"
+        )
+    elif n_periods == 46:
+        price_profile_stats += (
+            "\n\n*Clocks go forward on this date, so the trading day is 23 hours long: 46 half-hour periods, "
+            "and 01:00–02:00 Irish time does not occur.*"
+        )
 
     has_wind_chart = (chart_day_dir / f"price-wind-{date_str}.png").exists()
     if has_wind_chart and "wind_pct_mean" in summary:
