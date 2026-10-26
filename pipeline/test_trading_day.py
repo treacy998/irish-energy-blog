@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from trading_day import (
-    expected_periods, period_label_indices, period_labels, period_start_utc,
+    expected_periods, period_label_indices, placeable_halfhours, period_labels, period_start_utc,
     period_starts_utc, trading_day_start_utc,
 )
 
@@ -73,6 +73,13 @@ def test_min_wind_rows_is_75_percent_of_expected_periods():
         short = pd.Series([10.0] * (need - 1) + [float("nan")] * (n - need + 1))
         assert wind_summary(enough, delivery_date=d)["wind_pct_mean"] == 10.0
         assert wind_summary(short, delivery_date=d) == {}
+
+
+def test_placeable_halfhours_of_an_eirgrid_calendar_day():
+    # 48 normally; 46 when the clocks go forward (the skipped hour is dropped); 46 when they go back
+    # (the repeated hour is listed once, so its four half-hours cannot be placed).
+    for ds, want in (("2026-10-24", 48), ("2026-10-25", 46), ("2026-03-29", 46), ("2027-03-28", 46), ("2026-07-08", 48)):
+        assert placeable_halfhours(date.fromisoformat(ds)) == want, ds
 
 
 if __name__ == "__main__":

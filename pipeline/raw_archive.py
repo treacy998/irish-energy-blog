@@ -5,7 +5,8 @@ raw_archive.py — keep the raw SEMOpx / EirGrid files behind published posts in
 data/ is gitignored and a CI runner is ephemeral, so without this the checksums in
 pipeline/data-manifest.sha256 would point at files that exist nowhere after the job. The raw repo
 mirrors the layout of data/ (paths start with data/, so `sha256sum -c pipeline/data-manifest.sha256`
-works from its root). It is append-only by convention: a file already in it is never replaced.
+works from its root). It is append-only by convention: a file already in it is never replaced, with one exception
+(see may_supersede): an incomplete, unmanifested EirGrid file may be superseded once by a complete one.
 
     raw_archive.py restore --date 2026-10-09   # sparse-fetch what that day's run needs into data/
     raw_archive.py push --date 2026-10-09      # add this run's manifest-listed files; refuse any change
@@ -21,12 +22,17 @@ import argparse
 import base64
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 from datetime import date, timedelta
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from fetch import path_halfhours                     # noqa: E402
+from trading_day import placeable_halfhours          # noqa: E402
 
 ROOT = Path(__file__).parent.parent
 DATA_DIR = ROOT / "data"
@@ -78,6 +84,33 @@ def manifest_entries() -> dict[str, str]:
 
 def is_raw_data(rel: str) -> bool:
     return rel.startswith(("data/MarketResult_", "data/eirgrid_raw/")) or rel == "data/semo_dam_sample.csv"
+
+
+EIRGRID_RAW = re.compile(r"data/eirgrid_raw/(\d{4}-\d{2}-\d{2})/(wind|demand)\.json$")
+
+
+def eirgrid_completeness(rel: str, path: Path) -> tuple[int, int] | None:
+    """(half-hours present, half-hours the date can supply) for an EirGrid raw file; None for any other file."""
+    m = EIRGRID_RAW.search(rel)
+    if not m:
+        return None
+    return path_halfhours(path, m.group(2)), placeable_halfhours(date.fromisoformat(m.group(1)))
+
+
+def may_supersede(rel: str, archived: Path, new: Path, entries: dict[str, str]) -> tuple[bool, str]:
+    """May `new` replace the archived copy of `rel`? Only if the archived EirGrid file is incomplete, no
+    manifest entry pins its bytes (it does not back a published post), and `new` is complete.
+    Returns (allowed, reason); the reason is logged either way."""
+    old, fresh = eirgrid_completeness(rel, archived), eirgrid_completeness(rel, new)
+    if old is None:
+        return False, "not an EirGrid file"
+    if old[0] >= old[1]:
+        return False, f"archived file is complete ({old[0]}/{old[1]} half-hours)"
+    if entries.get(rel) == sha256(archived):
+        return False, f"archived file is incomplete ({old[0]}/{old[1]}) but the manifest references it"
+    if fresh[0] < fresh[1]:
+        return False, f"new file is incomplete too ({fresh[0]}/{fresh[1]} half-hours)"
+    return True, f"archived {old[0]}/{old[1]} half-hours, not in the manifest; new {fresh[0]}/{fresh[1]}"
 
 
 def clone(remote: str, dest: Path, sparse: list[str] | None = None) -> bool:
@@ -141,27 +174,34 @@ def cmd_push(args):
         non_empty = clone(remote_url(args.remote), tmp)
         if not non_empty:
             git("checkout", "-q", "-b", BRANCH, cwd=tmp)
-        added, conflicts = [], []
+        added, replaced, conflicts = [], [], []
         for f in wanted:
             rel = f.relative_to(DATA_DIR.parent)
             dest = tmp / rel
             if dest.exists():
                 if sha256(dest) != sha256(f):
-                    conflicts.append(rel.as_posix())
+                    ok, why = may_supersede(rel.as_posix(), dest, f, entries)
+                    if not ok:
+                        conflicts.append(f"{rel.as_posix()} ({why})")
+                        continue
+                    print(f"replacing {rel.as_posix()}: {why}; sha256 {sha256(dest)} -> {sha256(f)}")
+                    shutil.copy2(f, dest)
+                    replaced.append(rel.as_posix())
                 continue
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(f, dest)
             added.append(rel.as_posix())
         if conflicts:
             raise SystemExit("raw files differ from the archived copy (not replacing):\n  " + "\n  ".join(conflicts))
-        if not added:
+        if not added and not replaced:
             print("raw repo already holds every file")
             return
         git("add", "-A", cwd=tmp)
         git("-c", "user.name=raw-archive", "-c", "user.email=raw-archive@users.noreply.github.com",
-            "commit", "-q", "-m", f"raw files for {args.date or 'run'}: {len(added)} added", cwd=tmp)
+            "commit", "-q", "-m", f"raw files for {args.date or 'run'}: {len(added)} added, {len(replaced)} replaced"
+            + "".join(f"\nreplaced: {r}" for r in replaced), cwd=tmp)
         git("push", "-q", "origin", f"HEAD:{BRANCH}", cwd=tmp)
-    print(f"pushed {len(added)} raw files to the raw repo")
+    print(f"pushed {len(added)} raw files to the raw repo ({len(replaced)} replaced)")
 
 
 def cmd_seed(args):

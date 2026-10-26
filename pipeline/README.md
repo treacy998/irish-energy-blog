@@ -66,8 +66,16 @@ date is computed by the Irish calendar in Python, so UTC vs IST does not matter.
   between the two leaves raw files without a post. The retry does not race them: `--restore-raw` also
   restores the target day's own SEMOpx file and EirGrid archive, and `ci_daily.py` runs
   `run_daily.py --prefer-archived-raw`, which generates from the archived bytes and fetches an area live
-  only if nothing is archived for it. The retry's post is byte-identical and the raw push finds every
-  file already there (`pipeline/test_ci_retry.py` simulates the death with a local bare repo). One-off seeding from a local `data/`:
+  only if nothing is archived for it, or what is archived is incomplete (below `placeable_halfhours(date)`:
+  48 half-hours, 46 on both clock-change days). The retry's post is byte-identical and the raw push finds every
+  file already there (`pipeline/test_ci_retry.py` simulates the death with a local bare repo). **An unmanifested, incomplete raw file is not evidence; it may be superseded once, by a complete one.**
+  The raw push (`raw_archive.may_supersede`) replaces an archived EirGrid file only if (i) the archived file
+  is incomplete by that test, (ii) no manifest entry pins its hash (it backs no published post), and (iii) the
+  new file is complete. Every replacement is logged with both hashes and named in the raw commit message.
+  Anything else keeps the never-replace rule and fails on a hash difference: SEMOpx files, complete files,
+  manifest-referenced files, and a new file that is itself incomplete. The need arose because a local
+  nightly can save an EirGrid file before the demand feed is published, and a seed then archives that
+  empty or partial file as if it were the record. One-off seeding from a local `data/`:
   `python pipeline/raw_archive.py seed` (about 380 MB, `history.db` excluded), then `verify` clones fresh
   and runs `sha256sum -c` against the manifest. `verify` reports and skips any entry that is not raw data.
 - **History.** A run restores the 6 prior days of SEMOpx files and the previous day's EirGrid archive

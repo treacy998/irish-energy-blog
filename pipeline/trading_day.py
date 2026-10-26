@@ -34,6 +34,19 @@ def expected_periods(delivery_date: date) -> int:
     return span // PERIOD
 
 
+def local_midnight_utc(d: date) -> datetime:
+    """UTC instant of local 00:00 on calendar day d (never ambiguous or skipped in Dublin)."""
+    return datetime(d.year, d.month, d.day, tzinfo=DUBLIN_TZ).astimezone(UTC)
+
+
+def placeable_halfhours(d: date) -> int:
+    """Half-hours of Irish calendar day d that an EirGrid calendar-day file can supply: 48, or 46 when
+    the clocks go forward (the file still lists the skipped 01:00 hour, which is dropped). On the long
+    day the file lists the repeated hour once, so its four half-hours cannot be placed: 50 - 4 = 46."""
+    n = (local_midnight_utc(d + timedelta(days=1)) - local_midnight_utc(d)) // PERIOD
+    return n - 4 if n == 50 else n
+
+
 def period_start_utc(delivery_date: date, period: int) -> datetime:
     """UTC start of 1-based `period`; ValueError if it is outside that day's period range."""
     n = expected_periods(delivery_date)
