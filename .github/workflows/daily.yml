@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   daily:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       # Repo variables (Settings > Secrets and variables > Actions > Variables). Commits must be
@@ -50,11 +50,11 @@ jobs:
           [ -n "$GIT_COMMIT_NAME" ] && [ -n "$GIT_COMMIT_EMAIL" ] \
             || { echo "::error::repo variables GIT_COMMIT_NAME and GIT_COMMIT_EMAIL must both be set"; exit 1; }
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true   # site/themes/congo; the Hugo build fails without it
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
