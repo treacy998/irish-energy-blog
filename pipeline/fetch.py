@@ -8,13 +8,15 @@ No authentication required. Fails gracefully — if the fetch fails,
 the pipeline continues without wind data (wind chart is skipped).
 """
 
+import contextlib
+import io
 import json
 import requests
 import pandas as pd
 from datetime import datetime, date, timedelta
 from pathlib import Path
 
-from trading_day import DUBLIN_TZ, eirgrid_local_to_utc, trading_day_start_utc
+from trading_day import DUBLIN_TZ, eirgrid_local_to_utc, placeable_halfhours, trading_day_start_utc
 
 DEFAULT_DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -143,8 +145,9 @@ def fetch_wind_and_demand(
     JSON a published post was written from, and never writes an empty one; a
     zero-row file is a failed fetch, not a record worth protecting.
 
-    prefer_archive=True uses an area's archived response (no request) whenever that archive has
-    rows, and fetches live only for an area whose archive is missing or empty. CI uses it so a
+    prefer_archive=True uses an area's archived response (no request) when that archive is complete
+    for the date (placeable_halfhours), and fetches live for an area whose archive is missing, empty
+    or incomplete: an incomplete file is not evidence of what EirGrid published. CI uses it so a
     retry after a run that archived the raw files but died before publishing is generated from
     the archived bytes, not from a fresh response that may differ.
 
@@ -152,10 +155,28 @@ def fetch_wind_and_demand(
     region/chart combination (only SYSTEM_DEMAND) — there is no DemandForecastMW.
     """
     def area(name):
-        archived = load_archived_area(delivery_date, name, out_dir) if prefer_archive else None
-        if archived is not None:
-            return archived
-        return fetch_area(delivery_date, name, out_dir=out_dir, overwrite_raw=overwrite_raw)
+        if not prefer_archive:
+            return fetch_area(delivery_date, name, out_dir=out_dir, overwrite_raw=overwrite_raw)
+        have, need = archived_halfhours(delivery_date, name, out_dir), placeable_halfhours(delivery_date)
+        if have >= need:
+            archived = load_archived_area(delivery_date, name, out_dir)
+            if archived is not None:
+                return archived
+        if have == 0:
+            return fetch_area(delivery_date, name, out_dir=out_dir, overwrite_raw=overwrite_raw)
+        # An archive with some rows but fewer than the day has is not evidence of what EirGrid
+        # published (it was saved before the feed was complete): fetch live. If that is no better,
+        # keep the archived bytes, so the day is never generated from a worse file than we had.
+        print(f"  [fetch] archived {name} for {delivery_date} holds {have} of {need} half-hours; "
+              f"treating it as absent and fetching live")
+        path = archive_path(delivery_date, name, out_dir)
+        old = path.read_bytes()
+        live = fetch_area(delivery_date, name, out_dir=out_dir, overwrite_raw=overwrite_raw)
+        if live is None or archived_halfhours(delivery_date, name, out_dir) < have:
+            path.write_bytes(old)
+            print(f"  [fetch] live {name} for {delivery_date} is no better; keeping the archived file")
+            return load_archived_area(delivery_date, name, out_dir)
+        return live
 
     wind, demand = area("wind"), area("demand")
     prev_wind, prev_demand = load_archived_previous_day(delivery_date, out_dir)
@@ -250,6 +271,28 @@ def archive_row_count(path: Path) -> int:
         return len(data.get("Rows") or data.get("rows") or [])
     except (OSError, ValueError, AttributeError):
         return 0
+
+
+PRIMARY_FIELD = {"wind": "WIND_ACTUAL", "demand": "SYSTEM_DEMAND"}
+
+
+def path_halfhours(path: Path, area: str) -> int:
+    """Non-null half-hour readings of the area's main series (WIND_ACTUAL / SYSTEM_DEMAND) in an
+    EirGrid response file, placed on UTC as the pipeline places them. 0 if the file is missing, empty
+    or unparseable. Compare with trading_day.placeable_halfhours(date)."""
+    if archive_row_count(path) == 0:
+        return 0
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            df = _parse_area(json.loads(path.read_text()), area, [PRIMARY_FIELD[area]])
+            out = _resample_30min(df, "v") if df is not None else None
+    except Exception:
+        return 0
+    return 0 if out is None else len(out)
+
+
+def archived_halfhours(delivery_date: date, area: str, out_dir: Path | str = DEFAULT_DATA_DIR) -> int:
+    return path_halfhours(archive_path(delivery_date, area, out_dir), area)
 
 
 def load_archived_area(delivery_date: date, area: str, out_dir: Path | str = DEFAULT_DATA_DIR) -> pd.DataFrame | None:
