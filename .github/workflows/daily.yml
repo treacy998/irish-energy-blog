@@ -1,0 +1,101 @@
+name: daily
+
+# Manual only for now. When the schedule is switched on, use two attempts a day, wide enough that
+# UTC vs IST never matters: run_daily targets "yesterday" by the Irish calendar (Europe/Dublin), and
+# both times below fall after Irish midnight and before the next one in summer (IST) and winter (GMT).
+# The second attempt is a no-op when the first succeeded (see pipeline/ci_daily.py).
+#
+#   schedule:
+#     - cron: "30 6 * * *"    # morning attempt: 06:30 UTC = 07:30 IST / 06:30 GMT
+#     - cron: "30 18 * * *"   # evening retry:   18:30 UTC = 19:30 IST / 18:30 GMT
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Delivery date YYYY-MM-DD (blank = yesterday, Irish calendar)"
+        required: false
+        type: string
+      allow_no_wind:
+        description: "Publish even if EirGrid wind/demand is incomplete for the day"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Repo variables (Settings > Secrets and variables > Actions > Variables). Commits must be
+      # authored as the owner's GitHub-verified identity, or Vercel may refuse to deploy them.
+      GIT_COMMIT_NAME: ${{ vars.GIT_COMMIT_NAME }}
+      GIT_COMMIT_EMAIL: ${{ vars.GIT_COMMIT_EMAIL }}
+      # Private raw-data repo (pipeline/raw_archive.py): owner/name, defaults to treacy998/inis-energy-data.
+      # The matching secret DATA_REPO_TOKEN (fine-grained PAT, that repo only, Contents read+write) is
+      # given only to the steps that use it, not to the whole job.
+      DATA_REPO: ${{ vars.DATA_REPO }}
+    steps:
+      - name: Require the commit identity variables and the raw-repo token
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: |
+          [ -n "$DATA_REPO_TOKEN" ] || { echo "::error::secret DATA_REPO_TOKEN is not set"; exit 1; }
+          [ -n "$GIT_COMMIT_NAME" ] && [ -n "$GIT_COMMIT_EMAIL" ] \
+            || { echo "::error::repo variables GIT_COMMIT_NAME and GIT_COMMIT_EMAIL must both be set"; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true   # site/themes/congo; the Hugo build fails without it
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pipeline/requirements-ci.txt
+
+      - run: pip install -r pipeline/requirements-ci.txt
+
+      # Fails the job if the stale-data gate or any fetch.py fail-closed path trips; nothing is committed then.
+      - name: Generate the daily post
+        id: gen
+        env:
+          INPUT_DATE: ${{ inputs.date }}
+          ALLOW_NO_WIND: ${{ inputs.allow_no_wind }}
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: |
+          args=()
+          [ -n "$INPUT_DATE" ] && args+=(--date "$INPUT_DATE")
+          [ "$ALLOW_NO_WIND" = "true" ] && args+=(--allow-no-wind)
+          python pipeline/ci_daily.py --restore-raw "${args[@]}"
+
+      - name: Install Hugo
+        if: steps.gen.outputs.status == 'generated'
+        run: |
+          curl -sL https://github.com/gohugoio/hugo/releases/download/v0.146.0/hugo_extended_0.146.0_linux-amd64.tar.gz \
+            | tar -xz -C "$RUNNER_TEMP" hugo
+
+      - name: Build the site and check the new page
+        if: steps.gen.outputs.status == 'generated'
+        run: |
+          "$RUNNER_TEMP/hugo" --source site -d "$RUNNER_TEMP/public"
+          python pipeline/ci_verify_render.py "${{ steps.gen.outputs.date }}" "$RUNNER_TEMP/public"
+
+      # Raw first: if this fails the job stops here and the content is never pushed.
+      - name: Archive the raw data
+        if: steps.gen.outputs.status == 'generated'
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: python pipeline/raw_archive.py push --date "${{ steps.gen.outputs.date }}"
+
+      - name: Commit and push
+        if: steps.gen.outputs.status == 'generated'
+        env:
+          PUSH: "1"
+        run: scripts/ci_publish.sh "${{ steps.gen.outputs.date }}"

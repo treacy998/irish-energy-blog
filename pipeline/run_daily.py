@@ -12,6 +12,7 @@ Usage:
 """
 
 import argparse
+import os
 import subprocess
 import sys
 from datetime import date, datetime, timedelta
@@ -96,13 +97,19 @@ def parse_args():
              "store's last date +1 through yesterday (max 14 dates), then heal NULL demand over the last 14 "
              "days. Exit 0 only if nothing is missing but, possibly, yesterday's price.",
     )
+    parser.add_argument(
+        "--prefer-archived-raw",
+        action="store_true",
+        help="Use the day's archived EirGrid responses in data/eirgrid_raw/ (no request) wherever they have rows; "
+             "fetch live only for an area with none. CI sets it so a retry reproduces the archived bytes.",
+    )
     parser.add_argument("--db", type=Path, default=None, metavar="PATH",
                         help="History database (default: data/history.db).")
     parser.add_argument("--data-dir", type=Path, default=None, metavar="DIR",
                         help="Where SEMO files and eirgrid_raw/ live (default: data/). --store-only only.")
     args = parser.parse_args()
-    if args.store_only and (args.date or args.csv_file or args.force or args.include_bess):
-        parser.error("--store-only takes none of --date, CSV_FILE, --force, --include-bess")
+    if args.store_only and (args.date or args.csv_file or args.force or args.include_bess or args.prefer_archived_raw):
+        parser.error("--store-only takes none of --date, CSV_FILE, --force, --include-bess, --prefer-archived-raw")
     return args
 
 
@@ -183,7 +190,7 @@ def main():
     # ── Step 3: generate charts + scaffold post ──────────────────────────────
     step(3, TOTAL_STEPS, "Generating charts and scaffolding post...")
     print("  Fetching EirGrid wind and demand data…")
-    eirgrid_df = fetch_wind_and_demand(delivery_date, out_dir=DATA_DIR)
+    eirgrid_df = fetch_wind_and_demand(delivery_date, out_dir=DATA_DIR, prefer_archive=args.prefer_archived_raw)
     if eirgrid_df is not None and eirgrid_df["WindGeneration_pct"].notna().any():
         print(f"  ✓ EirGrid data fetched — {eirgrid_df['WindGeneration_pct'].mean():.1f}% avg wind")
     elif eirgrid_df is not None:
@@ -234,9 +241,9 @@ def main():
     charts_written = [p.name for p in chart_day_dir.glob("*")
                       if before.get(p.name) != p.stat().st_mtime_ns]
 
-    # Open all interactive HTML charts in the browser
+    # Open all interactive HTML charts in the browser (not on a headless CI runner)
     html_charts = sorted(chart_day_dir.glob("*.html"))
-    if html_charts:
+    if html_charts and not os.environ.get("CI"):
         print(f"\n  Opening {len(html_charts)} interactive charts in browser...")
         for html in html_charts:
             subprocess.Popen(["xdg-open", str(html)],

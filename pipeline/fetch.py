@@ -104,7 +104,8 @@ AREA_FIELDS = {
 
 
 def fetch_wind_and_demand(
-    delivery_date: date, out_dir: Path | str = DEFAULT_DATA_DIR, overwrite_raw: bool = True
+    delivery_date: date, out_dir: Path | str = DEFAULT_DATA_DIR, overwrite_raw: bool = True,
+    prefer_archive: bool = False,
 ) -> pd.DataFrame | None:
     """
     Fetch wind generation and demand for delivery_date from EirGrid.
@@ -142,11 +143,21 @@ def fetch_wind_and_demand(
     JSON a published post was written from, and never writes an empty one; a
     zero-row file is a failed fetch, not a record worth protecting.
 
+    prefer_archive=True uses an area's archived response (no request) whenever that archive has
+    rows, and fetches live only for an area whose archive is missing or empty. CI uses it so a
+    retry after a run that archived the raw files but died before publishing is generated from
+    the archived bytes, not from a fresh response that may differ.
+
     Note: EirGrid's demand endpoint does not return a forecast field for this
     region/chart combination (only SYSTEM_DEMAND) — there is no DemandForecastMW.
     """
-    wind   = fetch_area(delivery_date, "wind",   out_dir=out_dir, overwrite_raw=overwrite_raw)
-    demand = fetch_area(delivery_date, "demand", out_dir=out_dir, overwrite_raw=overwrite_raw)
+    def area(name):
+        archived = load_archived_area(delivery_date, name, out_dir) if prefer_archive else None
+        if archived is not None:
+            return archived
+        return fetch_area(delivery_date, name, out_dir=out_dir, overwrite_raw=overwrite_raw)
+
+    wind, demand = area("wind"), area("demand")
     prev_wind, prev_demand = load_archived_previous_day(delivery_date, out_dir)
     return combine_for_trading_day(delivery_date, wind, demand, prev_wind, prev_demand)
 

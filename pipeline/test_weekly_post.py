@@ -80,7 +80,7 @@ def test_post_contents_order_and_rules():
     with tempfile.TemporaryDirectory() as tmp:
         post = build_weekly_post(s, Path(tmp))
         md = post.read_text()
-        assert post == Path(tmp) / "weekly" / "2026-09-28" / "index.md"
+        assert post == Path(tmp) / "weekly" / "2026-10-04" / "index.md"
         assert "draft: true" in md and "week_start: 2026-09-28" in md
         body = md.split("---\n", 2)[2]
         assert body.index("dearest of the last") < body.index("![") < body.index("Week mean (c/kWh)") \
@@ -143,6 +143,78 @@ def test_build_refuses_when_final_day_missing_and_never_writes_then():
             raise AssertionError("overwrote without force")
         except FileExistsError:
             pass
+
+
+def _disk_store(tmp: Path) -> Path:
+    import sqlite3
+    db = tmp / "h.db"
+    disk = sqlite3.connect(db)
+    make_store().backup(disk)
+    disk.execute("UPDATE system_conditions SET wind_pct = 20.0 WHERE date BETWEEN '2026-09-28' AND '2026-10-04'")
+    disk.commit()
+    disk.close()
+    return db
+
+
+def test_week_gaps_prices_and_demand():
+    import sqlite3
+    with tempfile.TemporaryDirectory() as tmp:
+        db = _disk_store(Path(tmp))
+        assert weekly.week_gaps(db, date(2026, 9, 28)) == []
+        c = sqlite3.connect(db)
+        c.execute("DELETE FROM market_prices WHERE date = '2026-10-04'")
+        c.execute("UPDATE system_conditions SET wind_pct = NULL WHERE date = '2026-10-02'")
+        c.commit(); c.close()
+        gaps = weekly.week_gaps(db, date(2026, 9, 28))
+        assert len(gaps) == 2 and "2026-10-02 demand 0/36" in gaps[0] and "2026-10-04 prices 0/48" in gaps[1], gaps
+
+
+def test_ensure_week_current_retries_bounded_and_rechecks():
+    import sqlite3
+    with tempfile.TemporaryDirectory() as tmp:
+        db = _disk_store(Path(tmp))
+        c = sqlite3.connect(db)
+        c.execute("UPDATE system_conditions SET wind_pct = NULL WHERE date = '2026-10-04'")
+        c.commit(); c.close()
+        calls = []
+
+        def never(_db):
+            calls.append(1)
+            return 1
+        assert weekly.ensure_week_current(db, date(2026, 9, 28), refresh=never, attempts=3, wait_s=0)
+        assert len(calls) == 3, "bounded at 3 attempts"
+
+        calls.clear()
+
+        def heals_on_second(_db):
+            calls.append(1)
+            if len(calls) == 2:
+                c = sqlite3.connect(db)
+                c.execute("UPDATE system_conditions SET wind_pct = 20.0 WHERE date = '2026-10-04'")
+                c.commit(); c.close()
+            return 0
+        assert weekly.ensure_week_current(db, date(2026, 9, 28), refresh=heals_on_second, attempts=3, wait_s=0) == []
+        assert len(calls) == 2, "stops as soon as the week is clean"
+
+        calls.clear()
+        assert weekly.ensure_week_current(db, date(2026, 9, 28), refresh=never, attempts=3, wait_s=0) == []
+        assert not calls, "a clean week is never refreshed"
+
+
+def test_refresh_does_not_relax_the_completeness_check():
+    import sqlite3
+    with tempfile.TemporaryDirectory() as tmp:
+        db = _disk_store(Path(tmp))
+        c = sqlite3.connect(db)
+        c.execute("DELETE FROM market_prices WHERE date = '2026-10-04'")
+        c.commit(); c.close()
+        remaining = weekly.ensure_week_current(db, date(2026, 9, 28), refresh=lambda _d: 0, attempts=2, wait_s=0)
+        assert remaining
+        try:
+            weekly.build_weekly_draft(date(2026, 9, 30), db, Path(tmp) / "c", Path(tmp) / "ch")
+            raise AssertionError("built a week whose final day is short")
+        except ValueError as e:
+            assert "2026-10-04" in str(e)
 
 
 if __name__ == "__main__":

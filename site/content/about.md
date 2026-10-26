@@ -26,6 +26,8 @@ All analysis is produced using Python (pandas, matplotlib).
 
 - **SEMO** — Day-Ahead Market price results
 - **EirGrid** — Generation mix, wind forecasts, system demand, SNSP
+
+Supported by EirGrid Group Data
 - **CRU** — Regulatory decisions and consultation documents
 
 ## Get In Touch

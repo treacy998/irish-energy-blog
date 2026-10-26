@@ -207,6 +207,16 @@ def scaffold_daily(target_date: date, explicit_file: Path = None, title: str = N
         f"  ·  **Median** €{summary['median_price']}/MWh"
         f"  ·  **Periods above €150:** {summary['periods_above_150']} of {n_periods} ({pct_48(summary['periods_above_150'])})"
     )
+    if n_periods == 50:
+        price_profile_stats += (
+            "\n\n*Clocks go back on this date, so the trading day is 25 hours long: 50 half-hour periods, "
+            "with 01:00–02:00 Irish time occurring twice. The chart labels both passes.*"
+        )
+    elif n_periods == 46:
+        price_profile_stats += (
+            "\n\n*Clocks go forward on this date, so the trading day is 23 hours long: 46 half-hour periods, "
+            "and 01:00–02:00 Irish time does not occur.*"
+        )
 
     has_wind_chart = (chart_day_dir / f"price-wind-{date_str}.png").exists()
     if has_wind_chart and "wind_pct_mean" in summary:
@@ -380,14 +390,15 @@ WEEKLY_CAVEAT = (
 
 
 def build_weekly_post(summary: dict, content_root: Path | None = None, force: bool = False) -> Path:
-    """Write <content_root>/weekly/<week_start>/index.md (draft: true) from weekly_summary().
+    """Write <content_root>/weekly/<week_end>/index.md (draft: true) from weekly_summary(). The directory is
+    named by the last day of the week (the Sunday), like the post's date; week_start stays in the front matter.
 
     The audit keys on the week_start front matter and reads the labelled table rows, so the
     row labels here are the ones audit_posts.WEEKLY_ROWS expects. Refuses to overwrite an
     existing post unless force=True (it may have hand-written commentary)."""
     content_root = Path(content_root) if content_root else CONTENT_DIR
     ws, we = date.fromisoformat(summary["week_start"]), date.fromisoformat(summary["week_end"])
-    outpath = content_root / "weekly" / summary["week_start"] / "index.md"
+    outpath = content_root / "weekly" / summary["week_end"] / "index.md"
     if outpath.exists() and not force:
         raise FileExistsError(f"{outpath} exists; pass force=True to overwrite")
 

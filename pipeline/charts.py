@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import date
 
 from process import load_dam_data, get_day_data, daily_summary, wind_summary
+from trading_day import clock_change_note, period_keys, period_labels
 from charts_interactive import generate_interactive_charts
 
 # ── Palette ────────────────────────────────────────────────────────────────
@@ -71,14 +72,26 @@ def _header(fig, title, subtitle):
              va="top", ha="right", alpha=0.55)
 
 
-def _format_time_axis(ax):
-    """Standard x-axis formatting for half-hourly data (periods 0–47)."""
+def _delivery_date(day_df: pd.DataFrame) -> date:
+    return day_df["DeliveryDate"].iloc[0].date()
+
+
+def _with_note(subtitle: str, delivery_date: date) -> str:
+    note = clock_change_note(delivery_date)
+    return f"{subtitle}  ·  {note}" if note else subtitle
+
+
+def _format_time_axis(ax, delivery_date: date):
+    """Standard x-axis formatting for half-hourly data: one tick every 2 hours, labelled with the
+    period's local time. A 50- or 46-period day has that many positions, and on the long day the
+    second pass of the repeated hour is ticked too."""
+    labels = period_labels(delivery_date)
+    keys = period_keys(delivery_date)
+    ticks = sorted(set(range(0, len(labels), 4)) | {i for i, k in enumerate(keys)
+                                                    if k.endswith("(2nd)") and labels[i].endswith(":00")})
     ax.set_xlabel("")
-    ax.set_xticks(range(0, 48, 4))
-    ax.set_xticklabels(
-        [f"{((23*60 + i*30) % 1440) // 60:02d}:{((23*60 + i*30) % 1440) % 60:02d}" for i in range(0, 48, 4)],
-        rotation=45, ha="right", color=TEXT_SEC, fontsize=8,
-    )
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([labels[i] for i in ticks], rotation=45, ha="right", color=TEXT_SEC, fontsize=8)
 
 
 # ── Chart 1 — DAM price profile ────────────────────────────────────────────
@@ -95,7 +108,7 @@ def chart_dam_price_profile(day_df: pd.DataFrame, summary: dict, outpath: Path):
     ax.plot(x, prices, color=PRICE_LINE, linewidth=2.4, zorder=3, label="DAM Price (€/MWh)")
     ax.axhline(mean, color=MEAN_LINE, linewidth=1.0, linestyle="--", alpha=0.6, label=f"Mean  €{mean:.0f}")
     # Mean label on the right axis edge
-    ax.text(47.5, mean, f"avg €{mean:.0f}", color=MEAN_LINE, fontsize=7.5,
+    ax.text(len(x) - 0.5, mean, f"avg €{mean:.0f}", color=MEAN_LINE, fontsize=7.5,
             va="center", ha="left", fontweight="bold")
 
     peak_x = summary["peak_period"] - 1
@@ -119,12 +132,12 @@ def chart_dam_price_profile(day_df: pd.DataFrame, summary: dict, outpath: Path):
 
     ax.set_ylabel("€ / MWh", color=TEXT_SEC, fontsize=8.5)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"€{v:.0f}"))
-    _format_time_axis(ax)
+    _format_time_axis(ax, _delivery_date(day_df))
 
     _header(
         fig,
         f"I-SEM Day-Ahead Market — {summary['date']}",
-        "Half-hourly DAM clearing prices  |  €/MWh  |  Irish time",
+        _with_note("Half-hourly DAM clearing prices  |  €/MWh  |  Irish time", _delivery_date(day_df)),
     )
 
     plt.tight_layout(rect=[0, 0, 1, 0.86])
@@ -172,12 +185,13 @@ def chart_price_vs_wind(day_df: pd.DataFrame, summary: dict, outpath: Path):
         labelcolor=[PRICE_LINE, WIND_LINE],
     )
 
-    _format_time_axis(ax1)
+    _format_time_axis(ax1, _delivery_date(day_df))
 
     _header(
         fig,
         f"Price vs Wind Generation — {summary['date']}",
-        "DAM price (€/MWh, green)  ·  wind share (%, brown dashed)  ·  Irish time",
+        _with_note("DAM price (€/MWh, green)  ·  wind share (%, brown dashed)  ·  Irish time",
+                   _delivery_date(day_df)),
     )
 
     plt.tight_layout(rect=[0, 0, 1, 0.86])
@@ -204,10 +218,16 @@ def chart_week_comparison(df: pd.DataFrame, target_date: date, outpath: Path):
 
     legend_handles = []
     hist_idx = 0
+    # Each period sits where the target day has the same local clock label, so the lines line up
+    # by time of day; a period with no counterpart on the target day is not drawn.
+    position = {k: i for i, k in enumerate(period_keys(target_date))}
     for i, d in enumerate(recent_dates):
         day = df[df["DeliveryDate"].dt.date == d]
-        x   = day["Period"].values - 1
-        y   = day["DAMPrice_EUR_MWh"].values
+        day_keys = period_keys(d)
+        pts = [(position[day_keys[p - 1]], v) for p, v in zip(day["Period"].values, day["DAMPrice_EUR_MWh"].values)
+               if day_keys[p - 1] in position]
+        x = np.array([a for a, _ in pts], dtype=int)
+        y = np.array([b for _, b in pts])
 
         if d == target_date:
             ax.fill_between(x, y, color=PRICE_FILL, alpha=0.12, zorder=1)
@@ -230,12 +250,12 @@ def chart_week_comparison(df: pd.DataFrame, target_date: date, outpath: Path):
 
     ax.set_ylabel("€ / MWh", color=TEXT_SEC, fontsize=8.5)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"€{v:.0f}"))
-    _format_time_axis(ax)
+    _format_time_axis(ax, target_date)
 
     _header(
         fig,
         f"Week in Context — {target_date}",
-        "Last 7 days overlaid  ·  today (green) vs prior days (brown shades)",
+        _with_note("Last 7 days overlaid  ·  today (green) vs prior days (brown shades)", target_date),
     )
 
     plt.tight_layout(rect=[0, 0, 1, 0.86])
@@ -261,7 +281,7 @@ def chart_price_duration(df: pd.DataFrame, date_str: str, output_dir: Path):
 
         for level in (100, 150, 200):
             ax.axhline(level, color=PEAK_COLOR, linewidth=1.0, linestyle="--", alpha=0.8, zorder=4)
-            ax.text(48.8, level, f"€{level}", color=PEAK_COLOR, fontsize=7.5, va="center", ha="left",
+            ax.text(len(ranks) + 0.8, level, f"€{level}", color=PEAK_COLOR, fontsize=7.5, va="center", ha="left",
                     fontweight="bold")
 
         above_150 = int(np.sum(sorted_prices > 150))
@@ -273,12 +293,12 @@ def chart_price_duration(df: pd.DataFrame, date_str: str, output_dir: Path):
 
         ax.set_xlabel("Half-hour periods, ranked high → low", color=TEXT_SEC, fontsize=8.5)
         ax.set_ylabel("€ / MWh", color=TEXT_SEC, fontsize=8.5)
-        ax.set_xlim(0.5, 50.5)
+        ax.set_xlim(0.5, len(ranks) + 2.5)
         ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"€{v:.0f}"))
 
         _header(fig,
                 f"Price Duration Curve — {date_str}",
-                "48 half-hourly periods ranked high to low  |  €/MWh")
+                f"{len(ranks)} half-hourly periods ranked high to low  |  €/MWh")
 
         plt.tight_layout(rect=[0, 0, 1, 0.86])
         outpath = output_dir / f"pdc-{date_str}.png"
@@ -399,7 +419,7 @@ def chart_bess_dispatch(df: pd.DataFrame, bess_result: dict, date_str: str, outp
         # Spread bracket on the right side
         c_price = bess_result["charge_mean"]
         d_price = bess_result["discharge_mean"]
-        x_brk = 46.5
+        x_brk = len(prices) - 1.5
         ax.annotate("", xy=(x_brk, c_price), xytext=(x_brk, d_price),
                     arrowprops=dict(arrowstyle="<->", color=TEXT_SEC, lw=1.5))
         ax.text(x_brk + 0.4, (c_price + d_price) / 2,
@@ -411,7 +431,7 @@ def chart_bess_dispatch(df: pd.DataFrame, bess_result: dict, date_str: str, outp
         ax.axhline(d_price, color=PEAK_COLOR, linewidth=0.7, linestyle=":", alpha=0.6)
 
         ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"€{v:.0f}"))
-        _format_time_axis(ax)
+        _format_time_axis(ax, date.fromisoformat(date_str))
 
         _header(
             fig,

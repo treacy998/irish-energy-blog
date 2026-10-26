@@ -64,6 +64,7 @@
               <a href="{{ .RelPermalink }}">{{ .Title }}</a>.</p>
           {{ end }}
         {{ end }}
+        {{ partial "data-attribution.html" . }}
         {{ partial "inis-cta.html" . }}
       </div>
     </section>

@@ -1,0 +1,32 @@
+name: deadman
+
+# Independent of daily.yml: it only looks at what is on the default branch. Fails (and so emails the
+# repo's notification recipients) if any of the last 7 daily post directories is missing.
+on:
+  schedule:
+    - cron: "0 9 * * 1"   # Monday 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Last 7 daily posts exist
+        run: |
+          today=$(TZ=Europe/Dublin date +%F)
+          missing=0
+          for k in 1 2 3 4 5 6 7; do
+            d=$(date -d "$today -$k day" +%F)
+            if [ -f "site/content/daily/$d/index.md" ]; then
+              echo "ok      $d"
+            else
+              echo "::error::missing daily post $d (site/content/daily/$d/index.md)"
+              missing=$((missing + 1))
+            fi
+          done
+          [ "$missing" -eq 0 ] || { echo "$missing of the last 7 daily posts missing"; exit 1; }
