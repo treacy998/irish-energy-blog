@@ -7,7 +7,6 @@ authors: ["Eoin"]
 tags: ["weekly-analysis", "I-SEM"]
 summary: "3rd dearest of the last 14 weeks; last dearer: week of 12 Oct. Against the previous 13 weeks: dearer."
 images: ["charts/weekly/2026-10-19.png"]
-draft: true
 ShowToc: true
 ---
 
