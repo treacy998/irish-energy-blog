@@ -15,7 +15,11 @@ ci_daily.py — one unattended daily run, for GitHub Actions (.github/workflows/
    later raw push cannot see a differing hash. Only an area with nothing archived is fetched. Whatever is
    still missing is fetched from SEMOpx
    (the 7-day week-compare chart needs them; a missing one is a failure, not a quietly shorter chart)
-   and the previous day's EirGrid archive (a missing one leaves two half-hours NaN, as by design).
+   and the previous day's EirGrid archive (a missing one leaves two half-hours NaN, as by design; refresh_tail
+   says which areas are refetched, and when an incomplete archived file may be superseded). Live
+   EirGrid fetches, this one and run_daily's for the target day, retry while an area has fewer non-null
+   half-hours than the day can supply: up to 10 attempts about 60-90 s apart (fetch.py: EIRGRID_ATTEMPTS,
+   EIRGRID_RETRY_MIN_S/MAX_S, EIRGRID_READ_TIMEOUT_S), each attempt logged and tabled in $GITHUB_STEP_SUMMARY.
 3. Run run_daily.py --date <date> unchanged. Its stale-data gate and fetch.py's fail-closed paths
    are not touched; a nonzero exit fails this script.
 4. Unless --allow-no-wind, fail if the post came out without wind figures (EirGrid's demand feed is
@@ -27,6 +31,7 @@ Prints STATUS=noop|generated and DATE=<date>, and appends both to $GITHUB_OUTPUT
 """
 
 import argparse
+import hashlib
 import os
 import shutil
 import subprocess
@@ -36,7 +41,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from run_daily import CONTENT_DIR, DATA_DIR, default_delivery_date
-from fetch import archive_path, archive_row_count, fetch_area, fetch_semo
+from fetch import archive_path, archive_row_count, archived_halfhours, configured_attempts, fetch_areas, fetch_semo
+from trading_day import placeable_halfhours
 import raw_archive
 from update_manifest import ManifestConflict, update_manifest
 
@@ -60,6 +66,56 @@ def semo_file(delivery: date) -> Path | None:
     stamp = (delivery - timedelta(days=1)).strftime("%Y%m%d")
     found = sorted(DATA_DIR.glob(f"MarketResult_SEM-DA_PWR-MRC-D+1_{stamp}*.csv"))
     return found[0] if found else None
+
+
+def refresh_tail(prev: date) -> list[Path]:
+    """The previous day's EirGrid archive supplies the target day's first two half-hours; fetch what it lacks.
+
+    Per area, by what is archived for `prev` (HALF = non-null half-hours, NEED = placeable_halfhours(prev)):
+      complete (HALF >= NEED)               no request.
+      nothing archived (zero rows)          fetched, retried (fetch.py), written if it has rows.
+      incomplete and pinned by the manifest no request: it backs a published post and is never replaced.
+      incomplete and not pinned             not evidence (raw_archive.may_supersede, PR #2): fetched with retries,
+                                            and the archived file is replaced only by a COMPLETE response; a response
+                                            that is no better leaves the archived bytes in place.
+    "Pinned" means the manifest has any entry for the file. Returns the superseded files: main() adds them to this
+    run's manifest update, so the raw push (which replaces an incomplete, unpinned archived copy once, logging both
+    hashes) archives the bytes the post was built from; without that the post would rest on an unarchived file."""
+    need = placeable_halfhours(prev)
+    pinned = raw_archive.manifest_entries()
+    fetch_now, replaceable = [], {}
+    for area in ("wind", "demand"):
+        path = archive_path(prev, area, DATA_DIR)
+        have = archived_halfhours(prev, area, DATA_DIR)
+        rel = f"data/eirgrid_raw/{prev.isoformat()}/{area}.json"
+        if have >= need:
+            continue
+        if archive_row_count(path) == 0:
+            fetch_now.append(area)
+        elif rel in pinned:
+            print(f"  [tail] {rel} holds {have}/{need} half-hours but the manifest pins it; not refetched")
+        else:
+            print(f"  [tail] {rel} holds {have}/{need} half-hours and is not pinned by the manifest: "
+                  f"treating it as absent and fetching live")
+            replaceable[area] = (have, path.read_bytes())
+            path.unlink()                    # fetch_areas(overwrite_raw=False) writes only into an empty slot
+            fetch_now.append(area)
+    if fetch_now:
+        fetch_areas(prev, fetch_now, out_dir=DATA_DIR, overwrite_raw=False, attempts=configured_attempts(ci=True))
+    superseded = []
+    for area, (have, old) in replaceable.items():
+        path = archive_path(prev, area, DATA_DIR)
+        now = archived_halfhours(prev, area, DATA_DIR)
+        rel = f"data/eirgrid_raw/{prev.isoformat()}/{area}.json"
+        if now >= need:
+            print(f"  [tail] superseded {rel}: {have}/{need} -> {now}/{need} half-hours; "
+                  f"sha256 {hashlib.sha256(old).hexdigest()} -> {raw_archive.sha256(path)}")
+            superseded.append(path)
+        else:
+            path.write_bytes(old)
+            print(f"  [tail] live {area} for {prev.isoformat()} is no better ({now}/{need}); "
+                  f"keeping the archived file ({have}/{need})")
+    return superseded
 
 
 def main():
@@ -89,9 +145,9 @@ def main():
         except Exception as e:
             die(f"cannot fetch SEMOpx history for {d.isoformat()} ({type(e).__name__}: {e}); "
                 f"the week-compare chart for {iso} would be wrong, so not generating it")
+    prev = target - timedelta(days=1)
+    superseded = refresh_tail(prev)
     for area in ("wind", "demand"):
-        prev = target - timedelta(days=1)
-        fetch_area(prev, area, out_dir=DATA_DIR, overwrite_raw=False)
         if archive_row_count(archive_path(prev, area, DATA_DIR)) == 0:
             print(f"::warning::no EirGrid {area} archive for {prev.isoformat()}; "
                   f"its evening half-hours stay NaN in the {iso} post")
@@ -120,6 +176,7 @@ def main():
 
     raw = [f for f in (semo_file(d) for d in history + [target]) if f]
     raw += [DATA_DIR / "eirgrid_raw" / iso / f"{a}.json" for a in ("wind", "demand")]
+    raw += superseded            # a refreshed previous-day tail backs this post, so it is pinned and pushed with it
     try:
         added = update_manifest(raw)
     except ManifestConflict as e:

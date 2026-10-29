@@ -31,7 +31,12 @@ concurrency:
 jobs:
   daily:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # Worst case, every EirGrid request timing out and every wait at its maximum (pipeline/fetch.py, EIRGRID_*):
+    # each of the two fetching phases (the previous-day tail in ci_daily, the target day in run_daily) is
+    # 10 rounds x 2 areas x (15 s connect + 30 s read) + 9 waits x 90 s = 28.5 min; two phases = 57 min; the
+    # rest of the job (clone, install, SEMOpx history, charts, Hugo build, raw push, audit gate, publish) is about
+    # 13 min: 70 min in all.
+    timeout-minutes: 80
     env:
       # Repo variables (Settings > Secrets and variables > Actions > Variables). Commits must be
       # authored as the owner's GitHub-verified identity, or Vercel may refuse to deploy them.
@@ -93,6 +98,17 @@ jobs:
         env:
           DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
         run: python pipeline/raw_archive.py push --date "${{ steps.gen.outputs.date }}"
+
+      # The gate. Rebuilds a throwaway store from the archived raw (the 14 days before the target and the target
+      # itself, every file checked against the manifest) and audits the new post against it. A flagged figure that is
+      # not in pipeline/audit/audit_known.csv fails the job here, so the post is never committed. It runs after the
+      # raw push because the archive is where it reads the target day's raw from; the next run restores those
+      # bytes, so a failed audit costs nothing but the retry.
+      - name: Audit the new post against the raw archive
+        if: steps.gen.outputs.status == 'generated'
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: python pipeline/ci_audit.py --date "${{ steps.gen.outputs.date }}" --dest "$RUNNER_TEMP/audit-store"
 
       - name: Commit and push
         if: steps.gen.outputs.status == 'generated'

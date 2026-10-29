@@ -12,6 +12,10 @@ works from its root). It is append-only by convention: a file already in it is n
     raw_archive.py push --date 2026-10-09      # add this run's manifest-listed files; refuse any change
     raw_archive.py seed                        # one-off: push all of local data/ (not history.db)
     raw_archive.py verify                      # fresh clone, then sha256sum -c against the manifest
+    raw_archive.py materialise --from 2026-10-14 --to 2026-10-28 --dest DIR
+                                               # restore the archived raw for that range into DIR/data, check
+                                               # every file against the manifest, build a throwaway DIR/history.db
+                                               # (offline: the archive is the only source). Used as an audit gate.
 
 Remote: --remote PATH_OR_URL, else $RAW_ARCHIVE_REMOTE (used by tests), else https://github.com/$DATA_REPO.git (DATA_REPO defaults to
 treacy998/inis-energy-data). With DATA_REPO_TOKEN set, HTTPS requests carry it as a basic-auth
@@ -20,14 +24,16 @@ header passed through the environment (never on a command line, never in a URL).
 
 import argparse
 import base64
+import contextlib
 import hashlib
+import io
 import os
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -257,14 +263,109 @@ def cmd_verify(args):
     sys.exit(1 if bad else 0)
 
 
+def window_paths(start: date, end: date) -> list[str]:
+    """Sparse-checkout patterns for the raw behind deliveries start..end: each day's SEMOpx file (trade date =
+    delivery - 1) and each day's EirGrid archive, plus the day before `start` (its evening half-hours)."""
+    pats, d = [], start
+    while d <= end:
+        pats.append(f"/data/MarketResult_SEM-DA_PWR-MRC-D+1_{(d - timedelta(days=1)):%Y%m%d}*.csv")
+        d += timedelta(days=1)
+    d = start - timedelta(days=1)
+    while d <= end:
+        pats.append(f"/data/eirgrid_raw/{d}/*")
+        d += timedelta(days=1)
+    return pats
+
+
+SEMO_RAW = re.compile(r"data/MarketResult_SEM-DA_PWR-MRC-D\+1_(\d{8})")
+
+
+def in_window(rel: str, start: date, end: date) -> bool:
+    """Is this manifest path one that materialise(start, end) is meant to restore?"""
+    m = SEMO_RAW.match(rel)
+    if m:
+        return start <= datetime.strptime(m.group(1), "%Y%m%d").date() + timedelta(days=1) <= end
+    m = EIRGRID_RAW.match(rel)
+    return bool(m) and start - timedelta(days=1) <= date.fromisoformat(m.group(1)) <= end
+
+
+def build_throwaway_db(dest: Path, start: date, end: date) -> dict:
+    """history.db in dest, built with store.py's own backfill functions from dest/data alone. No network:
+    store.fetch_area is replaced so a date whose archive is missing is reported, never fetched."""
+    import store                                    # heavy imports (pandas, process); only materialise needs them
+    db = dest / "history.db"
+    conn = store.build_db(db)
+    prices = store.backfill_market_prices(conn, dest / "data")
+    saved, store.fetch_area = store.fetch_area, (lambda *a, **k: None)
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            res = store.backfill_system_conditions(conn, start, end, out_dir=dest / "data", retries=0)
+    finally:
+        store.fetch_area = saved
+    days = conn.execute("SELECT count(DISTINCT date) FROM market_prices").fetchone()[0]
+    conn.close()
+    return {"db": db, "price_rows": prices, "price_days": days, "condition_rows": res.rows,
+            "wind_failed": res.wind_failed, "demand_missing": res.demand_missing}
+
+
+def cmd_materialise(args):
+    """Restore the archived raw for deliveries --from..--to into DEST/data (a fresh directory), verify every
+    restored file against the manifest, and build DEST/history.db from it. Fails (nonzero, nothing built) if
+    a restored file's hash differs from its manifest entry, or a manifest-pinned file for the range is
+    missing from the archive. Files the manifest does not pin (older than its first entry, or in a gap) are
+    restored and counted, not trusted blindly: the summary says how many."""
+    start, end = date.fromisoformat(args.start), date.fromisoformat(args.to)
+    if end < start:
+        raise SystemExit("--to is before --from")
+    dest = Path(args.dest).resolve()
+    if dest.exists() and any(dest.iterdir()):
+        raise SystemExit(f"{dest} is not empty; materialise builds a throwaway store in a fresh directory")
+    (dest / "data").mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t) / "raw"
+        if not clone(remote_url(args.remote), tmp, sparse=window_paths(start, end)):
+            raise SystemExit("raw repo is empty")
+        src = [p for p in (tmp / "data").rglob("*") if p.is_file()] if (tmp / "data").exists() else []
+        for f in src:
+            out = dest / f.relative_to(tmp)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, out)
+    entries = manifest_entries()
+    restored = {p.relative_to(dest).as_posix(): p for p in (dest / "data").rglob("*") if p.is_file()}
+    mismatched = sorted(r for r, p in restored.items() if r in entries and entries[r] != sha256(p))
+    absent = sorted(r for r in entries if is_raw_data(r) and in_window(r, start, end) and r not in restored)
+    pinned = sum(1 for r in restored if r in entries)
+    if mismatched or absent:
+        for r in mismatched:
+            print(f"HASH MISMATCH {r}: archive {sha256(restored[r])}, manifest {entries[r]}")
+        for r in absent:
+            print(f"MISSING FROM ARCHIVE {r}: pinned by the manifest")
+        raise SystemExit(f"materialise {start}..{end}: {len(mismatched)} hash mismatch(es), {len(absent)} manifest file(s) missing")
+    built = build_throwaway_db(dest, start, end)
+    print(f"materialised {len(restored)} raw files for {start}..{end} into {dest}/data: {pinned} pinned by the manifest and "
+          f"matching, {len(restored) - pinned} not pinned by it")
+    print(f"built {built['db'].name}: {built['price_rows']} price rows over {built['price_days']} days, "
+          f"{built['condition_rows']} system_conditions rows")
+    if built["wind_failed"]:
+        w = built["wind_failed"]
+        print(f"  no archived EirGrid wind for {len(w)} date(s) ({w[0]}..{w[-1]}): their wind/demand figures have no archived ground truth")
+    if built["demand_missing"]:
+        print(f"  demand incomplete for {len(built['demand_missing'])} date(s): {built['demand_missing'][:5]}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1].strip())
     ap.add_argument("--remote", help="Raw repo URL or path (default: https://github.com/$DATA_REPO.git).")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name, fn in (("restore", cmd_restore), ("push", cmd_push), ("seed", cmd_seed), ("verify", cmd_verify)):
+    for name, fn in (("restore", cmd_restore), ("push", cmd_push), ("seed", cmd_seed), ("verify", cmd_verify),
+                     ("materialise", cmd_materialise)):
         p = sub.add_parser(name)
         if name in ("restore", "push"):
             p.add_argument("--date", required=name == "restore", metavar="YYYY-MM-DD")
+        if name == "materialise":
+            p.add_argument("--from", dest="start", required=True, metavar="YYYY-MM-DD", help="First delivery date.")
+            p.add_argument("--to", required=True, metavar="YYYY-MM-DD", help="Last delivery date.")
+            p.add_argument("--dest", required=True, metavar="DIR", help="A new, empty directory for data/ and history.db.")
         p.set_defaults(fn=fn)
     args = ap.parse_args()
     args.remote = remote_url(args.remote)
