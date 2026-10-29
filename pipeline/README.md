@@ -71,7 +71,8 @@ date is computed by the Irish calendar in Python, so UTC vs IST does not matter.
   1, so a local run, a backfill or a heal never waits), `EIRGRID_RETRY_MIN_S` / `EIRGRID_RETRY_MAX_S`
   (60 / 90) and `EIRGRID_READ_TIMEOUT_S` (30; the connect timeout stays 15). Worst case, every request
   timing out and every wait at its maximum: 10 x 2 x 45 s + 9 x 90 s = 28.5 min per phase, two phases
-  = 57 min, plus about 10 min for the rest of the job; `daily.yml` sets `timeout-minutes` to 75.
+  = 57 min, plus about 13 min for the rest of the job (including the audit gate); `daily.yml` sets
+  `timeout-minutes` to 80.
   `pipeline/test_fetch_retry.py` covers a flaky feed, an always-empty feed (refused in bounded time),
   a complete first fetch (no retry), a timeout, most-complete-wins, and the defaults.
 - **Source of truth.** For published figures, the raw files the CI run fetched are the record, not your
@@ -104,9 +105,31 @@ date is computed by the Irish calendar in Python, so UTC vs IST does not matter.
 - **Manifest.** `pipeline/update_manifest.py` merges new raw-file checksums into
   `pipeline/data-manifest.sha256` and never removes an entry. A recorded file whose hash changed aborts
   the run. `sha256sum -c --ignore-missing pipeline/data-manifest.sha256` checks what a local `data/` holds.
-- **Local store.** CI does not update `data/history.db` or run `audit_posts.py`; both need the local
-  store. Run the nightly store job and the audit locally as before. Until `--heal` has filled demand,
-  the audit flags CI-written posts for days the local store holds no demand for.
+- **Audit gate.** After the raw push and before the commit, `pipeline/ci_audit.py` audits the new post against
+  the archive, not against anyone's local store: `raw_archive.py materialise --from <date-14> --to <date>
+  --dest DIR` restores those days' raw from the raw repo into a fresh directory, checks every restored file
+  against `pipeline/data-manifest.sha256` (a hash mismatch, or a manifest-pinned file the archive lacks, fails
+  before anything is built; files the manifest does not pin are counted in the summary), and builds a
+  throwaway `DIR/history.db` with `store.py`'s own backfill functions, offline (a date with no archived EirGrid
+  raw is reported, never fetched). `audit_posts.py --store DIR/history.db --only <date>` then recomputes the
+  day's figures and compares every figure in the post. A flagged figure that is not in
+  `pipeline/audit/audit_known.csv`, or a post with no ground truth, exits 1 and the job stops before
+  "Commit and push". The raw is already pushed by then; the next run restores it and regenerates the same bytes.
+  `audit_posts.py` gained `--store PATH`, `--only DATE` and `--report PATH` (defaults unchanged: `data/history.db`,
+  every post, `audit_report.csv` in the root). `pipeline/test_audit_gate.py` covers a correct post (passes), a post
+  with one wrong figure (fails, and the workflow orders the gate before the commit), manifest mismatch and
+  missing pinned files, offline behaviour, and the weekly mode.
+- **Weekly audit.** `.github/workflows/audit-weekly.yml` runs on Mondays at 09:30 UTC, after the deadman check
+  (09:00). It materialises the whole archive (2025-10-07 to yesterday), audits every daily and weekly post with
+  `--exact --allow-skips`, and writes a summary. It fails only on a flagged figure that is not baselined. A post
+  whose raw is not in the archive is listed as having no archived ground truth and does not fail the job. Run
+  locally against the real archive on 2026-10-29 it restored 745 raw files (183 pinned by the manifest and
+  matching, 562 not pinned), checked 180 posts and 4,077 figures in about a minute, and flagged only the 142
+  baselined rows. The 562 unpinned files are the manifest's gap (it starts at 2026-05-03 with holes), so for
+  those the audit compares posts to the archive's bytes without a published checksum.
+- **Local store.** CI still does not update `data/history.db`; the nightly store job and a local `audit_posts.py`
+  run as before. Until `--heal` has filled demand, a local audit flags CI-written posts for days the local store
+  holds no demand for; the archive-based audits above do not depend on it.
 - **Render check.** The job builds Hugo and checks that the new page has `noindex, follow` and a weekly
   pointer exactly when a weekly covers its day (`pipeline/ci_verify_render.py`).
 - **Secrets and variables.** None for the fetch (SEMOpx and EirGrid are unauthenticated). The content

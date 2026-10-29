@@ -15,7 +15,11 @@ published posts the change invalidates:
 
     python pipeline/audit/audit_posts.py [--allow-skips] [--exact]
 
-Ground truth source: data/history.db (market_prices, system_conditions).
+Ground truth source: data/history.db (market_prices, system_conditions), or the store named by
+--store PATH, e.g. a throwaway one built from the raw archive by `raw_archive.py materialise`
+(ci_audit.py, the audit-weekly workflow). With --store a skipped post is reported as having
+"no archived ground truth". --only DATE restricts the run to one daily post (no weekly posts) and
+--report PATH moves audit_report.csv, so CI can audit without writing into the checkout.
 A post with no ground truth in the store is skipped, listed with its reason,
 and makes the run exit non-zero unless --allow-skips is passed — a skip is
 an unaudited post, not a clean one.
@@ -615,7 +619,7 @@ def audit_post(post_path: Path, gt: dict, exact: bool = False) -> list:
     return results
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description="Audit published daily posts against data/history.db.")
     parser.add_argument("--allow-skips", action="store_true",
                         help="Exit 0 even if some posts had no ground truth and were skipped.")
@@ -625,17 +629,28 @@ def main():
     parser.add_argument("--exact", action="store_true",
                         help="Daily posts: tolerance 0 for integer-valued fields (counts, rank, percentile, "
                              "days_since); other fields keep ±1.0. Weekly posts are always exact.")
-    args = parser.parse_args()
+    parser.add_argument("--store", type=Path, metavar="PATH",
+                        help="Ground-truth store (default: data/history.db). With it, a post that has no "
+                             "ground truth in the store is reported as having no archived ground truth.")
+    parser.add_argument("--report", type=Path, metavar="PATH",
+                        help="Where to write the CSV report (default: audit_report.csv in the repo root).")
+    parser.add_argument("--only", action="append", metavar="YYYY-MM-DD", default=None,
+                        help="Audit only the daily post for this date (repeatable); weekly posts are not audited.")
+    args = parser.parse_args(argv)
+    db_path = args.store or DB_PATH
+    report_path = args.report or REPORT_PATH
+    no_truth = "no archived ground truth: " if args.store else ""
+    only = set(args.only) if args.only else None
     posts_dir, weekly_dir = POSTS_DIR, WEEKLY_DIR
     if args.content_root:
         posts_dir, weekly_dir = args.content_root / "daily", args.content_root / "weekly"
 
-    if not DB_PATH.exists():
-        print(f"No {DB_PATH} — run pipeline/store.py first.", file=sys.stderr)
+    if not db_path.exists():
+        print(f"No {db_path} — run pipeline/store.py first.", file=sys.stderr)
         sys.exit(1)
 
     failed = False
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True) if args.store else sqlite3.connect(db_path)
     all_rows = []
     checked = 0
     skipped = []          # (post, reason)
@@ -648,6 +663,8 @@ def main():
             d = date.fromisoformat(post_dir.name)
         except ValueError:
             continue
+        if only is not None and d.isoformat() not in only:
+            continue
         idx = post_dir / "index.md"
         if not idx.exists():
             skipped.append((post_dir.name, "no index.md in post directory"))
@@ -656,10 +673,10 @@ def main():
         try:
             gt = load_ground_truth(conn, d)
         except ValueError as e:
-            skipped.append((post_dir.name, str(e)))
+            skipped.append((post_dir.name, no_truth + str(e)))
             continue
         if gt is None:
-            skipped.append((post_dir.name, "no market_prices rows in history.db for this date"))
+            skipped.append((post_dir.name, no_truth + f"no market_prices rows in {db_path.name} for this date"))
             continue
 
         checked += 1
@@ -669,7 +686,7 @@ def main():
             all_rows.append([d.isoformat()] + row)
 
     weekly_unaudited = []
-    if weekly_dir.exists():
+    if weekly_dir.exists() and only is None:
         for wdir in sorted(weekly_dir.iterdir()):
             idx = wdir / "index.md"
             if not (wdir.is_dir() and idx.exists()):
@@ -681,7 +698,7 @@ def main():
             try:
                 summary = weekly_summary(ws, conn)
             except ValueError as e:
-                skipped.append((f"weekly/{wdir.name}", str(e)))
+                skipped.append((f"weekly/{wdir.name}", no_truth + str(e)))
                 continue
             checked += 1
             for row in audit_weekly_post(idx, weekly_ground_truth(summary), summary=summary):
@@ -689,7 +706,7 @@ def main():
 
     conn.close()
 
-    with open(REPORT_PATH, "w", newline="") as f:
+    with open(report_path, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["date", "surface", "field", "published", "computed", "delta", "line", "note"])
         w.writerows(all_rows)
@@ -700,9 +717,11 @@ def main():
     known = [r for r in flagged if flag_key(r[0], r[2], r[3], r[4]) in known_map]
     new_flags = [r for r in flagged if flag_key(r[0], r[2], r[3], r[4]) not in known_map]
     stale = set(known_map) - {flag_key(r[0], r[2], r[3], r[4]) for r in flagged}
+    if only is not None:                      # a restricted run says nothing about other posts' baseline rows
+        stale = {k for k in stale if k[0] in only}
     posts_with_issues = sorted({r[0] for r in flagged})
 
-    print(f"checked {checked} posts, skipped {len(skipped)} (against {DB_PATH})")
+    print(f"checked {checked} posts, skipped {len(skipped)} (against {db_path})")
     for name, reason in skipped:
         print(f"  SKIPPED {name}: {reason}")
     if weekly_unaudited:
@@ -737,7 +756,7 @@ def main():
     for r in new_flags:
         print(f"  {r[0]} {r[2]} published={r[3]} recomputed={r[4]} ({r[-1]})")
     print()
-    print(f"Full report: {REPORT_PATH}")
+    print(f"Full report: {report_path}")
 
     if new_flags:
         print(f"\nFAIL: {len(new_flags)} flagged row(s) not in {KNOWN_PATH.name}.", file=sys.stderr)

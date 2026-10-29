@@ -1,0 +1,67 @@
+name: audit-weekly
+
+# Audits every published daily and weekly post against a store rebuilt from the private raw archive (not from
+# anyone's local history.db), every Monday after the deadman check (09:00 UTC). Read-only: no commit, no push.
+#
+# It fails only on a flagged figure that is not in pipeline/audit/audit_known.csv. A post whose raw is not in the
+# archive (before it was seeded, or a day it never held) has no archived ground truth: it is listed as such
+# and does not fail the job (--allow-skips), because an unaudited post is reported, not hidden.
+#
+# Schedules only run from the default branch (see pipeline/README.md).
+on:
+  schedule:
+    - cron: "30 9 * * 1"   # Monday 09:30 UTC, after deadman.yml (09:00)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    # Clone and store build for the whole archive (about 385 days of SEMOpx CSVs and 175 of EirGrid JSON) take a
+    # few minutes; the audit itself under one. Generous, not tight.
+    timeout-minutes: 30
+    env:
+      DATA_REPO: ${{ vars.DATA_REPO }}
+    steps:
+      - name: Require the raw-repo token
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: '[ -n "$DATA_REPO_TOKEN" ] || { echo "::error::secret DATA_REPO_TOKEN is not set"; exit 1; }'
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pipeline/requirements-ci.txt
+
+      - run: pip install -r pipeline/requirements-ci.txt
+
+      # 2025-10-07 is the first delivery date the archive holds prices for; the weekly posts' trailing and
+      # seasonal baselines need the whole price history.
+      - name: Rebuild a throwaway store from the raw archive
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: |
+          to=$(TZ=Europe/Dublin date -d yesterday +%F)
+          python pipeline/raw_archive.py materialise --from 2025-10-07 --to "$to" --dest "$RUNNER_TEMP/audit-store"
+
+      - name: Audit every post against it
+        run: |
+          # The summary is written whether or not the audit fails (the shell runs with -e), then the job exits
+          # with the audit's own status.
+          rc=0
+          python pipeline/audit/audit_posts.py --store "$RUNNER_TEMP/audit-store/history.db" --exact --allow-skips \
+            --report "$RUNNER_TEMP/audit_report.csv" | tee "$RUNNER_TEMP/audit.txt" || rc=$?
+          {
+            echo "### Weekly audit against the raw archive"
+            echo
+            grep -E '^(checked |Flagged rows|not in baseline|known \(baselined\))' "$RUNNER_TEMP/audit.txt" | sed 's/^/- /' || true
+            echo
+            echo "Posts with no archived ground truth (reported, not failed):"
+            grep -E 'SKIPPED .*no archived ground truth' "$RUNNER_TEMP/audit.txt" | sed 's/^  /- /' || echo "- none"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
