@@ -11,7 +11,10 @@ the pipeline continues without wind data (wind chart is skipped).
 import contextlib
 import io
 import json
+import os
+import random
 import requests
+import time
 import pandas as pd
 from datetime import datetime, date, timedelta
 from pathlib import Path
@@ -23,8 +26,49 @@ DEFAULT_DATA_DIR = Path(__file__).parent.parent / "data"
 
 EIRGRID_BASE  = "https://www.smartgriddashboard.com/api/chart/"
 SEMOPX_BASE   = "https://reports.semopx.com"
-TIMEOUT       = 15  # seconds
+TIMEOUT       = 15  # seconds: connect timeout for every request, and the whole-request timeout for SEMOpx
 TIMEOUT_DL    = 60  # seconds — download
+
+# ── EirGrid retry ────────────────────────────────────────────────────────────
+# EirGrid's chart endpoints intermittently answer 200 with {"Rows":[]} (or time out) for minutes at a
+# time, from every client. A fetch whose area has fewer non-null half-hours than the day can supply
+# (trading_day.placeable_halfhours) is retried, all incomplete areas in the same round so the waits
+# are shared. Settings come from the environment:
+#   EIRGRID_ATTEMPTS        attempts per fetch (>=1). Default 10 when CI is set, else 1 (no retry).
+#   EIRGRID_RETRY_MIN_S     shortest wait between rounds, default 60
+#   EIRGRID_RETRY_MAX_S     longest wait between rounds, default 90 (each wait is uniform in [min, max])
+#   EIRGRID_READ_TIMEOUT_S  per-request read timeout, default 30 (connect timeout stays TIMEOUT)
+# Worst case per fetch (every request times out): attempts x 2 areas x (TIMEOUT + READ) + (attempts-1) x MAX.
+_sleep = time.sleep           # tests replace these two
+_jitter = random.uniform
+ATTEMPT_LOG: list[dict] = []  # one entry per request, in order; also printed and summarised
+
+
+def _env_num(name: str, default: float, cast=float):
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return cast(raw)
+    except ValueError:
+        print(f"  [fetch] ignoring {name}={raw!r}: not a number")
+        return default
+
+
+def configured_attempts(ci: bool | None = None) -> int:
+    """Attempts per EirGrid fetch: EIRGRID_ATTEMPTS if set, else 10 in CI and 1 elsewhere.
+    ci=True forces the CI default (ci_daily's own fetches); None reads the CI environment variable."""
+    in_ci = bool(os.environ.get("CI")) if ci is None else ci
+    return max(1, int(_env_num("EIRGRID_ATTEMPTS", 10 if in_ci else 1, int)))
+
+
+def read_timeout_s() -> float:
+    return _env_num("EIRGRID_READ_TIMEOUT_S", 30.0)
+
+
+def retry_gap_s() -> float:
+    lo, hi = _env_num("EIRGRID_RETRY_MIN_S", 60.0), _env_num("EIRGRID_RETRY_MAX_S", 90.0)
+    return _jitter(min(lo, hi), max(lo, hi))
 
 
 def fetch_semo(delivery_date: date | str | None = None, out_dir: Path | str = "data") -> Path:
@@ -107,7 +151,7 @@ AREA_FIELDS = {
 
 def fetch_wind_and_demand(
     delivery_date: date, out_dir: Path | str = DEFAULT_DATA_DIR, overwrite_raw: bool = True,
-    prefer_archive: bool = False,
+    prefer_archive: bool = False, attempts: int | None = None,
 ) -> pd.DataFrame | None:
     """
     Fetch wind generation and demand for delivery_date from EirGrid.
@@ -151,34 +195,49 @@ def fetch_wind_and_demand(
     retry after a run that archived the raw files but died before publishing is generated from
     the archived bytes, not from a fresh response that may differ.
 
+    attempts (default configured_attempts(): 10 in CI, 1 elsewhere) is how many times an area that is
+    still incomplete is requested; both areas share the rounds and the waits between them. The most
+    complete response is the one archived and used. See the retry notes at the top of this module.
+
     Note: EirGrid's demand endpoint does not return a forecast field for this
     region/chart combination (only SYSTEM_DEMAND) — there is no DemandForecastMW.
     """
-    def area(name):
+    areas = ("wind", "demand")
+    need = placeable_halfhours(delivery_date)
+    resolved: dict[str, pd.DataFrame | None] = {}
+    keep: dict[str, tuple[int, bytes]] = {}     # area -> (archived half-hours, archived bytes), to compare after a live try
+    live: list[str] = []
+    for name in areas:
         if not prefer_archive:
-            return fetch_area(delivery_date, name, out_dir=out_dir, overwrite_raw=overwrite_raw)
-        have, need = archived_halfhours(delivery_date, name, out_dir), placeable_halfhours(delivery_date)
+            live.append(name)
+            continue
+        have = archived_halfhours(delivery_date, name, out_dir)
         if have >= need:
             archived = load_archived_area(delivery_date, name, out_dir)
             if archived is not None:
-                return archived
-        if have == 0:
-            return fetch_area(delivery_date, name, out_dir=out_dir, overwrite_raw=overwrite_raw)
-        # An archive with some rows but fewer than the day has is not evidence of what EirGrid
-        # published (it was saved before the feed was complete): fetch live. If that is no better,
-        # keep the archived bytes, so the day is never generated from a worse file than we had.
-        print(f"  [fetch] archived {name} for {delivery_date} holds {have} of {need} half-hours; "
-              f"treating it as absent and fetching live")
-        path = archive_path(delivery_date, name, out_dir)
-        old = path.read_bytes()
-        live = fetch_area(delivery_date, name, out_dir=out_dir, overwrite_raw=overwrite_raw)
-        if live is None or archived_halfhours(delivery_date, name, out_dir) < have:
-            path.write_bytes(old)
-            print(f"  [fetch] live {name} for {delivery_date} is no better; keeping the archived file")
-            return load_archived_area(delivery_date, name, out_dir)
-        return live
+                resolved[name] = archived
+                continue
+        live.append(name)
+        if have > 0:
+            # An archive with some rows but fewer than the day has is not evidence of what EirGrid
+            # published (it was saved before the feed was complete): fetch live. If that is no better,
+            # keep the archived bytes, so the day is never generated from a worse file than we had.
+            print(f"  [fetch] archived {name} for {delivery_date} holds {have} of {need} half-hours; "
+                  f"treating it as absent and fetching live")
+            keep[name] = (have, archive_path(delivery_date, name, out_dir).read_bytes())
+    if live:
+        fetched = fetch_areas(delivery_date, live, out_dir=out_dir, overwrite_raw=overwrite_raw, attempts=attempts)
+        for name in live:
+            frame = fetched[name]
+            if name in keep:
+                have, old = keep[name]
+                if frame is None or archived_halfhours(delivery_date, name, out_dir) < have:
+                    archive_path(delivery_date, name, out_dir).write_bytes(old)
+                    print(f"  [fetch] live {name} for {delivery_date} is no better; keeping the archived file")
+                    frame = load_archived_area(delivery_date, name, out_dir)
+            resolved[name] = frame
 
-    wind, demand = area("wind"), area("demand")
+    wind, demand = resolved["wind"], resolved["demand"]
     prev_wind, prev_demand = load_archived_previous_day(delivery_date, out_dir)
     return combine_for_trading_day(delivery_date, wind, demand, prev_wind, prev_demand)
 
@@ -276,19 +335,29 @@ def archive_row_count(path: Path) -> int:
 PRIMARY_FIELD = {"wind": "WIND_ACTUAL", "demand": "SYSTEM_DEMAND"}
 
 
-def path_halfhours(path: Path, area: str) -> int:
-    """Non-null half-hour readings of the area's main series (WIND_ACTUAL / SYSTEM_DEMAND) in an
-    EirGrid response file, placed on UTC as the pipeline places them. 0 if the file is missing, empty
-    or unparseable. Compare with trading_day.placeable_halfhours(date)."""
-    if archive_row_count(path) == 0:
+def data_halfhours(data, area: str) -> int:
+    """Non-null half-hour readings of the area's main series (WIND_ACTUAL / SYSTEM_DEMAND) in a parsed
+    EirGrid response, placed on UTC as the pipeline places them. 0 if it is empty or unparseable.
+    Compare with trading_day.placeable_halfhours(date)."""
+    if not isinstance(data, dict) or not (data.get("Rows") or data.get("rows")):
         return 0
     try:
         with contextlib.redirect_stdout(io.StringIO()):
-            df = _parse_area(json.loads(path.read_text()), area, [PRIMARY_FIELD[area]])
+            df = _parse_area(data, area, [PRIMARY_FIELD[area]])
             out = _resample_30min(df, "v") if df is not None else None
     except Exception:
         return 0
     return 0 if out is None else len(out)
+
+
+def path_halfhours(path: Path, area: str) -> int:
+    """data_halfhours of an EirGrid response file. 0 if the file is missing, empty or unparseable."""
+    if archive_row_count(path) == 0:
+        return 0
+    try:
+        return data_halfhours(json.loads(path.read_text()), area)
+    except (OSError, ValueError):
+        return 0
 
 
 def archived_halfhours(delivery_date: date, area: str, out_dir: Path | str = DEFAULT_DATA_DIR) -> int:
@@ -308,83 +377,162 @@ def load_archived_area(delivery_date: date, area: str, out_dir: Path | str = DEF
         return None
 
 
-def fetch_area(delivery_date: date, area: str, out_dir: Path | str = DEFAULT_DATA_DIR,
-               overwrite_raw: bool = True, raise_errors: bool = False) -> pd.DataFrame | None:
-    """Live-fetch one area (wind or demand) for delivery_date, archiving the raw response.
+class _Job:
+    """One area of one delivery date across the retry rounds: the best response seen so far."""
+    def __init__(self, area: str, delivery_date: date, need: int):
+        self.area, self.date, self.need = area, delivery_date, need
+        self.text: str | None = None
+        self.data = None
+        self.halfhours = -1          # -1: no response at all yet
+        self.last_exc: Exception | None = None
 
-    raise_errors=True re-raises a request error or a non-200 status instead of
-    printing it and returning None, so a caller can report why a fetch failed.
-    An empty or unparseable 200 response still returns None either way."""
-    return _fetch_area(
-        area, delivery_date.strftime("%d-%b-%Y"),   # e.g. "17-May-2026"
-        raw_dir=archive_path(delivery_date, area, out_dir).parent,
-        fields=AREA_FIELDS[area], overwrite_raw=overwrite_raw, raise_errors=raise_errors,
-    )
+    @property
+    def complete(self) -> bool:
+        return self.halfhours >= self.need
 
 
-def _fetch_area(area: str, date_str: str, raw_dir: Path | None = None, fields: list[str] | None = None,
-                overwrite_raw: bool = True, raise_errors: bool = False) -> pd.DataFrame | None:
-    """Fetch a single area (wind or demand) from EirGrid API.
+def _query_params(area: str, date_str: str) -> dict:
+    return {
+        "region":    "ROI",
+        "chartType": "generation" if area == "demand" else area,
+        "dateRange": "day",
+        "dateFrom":  date_str,
+        "dateTo":    date_str,
+        "areas":     "windactual,windforecast" if area == "wind" else "demandactual,demandforecast",
+    }
 
-    fields restricts which FieldName values are kept (e.g. ["WIND_ACTUAL", "WIND_FCAST"]).
-    Returned rows carry a 'field' column so callers can split multi-field areas like wind.
-    """
+
+def _request_once(job: _Job, k: int, n: int, raise_errors: bool) -> None:
+    entry = {"date": job.date.isoformat(), "area": job.area, "attempt": k, "of": n, "need": job.need,
+             "status": None, "bytes": 0, "rows": 0, "halfhours": 0, "elapsed": 0.0, "error": None}
+    t0 = time.monotonic()
     try:
-        resp = requests.get(
-            EIRGRID_BASE,
-            params={
-                "region":    "ROI",
-                "chartType": "generation" if area == "demand" else area,
-                "dateRange": "day",
-                "dateFrom":  date_str,
-                "dateTo":    date_str,
-                "areas":     "windactual,windforecast" if area == "wind" else "demandactual,demandforecast",
-            },
-            timeout=TIMEOUT,
-        )
+        resp = requests.get(EIRGRID_BASE, params=_query_params(job.area, job.date.strftime("%d-%b-%Y")),
+                            timeout=(TIMEOUT, read_timeout_s()))
+        entry["status"] = getattr(resp, "status_code", None)
         resp.raise_for_status()
         if raise_errors and resp.status_code != 200:
             raise requests.HTTPError(f"HTTP {resp.status_code} (expected 200)", response=resp)
-
+        text = resp.text
+        entry["bytes"] = len(text.encode("utf-8"))
         try:
             data = resp.json()
         except ValueError:
             data = None
-        has_rows = isinstance(data, dict) and bool(data.get("Rows") or data.get("rows"))
+        entry["rows"] = len(data.get("Rows") or data.get("rows") or []) if isinstance(data, dict) else 0
+        entry["halfhours"] = data_halfhours(data, job.area)
+        if entry["halfhours"] > job.halfhours:           # strictly: on a tie the earlier response is kept
+            job.text, job.data, job.halfhours = text, data, entry["halfhours"]
+    except Exception as e:                               # timeout, connection reset, HTTP error, anything
+        job.last_exc = e
+        entry["error"] = f"{type(e).__name__}: {e}"[:140]
+        status = getattr(getattr(e, "response", None), "status_code", None)
+        entry["status"] = entry["status"] or status
+    entry["elapsed"] = round(time.monotonic() - t0, 1)
+    ATTEMPT_LOG.append(entry)
+    got = f"HTTP {entry['status']}, {entry['bytes']:,} B, {entry['rows']} rows, " \
+          f"{entry['halfhours']}/{job.need} half-hours" if not entry["error"] else f"FAILED ({entry['error']})"
+    print(f"  [eirgrid] {entry['date']} {job.area} attempt {k}/{n}: {got}, {entry['elapsed']} s")
 
-        if raw_dir is not None:
-            raw_path = raw_dir / f"{area}.json"
-            # An archive that has rows is never replaced by a response that has none, in any
-            # mode: EirGrid's feeds go empty for minutes at a time, and an empty answer is not
-            # a better record than the data the store and the posts were built from.
-            # overwrite_raw=True (run_daily's default) otherwise archives whatever EirGrid said,
-            # including an empty response where there is no archive yet (a record of the failed
-            # fetch). overwrite_raw=False (backfill, heal) only archives a response that has
-            # rows, and only where the archive is missing or has none.
-            existing_rows = archive_row_count(raw_path)
-            if has_rows and (overwrite_raw or existing_rows == 0):
-                write_raw = True
-            else:
-                write_raw = overwrite_raw and existing_rows == 0
-            if write_raw:
-                raw_dir.mkdir(parents=True, exist_ok=True)
-                raw_path.write_text(resp.text)
 
-        if data is None:
-            print(f"  [fetch] EirGrid returned non-JSON for area={area}")
-            return None
-        return _parse_area(data, area, fields)
+def _append_step_summary(entries: list[dict]) -> None:
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path or not entries:
+        return
+    lines = ["", "### EirGrid fetch attempts", "",
+             "| date | area | attempt | HTTP | bytes | data rows | non-null half-hours | elapsed (s) | result |",
+             "|---|---|---|---|---|---|---|---|---|"]
+    for e in entries:
+        result = e["error"] or ("complete" if e["halfhours"] >= e["need"] else "incomplete")
+        lines.append(f"| {e['date']} | {e['area']} | {e['attempt']}/{e['of']} | {e['status'] or ''} | {e['bytes']} | "
+                     f"{e['rows']} | {e['halfhours']}/{e['need']} | {e['elapsed']} | {result} |")
+    try:
+        with open(path, "a") as f:
+            f.write("\n".join(lines) + "\n")
+    except OSError:
+        pass
 
-    except requests.RequestException as e:
-        if raise_errors:
-            raise
-        print(f"  [fetch] EirGrid request failed for area={area}: {e}")
+
+def fetch_areas(delivery_date: date, areas: list[str] | tuple[str, ...], out_dir: Path | str = DEFAULT_DATA_DIR,
+                overwrite_raw: bool = True, raise_errors: bool = False,
+                attempts: int | None = None) -> dict[str, pd.DataFrame | None]:
+    """Live-fetch EirGrid areas (wind, demand) for delivery_date, retrying until each has the day's half-hours.
+
+    Round k requests every area still short of placeable_halfhours(delivery_date); the rounds share one
+    wait (EIRGRID_RETRY_MIN_S..MAX_S, jittered) and stop at the first round in which all are complete or
+    after `attempts` rounds (default configured_attempts()). Each attempt is logged, and a table of them is
+    appended to $GITHUB_STEP_SUMMARY. The most complete response per area (the earlier on a tie) is the
+    one archived and parsed, under the archive rules below, which are unchanged:
+
+    An archive that has rows is never replaced by a response that has none, in any mode: EirGrid's feeds
+    go empty for minutes at a time, and an empty answer is not a better record than the data the store
+    and the posts were built from. overwrite_raw=True (run_daily's default) otherwise archives the best
+    response, including an empty one where there is no archive yet (a record of the failed fetch).
+    overwrite_raw=False (backfill, heal) only archives a response that has rows, and only where the
+    archive is missing or has none.
+
+    raise_errors=True re-raises the last request error (or a non-200 status) for an area that never got
+    any response, instead of printing it and returning None, so a caller can report why a fetch failed.
+    An empty or unparseable 200 response still returns None either way."""
+    n = max(1, attempts if attempts is not None else configured_attempts())
+    need = placeable_halfhours(delivery_date)
+    jobs = {a: _Job(a, delivery_date, need) for a in areas}
+    first = len(ATTEMPT_LOG)
+    for k in range(1, n + 1):
+        pending = [j for j in jobs.values() if not j.complete]
+        if not pending:
+            break
+        for j in pending:
+            _request_once(j, k, n, raise_errors)
+        if k < n and any(not j.complete for j in jobs.values()):
+            gap = retry_gap_s()
+            short = ", ".join(f"{j.area} {max(j.halfhours, 0)}/{need}" for j in jobs.values() if not j.complete)
+            print(f"  [eirgrid] {delivery_date.isoformat()} incomplete after attempt {k}/{n} ({short}); retrying in {gap:.0f} s")
+            _sleep(gap)
+    _append_step_summary(ATTEMPT_LOG[first:])
+
+    results, failure = {}, None
+    for a, j in jobs.items():
+        results[a] = _finish(j, archive_path(delivery_date, a, out_dir).parent, overwrite_raw)
+        if j.text is None:
+            failure = failure or j
+    if failure is not None:
+        if raise_errors and failure.last_exc is not None:
+            raise failure.last_exc
+        print(f"  [fetch] EirGrid request failed for area={failure.area}: {failure.last_exc}")
+    return results
+
+
+def _finish(job: _Job, raw_dir: Path, overwrite_raw: bool) -> pd.DataFrame | None:
+    """Archive the job's best response (under the archive rules) and parse it."""
+    if job.text is None:                      # every attempt failed: nothing to archive or parse
         return None
+    has_rows = isinstance(job.data, dict) and bool(job.data.get("Rows") or job.data.get("rows"))
+    raw_path = raw_dir / f"{job.area}.json"
+    existing_rows = archive_row_count(raw_path)
+    if has_rows and (overwrite_raw or existing_rows == 0):
+        write_raw = True
+    else:
+        write_raw = overwrite_raw and existing_rows == 0
+    if write_raw:
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        raw_path.write_text(job.text)
+    if job.data is None:
+        print(f"  [fetch] EirGrid returned non-JSON for area={job.area}")
+        return None
+    try:
+        return _parse_area(job.data, job.area, AREA_FIELDS[job.area])
     except Exception as e:
-        if raise_errors:
-            raise
-        print(f"  [fetch] Unexpected error fetching area={area}: {e}")
+        print(f"  [fetch] Unexpected error parsing area={job.area}: {e}")
         return None
+
+
+def fetch_area(delivery_date: date, area: str, out_dir: Path | str = DEFAULT_DATA_DIR,
+               overwrite_raw: bool = True, raise_errors: bool = False,
+               attempts: int | None = None) -> pd.DataFrame | None:
+    """Live-fetch one area (wind or demand) for delivery_date, archiving the raw response. See fetch_areas."""
+    return fetch_areas(delivery_date, [area], out_dir=out_dir, overwrite_raw=overwrite_raw,
+                       raise_errors=raise_errors, attempts=attempts)[area]
 
 
 def _parse_area(data: dict, area: str, fields: list[str] | None = None) -> pd.DataFrame | None:

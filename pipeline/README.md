@@ -52,8 +52,28 @@ date is computed by the Irish calendar in Python, so UTC vs IST does not matter.
   paths decide. Any nonzero exit fails the job and nothing is committed.
 - **No wind, no post (default).** EirGrid's demand feed is intermittently empty and `run_daily.py` carries
   on without wind, leaving a one-hour wind stub on the Price vs Wind chart. CI treats that as a failure
-  and keeps nothing, so the evening attempt can retry. In testing about half of the days needed a second
-  attempt. Dispatch with `allow_no_wind` to publish anyway.
+  and keeps nothing, so the evening attempt can retry. Dispatch with `allow_no_wind` to publish anyway.
+  The check is unchanged and still decides after the last fetch attempt (below).
+- **EirGrid retry.** EirGrid's chart endpoints answer 200 with `{"Rows":[]}` for minutes at a time, from
+  every client, and a runner request has also hit a read timeout. A live fetch of an area with fewer
+  non-null half-hours than the day can supply (`placeable_halfhours(date)`: 48, or 46 on the clock-change
+  days) is therefore retried, up to 10 attempts about 60-90 s apart (about 11 minutes of waiting on
+  average). It covers the target day's wind and demand (`run_daily`) and the previous-day tail `ci_daily`
+  fills. The tail follows the supersede rule of PR #2: a complete archived file is never fetched; a missing or
+  empty one is fetched; an incomplete one that the manifest pins (it backs a published post) is never
+  refetched; an incomplete one that no manifest entry pins is fetched and replaced only by a complete
+  response (a response that is no better leaves it alone), and the replacement is logged with both hashes,
+  pinned in this run's manifest update and pushed with it, so the post rests on archived bytes.
+  Both areas share the rounds and the waits, the first complete round stops the loop, and the most complete
+  response (the earlier on a tie) is the one archived and used. Each attempt is printed (area, date, HTTP
+  status, bytes, data rows, non-null half-hours against the day's need, seconds, or the error) and tabled
+  in the job's step summary. Settings, all optional: `EIRGRID_ATTEMPTS` (default 10 when `CI` is set, else
+  1, so a local run, a backfill or a heal never waits), `EIRGRID_RETRY_MIN_S` / `EIRGRID_RETRY_MAX_S`
+  (60 / 90) and `EIRGRID_READ_TIMEOUT_S` (30; the connect timeout stays 15). Worst case, every request
+  timing out and every wait at its maximum: 10 x 2 x 45 s + 9 x 90 s = 28.5 min per phase, two phases
+  = 57 min, plus about 10 min for the rest of the job; `daily.yml` sets `timeout-minutes` to 75.
+  `pipeline/test_fetch_retry.py` covers a flaky feed, an always-empty feed (refused in bounded time),
+  a complete first fetch (no retry), a timeout, most-complete-wins, and the defaults.
 - **Source of truth.** For published figures, the raw files the CI run fetched are the record, not your
   local `data/history.db`. The store is derived and can lag or have gaps; the audit compares posts to it,
   so a flag on a CI-written post usually means the local store needs `store.py --heal` / `--rebuild-conditions`.

@@ -31,7 +31,11 @@ concurrency:
 jobs:
   daily:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # Worst case, every EirGrid request timing out and every wait at its maximum (pipeline/fetch.py, EIRGRID_*):
+    # each of the two fetching phases (the previous-day tail in ci_daily, the target day in run_daily) is
+    # 10 rounds x 2 areas x (15 s connect + 30 s read) + 9 waits x 90 s = 28.5 min; two phases = 57 min; the
+    # rest of the job (clone, install, SEMOpx history, charts, Hugo build, raw push, publish) is about 10 min.
+    timeout-minutes: 75
     env:
       # Repo variables (Settings > Secrets and variables > Actions > Variables). Commits must be
       # authored as the owner's GitHub-verified identity, or Vercel may refuse to deploy them.
