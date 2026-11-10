@@ -7,7 +7,7 @@ authors: ["Eoin"]
 tags: ["weekly-analysis", "I-SEM"]
 summary: "41.57 c/kWh, 3.0x the same week last year (14.06 c/kWh). Dearest of the last 14 weeks; dearest week in the record (since 13 Oct 2025). Against the previous 13 weeks: unusually dearer. Week on week: up 76%."
 images: ["charts/weekly/2026-11-02.png"]
-draft: true
+draft: false
 ShowToc: true
 ---
 
