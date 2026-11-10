@@ -119,8 +119,8 @@ date is computed by the Irish calendar in Python, so UTC vs IST does not matter.
   every post, `audit_report.csv` in the root). `pipeline/test_audit_gate.py` covers a correct post (passes), a post
   with one wrong figure (fails, and the workflow orders the gate before the commit), manifest mismatch and
   missing pinned files, offline behaviour, and the weekly mode.
-- **Weekly audit.** `.github/workflows/audit-weekly.yml` runs on Mondays at 09:30 UTC, after the deadman check
-  (09:00). It materialises the whole archive (2025-10-07 to yesterday), audits every daily and weekly post with
+- **Weekly audit.** `.github/workflows/audit-weekly.yml` runs on Mondays at 09:30 UTC, after the first archive and weekly
+  attempts. It materialises the whole archive (2025-10-07 to yesterday), audits every daily and weekly post with
   `--exact --allow-skips`, and writes a summary. It fails only on a flagged figure that is not baselined. A post
   whose raw is not in the archive is listed as having no archived ground truth and does not fail the job. Run
   locally against the real archive on 2026-10-29 it restored 745 raw files (183 pinned by the manifest and
@@ -149,14 +149,16 @@ runs on a timer, and merging is what switches a schedule on (the daily one is co
 ### Scheduled workflows are disabled after 60 days of repo inactivity
 
 GitHub turns off `schedule:` triggers on a repository with no activity for 60 days, with no failure
-and no email. Nothing then runs the daily job. `deadman.yml` is a separate workflow (Monday 09:00 UTC
-and `workflow_dispatch`) that does not use `daily.yml`'s outcome: it checks that each of the last 7
-days (Irish calendar) has `site/content/daily/<date>/index.md` and fails if any is missing, which
-sends the usual failed-run email. A silent stop of the daily job shows up as a red deadman on the next Monday.
+and no email. Nothing then runs `archive.yml` or `weekly.yml`. `deadman.yml` is a separate workflow (every day at
+12:00 UTC, after the archive retry at 10:15 and the weekly retry at 11:00, plus `workflow_dispatch`) that does not use
+their outcome. `pipeline/ci_deadman.py` checks that the raw repo has yesterday's SEMOpx DA file, wind and demand (and
+that the two EirGrid files are complete), and on Tuesdays that `site/content/weekly/<last Sunday>/index.md` is on the
+default branch or the branch `weekly/<last Sunday>` has an open pull request. It fails if not, which sends the usual
+failed-run email. A silent stop shows up as a red deadman the next day (or the next Tuesday for the weekly post).
 
 Limits: deadman is itself a scheduled workflow, so it is disabled by the same rule. It only helps while
 something else keeps the repo active, for example the manual commits you make when it fires. It also
-cannot tell a stopped schedule from a failing run; both look like missing posts. If you see no deadman
+cannot tell a stopped schedule from a failing run; both look like missing files. If you see no deadman
 run for a week, open the Actions tab and re-enable the workflows. Whether commits pushed by
 `GITHUB_TOKEN` count as activity for the 60-day rule has not been verified.
 

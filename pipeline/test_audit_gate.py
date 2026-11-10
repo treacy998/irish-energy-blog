@@ -12,7 +12,7 @@ Stubbed: only the SEMOpx CSV parser (store.load_dam_data returns the fixture pri
 4. materialise is offline: a date with no archived EirGrid raw is reported, never fetched.
 5. The weekly audit mode (--allow-skips) reports a post with no archived ground truth and does not fail on it; without
    --allow-skips it does fail. --only and --report leave the other posts and the checkout alone.
-6. The weekly workflow is scheduled after the deadman check and cannot hide a failure behind its summary."""
+6. The weekly audit workflow runs on Mondays and cannot hide a failure behind its summary."""
 
 import argparse
 import contextlib
@@ -241,13 +241,12 @@ def test_weekly_mode_reports_a_post_with_no_archived_ground_truth_without_failin
         assert Path(report).exists()
 
 
-def test_the_weekly_workflow_runs_after_the_deadman_and_cannot_hide_a_failure():
+def test_the_weekly_audit_workflow_runs_on_mondays_and_cannot_hide_a_failure():
     weekly = (WORKFLOWS / "audit-weekly.yml").read_text()
-    deadman = (WORKFLOWS / "deadman.yml").read_text()
     wk = re.search(r'cron: "(\d+) (\d+) \* \* (\d)"', weekly)
-    dm = re.search(r'cron: "(\d+) (\d+) \* \* (\d)"', deadman)
-    assert wk and dm and wk.group(3) == dm.group(3) == "1", (wk, dm)               # both on Monday
-    assert (int(wk.group(2)), int(wk.group(1))) > (int(dm.group(2)), int(dm.group(1))), "audit must be after the deadman"
+    assert wk and wk.group(3) == "1", wk                                           # Monday
+    # it audits what archive.yml and the weekly merges left, so it must not run before the weekly attempts (08:00, 11:00)
+    # have had their go: 09:30 sits between them, which is fine, because the audit reads the raw repo, not a draft.
     assert "--allow-skips" in weekly and "--exact" in weekly and "--store" in weekly
     assert 'exit "$rc"' in weekly and "|| rc=$?" in weekly, "the job must exit with the audit's own status after the summary"
     assert "permissions:\n  contents: read" in weekly and "git push" not in weekly and "git commit" not in weekly

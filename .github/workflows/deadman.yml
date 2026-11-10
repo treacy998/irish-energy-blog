@@ -1,32 +1,54 @@
 name: deadman
 
-# Independent of daily.yml: it only looks at what is on the default branch. Fails (and so emails the
-# repo's notification recipients) if any of the last 7 daily post directories is missing.
+# Independent of archive.yml and weekly.yml: it only looks at what they should have left behind, and fails (so GitHub
+# emails the repo's notification recipients) when it is not there.
+#   every day, 12:00 UTC   the raw repo has yesterday's SEMOpx DA file, wind and demand, and the EirGrid files are complete
+#   Tuesdays, 12:00 UTC    site/content/weekly/<last Sunday>/index.md is on the default branch, or the branch
+#                          weekly/<last Sunday> has an open pull request
+# 12:00 UTC is after the archive retry (10:15) and the weekly retry (11:00). Schedules only run from the default branch.
 on:
   schedule:
-    - cron: "0 9 * * 1"   # Monday 09:00 UTC
+    - cron: "0 12 * * *"
   workflow_dispatch:
+    inputs:
+      weekly:
+        description: "Also check the last Sunday's weekly post (always done on Tuesdays)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   check:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      DATA_REPO: ${{ vars.DATA_REPO }}
     steps:
+      - name: Require the raw-repo token
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: '[ -n "$DATA_REPO_TOKEN" ] || { echo "::error::secret DATA_REPO_TOKEN is not set"; exit 1; }'
+
       - uses: actions/checkout@v7
 
-      - name: Last 7 daily posts exist
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pipeline/requirements-ci.txt
+
+      - run: pip install -r pipeline/requirements-ci.txt
+
+      - name: The raw repo has yesterday's files; on Tuesdays the last Sunday's weekly post exists
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          INPUT_WEEKLY: ${{ inputs.weekly }}
         run: |
-          today=$(TZ=Europe/Dublin date +%F)
-          missing=0
-          for k in 1 2 3 4 5 6 7; do
-            d=$(date -d "$today -$k day" +%F)
-            if [ -f "site/content/daily/$d/index.md" ]; then
-              echo "ok      $d"
-            else
-              echo "::error::missing daily post $d (site/content/daily/$d/index.md)"
-              missing=$((missing + 1))
-            fi
-          done
-          [ "$missing" -eq 0 ] || { echo "$missing of the last 7 daily posts missing"; exit 1; }
+          args=()
+          if [ "$(date -u +%u)" = "2" ] || [ "$INPUT_WEEKLY" = "true" ]; then args+=(--weekly); fi
+          python pipeline/ci_deadman.py "${args[@]}"
