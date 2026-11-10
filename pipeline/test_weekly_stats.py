@@ -135,6 +135,33 @@ def test_chart_and_text_inputs():
         ["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st", "111th"]
 
 
+def _set_day(conn, day: str, first_47: float, last: float):
+    conn.execute("UPDATE market_prices SET dam_price_eur_mwh = ? WHERE date = ?", (first_47, day))
+    conn.execute("UPDATE market_prices SET dam_price_eur_mwh = ? WHERE date = ? AND period = 48", (last, day))
+
+
+def test_daily_c_per_kwh_is_rounded_once_from_the_exact_mean():
+    conn = make_store()
+    _set_day(conn, "2026-09-29", 488.45, 488.61)           # mean 488.45333: old path 488.45 -> 48.845 -> "48.84"
+    _set_day(conn, "2026-09-30", 209.05, 208.87)           # mean 209.04625: old path 209.05 -> 20.905 -> "20.91"
+    _set_day(conn, "2026-10-01", 85.15, 84.97)             # mean 85.14625 / 85.1462...: control
+    s = weekly_summary(date(2026, 9, 28), conn)
+    i = s["daily_dates"].index("2026-09-29")
+    assert (s["daily_means"][i], s["daily_means_c_per_kwh"][i]) == (488.45, 48.85), (s["daily_means"][i], s["daily_means_c_per_kwh"][i])
+    i = s["daily_dates"].index("2026-09-30")
+    assert (s["daily_means"][i], s["daily_means_c_per_kwh"][i]) == (209.05, 20.90)
+    assert s["highest_day"]["date"] == "2026-09-29" and s["highest_day"]["mean_c_per_kwh"] == 48.85
+
+
+def test_exact_ties_round_half_up_not_by_binary_float():
+    from weekly_stats import _round_half_up, exact_mean
+    assert round(85.145, 2) == 85.14                                  # the float answer this replaces
+    assert _round_half_up(exact_mean([85.14, 85.15] * 24), 2) == 85.15     # mean exactly 85.145
+    assert _round_half_up(exact_mean([145.72, 145.73] * 24), 2) == 145.73
+    assert _round_half_up(exact_mean([-1.0, -2.0]), 2) == -1.5 and _round_half_up(exact_mean([-0.005 * 100]), 2) == -0.5
+    assert _round_half_up(exact_mean([488.45] * 47 + [488.61]) / 10, 2) == 48.85
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in tests:

@@ -138,6 +138,17 @@ def test_year_on_year_is_absent_while_the_seasonal_baseline_is_suppressed():
     assert year_on_year_sentence(s) is None and "same week last year" not in weekly_verdict_text(s)
 
 
+def test_daily_means_table_prints_the_exact_rounding():
+    from test_weekly_stats import _set_day
+    conn = make_store()
+    _set_day(conn, "2026-09-29", 488.45, 488.61)
+    _set_day(conn, "2026-09-30", 209.05, 208.87)
+    with tempfile.TemporaryDirectory() as tmp:
+        md = build_weekly_post(weekly_summary(date(2026, 9, 28), conn), Path(tmp)).read_text()
+    assert "| Tue 29 Sep | 48.85 | 488.45 |" in md, md[md.index("## Daily means"):][:400]
+    assert "| Wed 30 Sep | 20.90 | 209.05 |" in md
+
+
 def test_verdict_text_suppressed_says_so_and_invents_nothing():
     conn = make_store()
     conn.execute("DELETE FROM market_prices WHERE date < '2026-06-15'")

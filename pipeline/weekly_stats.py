@@ -15,8 +15,11 @@ Definitions (stated once, here):
             is not counted, and n says how many were.
 
   Means     week_mean is the mean over every price row in the week, so a 50-period
-            day counts 50 times. daily_means are per-day means. week_mean_c_per_kwh
-            is the unrounded week_mean / 10, rounded to 2 dp.
+            day counts 50 times. daily_means are per-day means in EUR/MWh and
+            daily_means_c_per_kwh the same means / 10, each rounded once, half up, from the
+            exact mean (never c/kWh from the already-rounded EUR/MWh: 488.4533 -> 488.45 ->
+            48.845 -> 48.84, but the day is 48.85). week_mean_c_per_kwh is the unrounded
+            week_mean / 10, rounded to 2 dp.
 
   Baselines Both exclude the target week and anything later.
     trailing  the 13 calendar weeks immediately before the target, counting only
@@ -67,6 +70,8 @@ import sqlite3
 import statistics
 import sys
 from datetime import date, timedelta
+from decimal import Decimal
+from fractions import Fraction
 from pathlib import Path
 
 import pandas as pd
@@ -82,6 +87,19 @@ MIN_N = {"trailing": 8, "seasonal": 4}
 MIN_WIND_COVERAGE = 0.75
 
 
+def _round_half_up(x: Fraction, nd: int) -> float:
+    """x rounded to nd decimals, halves away from zero, from the exact value (no binary-float ties)."""
+    scaled = x * 10 ** nd
+    n = (scaled + Fraction(1, 2)).__floor__() if scaled >= 0 else -((-scaled + Fraction(1, 2)).__floor__())
+    return float(Decimal(n).scaleb(-nd))
+
+
+def exact_mean(prices) -> Fraction:
+    """The mean of prices stored to the cent, as an exact fraction."""
+    vals = [Fraction(Decimal(repr(float(p)))) for p in prices]
+    return sum(vals) / len(vals)
+
+
 class _Week:
     """One complete week of price rows, loaded once."""
 
@@ -91,6 +109,11 @@ class _Week:
         prices = [p for rows in days.values() for _, _, p in rows]
         self.mean = sum(prices) / len(prices)
         self.daily_means = [sum(p for _, _, p in rows) / len(rows) for rows in days.values()]
+        # What the post prints, rounded once from the exact mean. Never derive the c/kWh figure from the rounded
+        # EUR/MWh one: 488.4533 -> 488.45 -> 48.845 -> "48.84", but the day's mean is 48.85.
+        exact = [exact_mean(p for _, _, p in rows) for rows in days.values()]
+        self.daily_means_eur = [_round_half_up(m, 2) for m in exact]
+        self.daily_means_c_per_kwh = [_round_half_up(m / 10, 2) for m in exact]
         self.above_150 = sum(p > 150 for p in prices)
         self.above_200 = sum(p > 200 for p in prices)
         self._arb = None
@@ -275,9 +298,12 @@ def weekly_summary(week_start: date, conn: sqlite3.Connection) -> dict:
         "week_mean": round(this.mean, 2),
         "week_mean_c_per_kwh": round(this.mean / 10, 2),
         "daily_dates": [d.isoformat() for d in daily],
-        "daily_means": [round(m, 2) for m in this.daily_means],
-        "highest_day": {"date": daily[hi].isoformat(), "mean": round(this.daily_means[hi], 2)},
-        "lowest_day": {"date": daily[lo].isoformat(), "mean": round(this.daily_means[lo], 2)},
+        "daily_means": this.daily_means_eur,
+        "daily_means_c_per_kwh": this.daily_means_c_per_kwh,
+        "highest_day": {"date": daily[hi].isoformat(), "mean": this.daily_means_eur[hi],
+                        "mean_c_per_kwh": this.daily_means_c_per_kwh[hi]},
+        "lowest_day": {"date": daily[lo].isoformat(), "mean": this.daily_means_eur[lo],
+                       "mean_c_per_kwh": this.daily_means_c_per_kwh[lo]},
         "periods_above_150": this.above_150,
         "periods_above_200": this.above_200,
         "periods_above_150_trailing_median": statistics.median(t150) if t150 else None,

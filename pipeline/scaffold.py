@@ -448,8 +448,8 @@ def build_weekly_post(summary: dict, content_root: Path | None = None, force: bo
         f"Same week last year: not available. {summary['seasonal_reason'].capitalize()}.")
 
     day_rows = "\n".join(
-        f"| {date.fromisoformat(d).strftime('%a %-d %b')} | {m / 10:.2f} | {m:.2f} |"
-        for d, m in zip(summary["daily_dates"], summary["daily_means"]))
+        f"| {date.fromisoformat(d).strftime('%a %-d %b')} | {c:.2f} | {m:.2f} |"
+        for d, c, m in zip(summary["daily_dates"], summary["daily_means_c_per_kwh"], summary["daily_means"]))
     clock_note = ("" if summary["n_periods"] == 48 * len(summary["daily_dates"]) else
                   f"\nThis week has {summary['n_periods']} half-hour periods rather than "
                   f"{48 * len(summary['daily_dates'])}: it contains a clock-change day.\n")
