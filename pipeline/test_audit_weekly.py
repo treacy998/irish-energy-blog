@@ -169,6 +169,38 @@ def test_year_on_year_sentence_and_verdict_sentence_are_audited_from_the_shared_
         assert "year_on_year_sentence" not in audit_posts.weekly_ground_truth(summary)
 
 
+def test_the_daily_means_table_and_the_week_mean_are_audited_to_the_cent():
+    from test_weekly_stats import _set_day
+    conn = make_store()
+    _set_day(conn, "2026-09-29", 488.45, 488.61)
+    summary = weekly_summary(WEEK, conn)
+    gt = audit_posts.weekly_ground_truth(summary)
+    assert gt["daily_c_per_kwh[Tue 29 Sep]"] == 48.85 and gt["daily_eur_mwh[Tue 29 Sep]"] == 488.45
+    with tempfile.TemporaryDirectory() as t:
+        path = build_weekly_post(summary, Path(t))
+        assert flags(audit_posts.audit_weekly_post(path, gt)) == []
+        text = path.read_text()
+        for old, new, field in (("| Tue 29 Sep | 48.85 |", "| Tue 29 Sep | 48.84 |", "daily_c_per_kwh[Tue 29 Sep]"),
+                                ("| 488.45 |", "| 488.46 |", "daily_eur_mwh[Tue 29 Sep]"),
+                                (f"| Week mean (c/kWh) | {summary['week_mean_c_per_kwh']} |",
+                                 f"| Week mean (c/kWh) | {summary['week_mean_c_per_kwh'] + 0.5} |", "week_mean_c_per_kwh")):
+            assert old in text, old
+            path.write_text(text.replace(old, new, 1))
+            got = flags(audit_posts.audit_weekly_post(path, gt))
+            assert [f for f, *_ in got] == [field], (field, got)             # a cent (or half a c/kWh) out is a flag now
+
+
+def test_commentary_accepts_the_correctly_rounded_daily_mean_and_rejects_the_double_rounded_one():
+    from test_weekly_stats import _set_day
+    conn = make_store()
+    _set_day(conn, "2026-09-29", 488.45, 488.61)
+    summary = weekly_summary(WEEK, conn)
+    figs = audit_posts.summary_figures(summary)
+    assert audit_posts._matches_at_precision("48.85", figs)
+    assert not audit_posts._matches_at_precision("48.84", figs)              # 48.845 is no longer derived from 488.45
+    assert audit_posts._matches_at_precision("488.45", figs)
+
+
 def test_empty_section_flag():
     fm = "---\ntitle: x\ndraft: false\n---\n\n"
     broker = ("## Broker Takeaway\n\n<!-- hint\nspanning lines -->\n\n"

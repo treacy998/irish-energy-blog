@@ -81,6 +81,8 @@ WEEKLY_DIR = ROOT / "site" / "content" / "weekly"
 # Only the periods_above_* counts are extracted from posts today; rank,
 # percentile and days_since are listed so they are exact from the day an
 # extractor and ground-truth value for them exist.
+# Weekly price figures a reader quotes: the post must print exactly what weekly_summary holds, not within 1.0.
+EXACT_PRICE_FIELDS = {"week_mean", "week_mean_c_per_kwh"}
 INTEGER_FIELDS = {"periods_above_150", "periods_above_200", "period_count", "rank", "percentile", "days_since",
                   "trailing_rank", "trailing_rank_of", "seasonal_rank", "seasonal_rank_of"}
 
@@ -330,7 +332,7 @@ def compare_findings(findings, gt: dict, exact: bool) -> list:
                              "" if match else "string_mismatch"])
         else:
             delta = round(val - computed, 2)
-            tol = 0.0 if exact and field in INTEGER_FIELDS else 1.0
+            tol = 0.0 if (exact and field in INTEGER_FIELDS) or field in EXACT_PRICE_FIELDS or field.startswith("daily_") else 1.0
             note = "" if abs(delta) <= tol else "MISMATCH"
             results.append([surface, field, val, computed, delta, ln, note])
     return results
@@ -361,6 +363,7 @@ WEEKLY_ROWS = [
     ("Volatility verdict (seasonal)", "seasonal_verdict_volatility", "verdict_spread"),
 ]
 ISO_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+DAILY_LABEL_RE = re.compile(r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} [A-Z][a-z]{2}")
 # The opening verdict sentence: "Inside the recent range, at the top end." or, outside the normal band
 # (and in posts written before 2026-10-10), "Against the previous 13 weeks: dearer."
 # The opening tail for a week that is the dearest / cheapest of its comparison set (weekly_stats.extremum_clause)
@@ -378,6 +381,9 @@ def weekly_ground_truth(summary: dict) -> dict:
     gt = {k: summary[k] for k in ("week_mean", "week_mean_c_per_kwh", "periods_above_150", "periods_above_200",
                                   "median_arb_spread", "wind_mw_mean", "wind_mw_trailing_median")}
     gt["wind_coverage_pct"] = round(summary["wind_coverage"] * 100, 1)
+    for d, c, m in zip(summary["daily_dates"], summary["daily_means_c_per_kwh"], summary["daily_means"]):
+        label = date.fromisoformat(d).strftime("%a %-d %b")
+        gt[f"daily_c_per_kwh[{label}]"], gt[f"daily_eur_mwh[{label}]"] = c, m
     for kind in ("trailing", "seasonal"):
         b = summary[kind]
         if b is None or b["suppressed"]:
@@ -419,6 +425,13 @@ def extract_weekly_rows(lines) -> list:
         if len(cells) < 2:
             continue
         label = cells[0].strip("* ").strip()
+        if DAILY_LABEL_RE.fullmatch(label) and len(cells) == 3:           # "| Tue 3 Nov | 48.85 | 488.45 |"
+            try:
+                out.append(("weekly:table", f"daily_c_per_kwh[{label}]", float(cells[1]), i))
+                out.append(("weekly:table", f"daily_eur_mwh[{label}]", float(cells[2]), i))
+            except ValueError:
+                pass
+            continue
         for prefix, field, kind in WEEKLY_ROWS:
             if not label.startswith(prefix):
                 continue
@@ -465,8 +478,9 @@ COMMENTARY_NOT_FIGURES = [
 ]
 COMMENTARY_NUMBER_RE = re.compile(r"(?<![\w.])-?\d+(?:,\d{3})*(?:\.\d+)?")
 # weekly_summary keys whose €/MWh values the post also shows in c/kWh (÷ 10)
-_PRICE_KEYS = {"week_mean", "previous_week_mean", "median_arb_spread", "daily_means", "mean", "means",
-               "median_week_mean"}
+_PRICE_KEYS = {"week_mean", "previous_week_mean", "median_arb_spread", "mean", "means", "median_week_mean"}
+# daily_means and highest/lowest_day carry their own c/kWh figures (rounded once from the exact mean); dividing the
+# rounded EUR/MWh value by 10 would accept a double-rounded 48.84 for 48.845.
 
 
 def summary_figures(summary: dict) -> list:
@@ -475,19 +489,19 @@ def summary_figures(summary: dict) -> list:
     spread written as 'minus €8' still matches 8."""
     out = []
 
-    def walk(v, key=None):
+    def walk(v, key=None, parent=None):
         if isinstance(v, bool) or v is None or isinstance(v, str):
             return
         if isinstance(v, (int, float)):
             out.append(abs(float(v)))
-            if key in _PRICE_KEYS:
+            if key in _PRICE_KEYS and not (key == "mean" and parent in ("highest_day", "lowest_day")):
                 out.append(abs(v) / 10)
         elif isinstance(v, dict):
             for k, x in v.items():
-                walk(x, k)
+                walk(x, k, key)
         elif isinstance(v, (list, tuple)):
             for x in v:
-                walk(x, key)
+                walk(x, key, parent)
 
     walk(summary)
     out += [150.0, 200.0]                           # the €/MWh thresholds behind periods_above_150 / _200
