@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Commit one generated daily (post, charts, manifest) and optionally push. Used by daily.yml; runnable locally.
+# Commit one generated daily (post, charts, manifest) and optionally push. Was used by daily.yml (removed); runnable locally.
 #   scripts/ci_publish.sh 2026-10-09          # commit only
 #   PUSH=1 scripts/ci_publish.sh 2026-10-09   # commit, rebase on the remote branch, push
 # Commits nothing when the paths have no changes, so a rerun is a true no-op.
@@ -13,7 +13,7 @@ if git diff --cached --quiet; then
     echo "no changes to commit for $D"
     exit 0
 fi
-# daily.yml sets these from repo variables and fails early if they are empty. Locally, use git's own identity.
+# the old daily.yml set these from repo variables and fails early if they are empty. Locally, use git's own identity.
 ident=()
 [ -n "${GIT_COMMIT_NAME:-}" ] && ident+=(-c "user.name=$GIT_COMMIT_NAME")
 [ -n "${GIT_COMMIT_EMAIL:-}" ] && ident+=(-c "user.email=$GIT_COMMIT_EMAIL")

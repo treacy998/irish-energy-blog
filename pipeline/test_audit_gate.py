@@ -5,8 +5,8 @@ Real: raw_archive.cmd_seed / cmd_materialise (git), store's backfill functions, 
 Stubbed: only the SEMOpx CSV parser (store.load_dam_data returns the fixture prices for the file's date).
 
 1. A correct post passes the gate.
-2. A post with one wrong figure fails it, naming the figure, and the workflow runs the gate before "Commit and push"
-   with nothing that could let the commit step run after a failure.
+2. A post with one wrong figure fails it, naming the figure. (daily.yml, which ran the gate before its commit step,
+   is gone: CI no longer writes daily posts. ci_audit.py stays for a person to run.)
 3. materialise refuses a restored file whose hash differs from the manifest, and a manifest-pinned file that is missing
    from the archive, before building anything; it refuses a non-empty destination.
 4. materialise is offline: a date with no archived EirGrid raw is reported, never fetched.
@@ -157,7 +157,7 @@ def test_a_correct_post_passes_the_gate():
         assert "clean against the raw archive" in summary.read_text()
 
 
-def test_one_wrong_figure_fails_the_gate_and_the_workflow_runs_it_before_the_commit():
+def test_one_wrong_figure_fails_the_gate():
     with gate_env() as g:
         g.write_post(mean_shift=5.0)                      # statbar and table both say 5 more than the archive's prices
         os.environ["GITHUB_STEP_SUMMARY"] = str(g.tmp / "summary.md")
@@ -165,18 +165,6 @@ def test_one_wrong_figure_fails_the_gate_and_the_workflow_runs_it_before_the_com
         assert code == 1, (code, out)
         assert "mean_price" in out and "(MISMATCH)" in out and "not in baseline: 2" in out, out
         assert "FAILED" in (g.tmp / "summary.md").read_text()
-    # The job stops at the first failing step, so the gate must come before the commit step and nothing may let the
-    # commit step run after a failure.
-    text = (WORKFLOWS / "daily.yml").read_text()
-    steps = re.split(r"\n      - ", text.split("    steps:\n", 1)[1])
-    names = [re.search(r"name: (.+)", s).group(1) if re.search(r"name: (.+)", s) else s.split("\n")[0] for s in steps]
-    i_raw = names.index("Archive the raw data")
-    i_gate = names.index("Audit the new post against the raw archive")
-    i_commit = names.index("Commit and push")
-    assert i_raw < i_gate < i_commit, names
-    for s in (steps[i_gate], steps[i_commit]):
-        assert "continue-on-error" not in s and "always()" not in s and "failure()" not in s, s
-    assert "ci_audit.py" in steps[i_gate] and "scripts/ci_publish.sh" in steps[i_commit]
 
 
 def test_materialise_refuses_a_hash_mismatch_a_missing_pinned_file_and_a_used_destination():

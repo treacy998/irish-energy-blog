@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ci_audit.py — the audit gate between "generated" and "published" in .github/workflows/daily.yml.
+ci_audit.py — the audit gate between "generated" and "published" in the former .github/workflows/daily.yml (removed; run it by hand).
 
     python pipeline/ci_audit.py --date 2026-10-28 --dest "$RUNNER_TEMP/audit-store"
 

@@ -39,10 +39,30 @@ goes out a week late), reconsider adding a separate `date` (publish) vs.
 template and permalink behaviour, which wasn't worth the risk for a
 one-post fix.
 
-## Automated daily run (GitHub Actions)
+## GitHub Actions owns the schedule
 
-`.github/workflows/daily.yml` runs `pipeline/ci_daily.py`, which does one unattended daily post. It is
-`workflow_dispatch` only for now; the two intended schedules (06:30 and 18:30 UTC) are commented out in
+The laptop is where posts are written; it runs no cron. Four workflows in `.github/workflows/`:
+
+| workflow | when (UTC) | does |
+|---|---|---|
+| `archive.yml` | daily 07:15, retry 10:15 | `ci_archive.py`: fetch yesterday's SEMOpx DA file and EirGrid wind and demand, verify, push to the raw repo; heal the last 14 days (empty or short demand/wind, or no file). No post, no content commit. Exit 0 if yesterday is already complete. |
+| `weekly.yml` | Monday 08:00, retry 11:00 | `ci_weekly.py`: materialise a store from the raw repo into `$RUNNER_TEMP`, run `weekly.py` on it with no network, push `weekly/<sunday>` and open a PR with the draft and chart. Exit 0 if the post is on master or the branch exists; the retry fails if the week is still incomplete. |
+| `deadman.yml` | daily 12:00 | `ci_deadman.py`: the raw repo has yesterday's files; Tuesdays, the last Sunday's weekly post is on master or in an open PR. |
+| `audit-weekly.yml` | Monday 09:30 | audits every published post against a store rebuilt from the raw repo. |
+
+`daily.yml` (one CI-generated daily post per day) was removed: there are no CI daily posts now, only weekly ones.
+The scripts it used (`ci_daily.py`, `ci_audit.py`, `ci_publish.sh`, `ci_verify_render.py`) stay: `ci_archive.py` reuses
+`ci_daily.refresh_tail`, and the others can be run by hand. `raw_gap.py list|push` pushes this machine's raw files for
+dates the raw repo lacks (run it once before the archive schedule's first run, so the archive and the laptop agree).
+`weekly.yml`'s PR step needs Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests".
+
+The sections below describe the daily pipeline as it was built and are kept for the history of the raw archive,
+the manifest and the audit gate.
+
+## Automated daily run (GitHub Actions, removed)
+
+`.github/workflows/daily.yml` ran `pipeline/ci_daily.py`, which did one unattended daily post. It was
+`workflow_dispatch` only; the two intended schedules (06:30 and 18:30 UTC) were commented out in
 the file. Both fall after Irish midnight and before the next one in summer and winter, and the target
 date is computed by the Irish calendar in Python, so UTC vs IST does not matter.
 

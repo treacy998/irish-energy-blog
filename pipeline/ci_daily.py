@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ci_daily.py — one unattended daily run, for GitHub Actions (.github/workflows/daily.yml).
+ci_daily.py — one unattended daily run, for GitHub Actions (.github/workflows/daily.yml, removed: archive.yml reuses refresh_tail).
 
     python pipeline/ci_daily.py                  # yesterday's delivery date, Irish calendar
     python pipeline/ci_daily.py --date 2026-09-08
