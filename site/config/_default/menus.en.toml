@@ -1,10 +1,4 @@
 [[main]]
-  identifier = "daily"
-  name = "Daily Briefings"
-  url = "/daily/"
-  weight = 10
-
-[[main]]
   identifier = "weekly"
   name = "Weekly Analysis"
   url = "/weekly/"
