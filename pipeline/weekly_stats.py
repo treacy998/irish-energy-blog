@@ -142,6 +142,29 @@ def verdict_sentence(b: dict) -> str:
     return f"Against the previous {b['n']} weeks: {b['verdict_price']}."
 
 
+def _dm(iso: str, year: bool = False) -> str:
+    return date.fromisoformat(iso).strftime("%-d %b %Y" if year else "%-d %b")
+
+
+def extremum_clause(b: dict) -> str | None:
+    """The opening sentence's tail for a baseline week that is the dearest (rank 1) or the cheapest
+    (rank == rank_of) of its comparison set, else None (the caller keeps its "last dearer" tail). Names the
+    most recent earlier week at least as dear (or as cheap), searching every complete earlier week in the store;
+    if there is none it says the week is the extreme of the whole record and where the record starts.
+    record_start is the first complete week in the store. Single source for the post text and the audit."""
+    if b["suppressed"]:
+        return None
+    if b["rank"] == 1:
+        word, since = "dearest", b["dearest_since"]
+    elif b["rank"] == b["rank_of"]:
+        word, since = "cheapest", b["cheapest_since"]
+    else:
+        return None
+    if since:
+        return f"{word} week since the week of {_dm(since)}"
+    return f"{word} week in the record (since {_dm(b['record_start'], year=True)})"
+
+
 def _verdict(pct: float, high: str, low: str) -> str:
     if pct > 95:
         return f"unusually {high}"
@@ -196,6 +219,7 @@ def weekly_summary(week_start: date, conn: sqlite3.Connection) -> dict:
                "reason": None, "median_week_mean": round(statistics.median(w.mean for w in base), 2) if base else None,
                "rank": None, "rank_of": None, "percentile": None, "verdict_price": None,
                "dearest_since": None, "cheapest_since": None,
+               "record_start": since_pool[-1].start.isoformat() if since_pool else None,
                "arb_rank": None, "arb_percentile": None, "verdict_volatility": None}
         if out["suppressed"]:
             out["reason"] = f"only {n} complete {kind} baseline week{'' if n == 1 else 's'}, need {MIN_N[kind]}"

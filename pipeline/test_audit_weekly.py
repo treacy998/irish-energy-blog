@@ -134,6 +134,21 @@ def test_verdict_sentence_is_audited_old_wording_flags():
         assert got[0][1:3] == ("Against the previous 13 weeks: normal.", want)
 
 
+def test_extremum_clause_is_audited_for_dearest_and_cheapest_weeks():
+    from test_weekly_post import _scaled_store
+    for factor, old_factor, word in ((3, 6, "dearest"), (0.2, 0.1, "cheapest")):
+        with tempfile.TemporaryDirectory() as t:
+            summary = weekly_summary(WEEK, _scaled_store(WEEK, factor, date(2026, 3, 2), old_factor))
+            path = build_weekly_post(summary, Path(t))
+            gt = audit_posts.weekly_ground_truth(summary)
+            assert gt["trailing_extremum_clause"].startswith(f"{word} week since the week of 2 Mar")
+            assert flags(audit_posts.audit_weekly_post(path, gt)) == [], word      # includes Cheapest-of rank parsing
+            text = path.read_text()
+            path.write_text(text.replace("the week of 2 Mar", "the week of 9 Mar"))
+            got = {f for f, *_ in flags(audit_posts.audit_weekly_post(path, gt))}
+            assert got == {"trailing_extremum_clause"}, got
+
+
 def test_empty_section_flag():
     fm = "---\ntitle: x\ndraft: false\n---\n\n"
     broker = ("## Broker Takeaway\n\n<!-- hint\nspanning lines -->\n\n"

@@ -18,7 +18,7 @@ from datetime import date, timedelta
 from process import load_dam_data, get_day_data, daily_summary
 from trading_day import expected_periods
 from charts import generate_daily_charts
-from weekly_stats import MIN_N, ordinal, verdict_sentence
+from weekly_stats import MIN_N, extremum_clause, ordinal, verdict_sentence
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CONTENT_DIR = Path(__file__).parent.parent / "site" / "content"
@@ -370,10 +370,12 @@ def weekly_verdict_text(summary: dict) -> str:
         parts = [f"No verdict this week: the store holds only {t['n']} complete earlier week{'' if t['n'] == 1 else 's'} and a "
                  f"comparison needs {MIN_N['trailing']}, so the week is not ranked or labelled."]
     else:
+        extreme = extremum_clause(t)
         head = (f"Dearest of the last {t['rank_of']} weeks" if t["rank"] == 1
+                else f"Cheapest of the last {t['rank_of']} weeks" if t["rank"] == t["rank_of"]
                 else f"{ordinal(t['rank'])} dearest of the last {t['rank_of']} weeks")
-        tail = (f"last dearer: week of {_day_month(t['dearest_since'])}" if t["dearest_since"]
-                else "no earlier week in the store was as dear")
+        tail = extreme or (f"last dearer: week of {_day_month(t['dearest_since'])}" if t["dearest_since"]
+                           else "no earlier week in the store was as dear")
         parts = [f"{head}; {tail}.", verdict_sentence(t)]
     prev = summary["previous_week_mean"]
     if prev and abs(summary["week_mean"] / prev - 1) > 0.10:

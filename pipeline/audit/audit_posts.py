@@ -63,7 +63,7 @@ sys.path.insert(0, str(ROOT / "pipeline"))
 import pandas as pd
 from process import daily_summary
 from bess import simulate_bess
-from weekly_stats import weekly_summary, verdict_sentence
+from weekly_stats import weekly_summary, verdict_sentence, extremum_clause
 from trading_day import calendar_label_to_utc, expected_periods, period_label_indices, period_start_utc
 
 DB_PATH = ROOT / "data" / "history.db"
@@ -363,6 +363,9 @@ WEEKLY_ROWS = [
 ISO_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 # The opening verdict sentence: "Inside the recent range, at the top end." or, outside the normal band
 # (and in posts written before 2026-10-10), "Against the previous 13 weeks: dearer."
+# The opening tail for a week that is the dearest / cheapest of its comparison set (weekly_stats.extremum_clause)
+EXTREMUM_CLAUSE_RE = re.compile(r"(?:dearest|cheapest) week since the week of \d{1,2} \w{3}"
+                                r"|(?:dearest|cheapest) week in the record \(since \d{1,2} \w{3} \d{4}\)")
 VERDICT_SENTENCE_RE = re.compile(r"Inside the recent range, (?:at the top end|mid-range|at the bottom end)\.|"
                                  r"Against the previous \d+ weeks: [a-z ]+\.")
 
@@ -382,6 +385,8 @@ def weekly_ground_truth(summary: dict) -> dict:
         gt[f"{kind}_verdict_price"] = b["verdict_price"]
         if kind == "trailing":
             gt["trailing_verdict_sentence"] = verdict_sentence(b)
+            if extremum_clause(b):
+                gt["trailing_extremum_clause"] = extremum_clause(b)
         gt[f"{kind}_verdict_volatility"] = b["verdict_volatility"]
     return gt
 
@@ -391,13 +396,17 @@ def extract_weekly_rows(lines) -> list:
     for i, line in enumerate(lines, start=1):
         if "|" not in line:
             # The opening rank sentence: "4th dearest of the last 14 weeks" / "Dearest of the last 14 weeks".
-            m = re.search(r"(?:\b(\d+)(?:st|nd|rd|th) dearest|\b(Dearest)) of the last (\d+) weeks", line)
+            m = re.search(r"(?:\b(\d+)(?:st|nd|rd|th) dearest|\b(Dearest)|\b(Cheapest)) of the last (\d+) weeks", line)
             vm = VERDICT_SENTENCE_RE.search(line)
             if vm:
                 out.append(("weekly:sentence", "trailing_verdict_sentence", vm.group(0), i))
+            em = EXTREMUM_CLAUSE_RE.search(line)
+            if em:
+                out.append(("weekly:sentence", "trailing_extremum_clause", em.group(0), i))
             if m:
-                out.append(("weekly:sentence", "trailing_rank", float(m.group(1)) if m.group(1) else 1.0, i))
-                out.append(("weekly:sentence", "trailing_rank_of", float(m.group(3)), i))
+                of = float(m.group(4))
+                out.append(("weekly:sentence", "trailing_rank", float(m.group(1)) if m.group(1) else (1.0 if m.group(2) else of), i))
+                out.append(("weekly:sentence", "trailing_rank_of", of, i))
             continue
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if len(cells) < 2:

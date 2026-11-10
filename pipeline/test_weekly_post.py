@@ -3,7 +3,7 @@ Run: python pipeline/test_weekly_post.py   (writes only under a temp directory)"
 
 import sys
 import tempfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -49,6 +49,55 @@ def test_verdict_sentence_bands():
         "Against the previous 13 weeks: unusually cheaper."
 
 
+def _scaled_store(week_start: date, factor: float, old_week: date | None = None, old_factor: float = 1.0):
+    """make_store() with the week starting week_start scaled by factor, and optionally one earlier week scaled
+    by old_factor: the dearest/cheapest edges the opening sentence has to word."""
+    conn = make_store()
+    def scale(start, f):
+        conn.execute("UPDATE market_prices SET dam_price_eur_mwh = dam_price_eur_mwh * ? WHERE date BETWEEN ? AND ?",
+                     (f, start.isoformat(), (start + timedelta(days=6)).isoformat()))
+    scale(week_start, factor)
+    if old_week:
+        scale(old_week, old_factor)
+    return conn
+
+
+def test_dearest_week_names_the_last_equally_dear_week():
+    old = date(2026, 3, 2)                                    # outside the 13 trailing weeks
+    s = weekly_summary(date(2026, 9, 28), _scaled_store(date(2026, 9, 28), 3, old, 6))
+    t = s["trailing"]
+    assert t["rank"] == 1 and t["dearest_since"] == "2026-03-02", t
+    text = weekly_verdict_text(s)
+    assert text.startswith("Dearest of the last 14 weeks; dearest week since the week of 2 Mar."), text
+    assert "last dearer" not in text and "no earlier week" not in text and "cheapest" not in text.lower()
+
+
+def test_dearest_week_in_the_record_says_where_the_record_starts():
+    s = weekly_summary(date(2026, 9, 28), _scaled_store(date(2026, 9, 28), 6))
+    t = s["trailing"]
+    assert t["rank"] == 1 and t["dearest_since"] is None and t["record_start"] == "2025-10-13", t
+    assert weekly_verdict_text(s).startswith(
+        "Dearest of the last 14 weeks; dearest week in the record (since 13 Oct 2025)."), weekly_verdict_text(s)
+
+
+def test_cheapest_week_mirrors_it():
+    old = date(2026, 3, 2)
+    s = weekly_summary(date(2026, 9, 28), _scaled_store(date(2026, 9, 28), 0.2, old, 0.1))
+    t = s["trailing"]
+    assert t["rank"] == t["rank_of"] == 14 and t["cheapest_since"] == "2026-03-02", t
+    assert weekly_verdict_text(s).startswith("Cheapest of the last 14 weeks; cheapest week since the week of 2 Mar."), \
+        weekly_verdict_text(s)
+    s = weekly_summary(date(2026, 9, 28), _scaled_store(date(2026, 9, 28), 0.1))
+    assert s["trailing"]["cheapest_since"] is None
+    assert weekly_verdict_text(s).startswith(
+        "Cheapest of the last 14 weeks; cheapest week in the record (since 13 Oct 2025)."), weekly_verdict_text(s)
+
+
+def test_a_middling_week_keeps_the_last_dearer_tail():
+    text = weekly_verdict_text(weekly_summary(date(2026, 9, 28), make_store()))
+    assert "dearest of the last 14 weeks; last dearer: week of" in text and "in the record" not in text
+
+
 def test_verdict_text_suppressed_says_so_and_invents_nothing():
     conn = make_store()
     conn.execute("DELETE FROM market_prices WHERE date < '2026-06-15'")
@@ -72,7 +121,8 @@ def test_rank_one_wording():
     s = weekly_summary(date(2026, 9, 28), make_store())
     s["trailing"].update(rank=1, dearest_since=None)
     text = weekly_verdict_text(s)
-    assert text.startswith("Dearest of the last 14 weeks; no earlier week in the store was as dear.")
+    # rank 1 no longer says "no earlier week in the store was as dear": it says where the record starts
+    assert text.startswith("Dearest of the last 14 weeks; dearest week in the record (since 13 Oct 2025).")
 
 
 def test_post_contents_order_and_rules():
