@@ -1,0 +1,63 @@
+name: archive
+
+# Keeps the private raw repo (SEMOpx DA files, EirGrid wind and demand) current. It owns the schedule for raw data:
+# no post is generated and nothing is committed to this repo. weekly.yml builds the weekly post from that archive.
+#
+# Two attempts a day, both after Irish midnight and before the next one in summer (IST) and winter (GMT), so
+# "yesterday" is the same day either way. The second is a no-op when the first left the archive complete
+# (pipeline/ci_archive.py checks the archive, and makes no request when it is). Each run also heals the 14 days
+# before yesterday: any with an empty or short wind/demand file, or no file, is refetched.
+#
+# Schedules only run from the default branch (see pipeline/README.md).
+on:
+  schedule:
+    - cron: "15 7 * * *"     # 07:15 UTC = 08:15 IST / 07:15 GMT
+    - cron: "15 10 * * *"    # 10:15 UTC: the retry
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Delivery date YYYY-MM-DD (blank = yesterday, Irish calendar)"
+        required: false
+        type: string
+
+permissions:
+  contents: read             # nothing is pushed to this repo; the raw repo is written with DATA_REPO_TOKEN
+
+concurrency:
+  group: archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-24.04
+    # Worst case, every EirGrid request timing out and every wait at its maximum (pipeline/fetch.py, EIRGRID_*):
+    # 10 rounds x 2 areas x (15 s connect + 30 s read) + 9 waits x 90 s = 28.5 min for the target day, and a heal
+    # day or two on top; the clone, install and push are a few minutes.
+    timeout-minutes: 60
+    env:
+      DATA_REPO: ${{ vars.DATA_REPO }}      # owner/name; defaults to treacy998/inis-energy-data
+    steps:
+      - name: Require the raw-repo token
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: '[ -n "$DATA_REPO_TOKEN" ] || { echo "::error::secret DATA_REPO_TOKEN is not set"; exit 1; }'
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pipeline/requirements-ci.txt
+
+      - run: pip install -r pipeline/requirements-ci.txt
+
+      - name: Archive yesterday and heal the last 14 days
+        env:
+          INPUT_DATE: ${{ inputs.date }}
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+          CI: "1"
+        run: |
+          args=()
+          [ -n "$INPUT_DATE" ] && args+=(--date "$INPUT_DATE")
+          python pipeline/ci_archive.py "${args[@]}"
