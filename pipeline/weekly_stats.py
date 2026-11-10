@@ -165,6 +165,18 @@ def extremum_clause(b: dict) -> str | None:
     return f"{word} week in the record (since {_dm(b['record_start'], year=True)})"
 
 
+def year_on_year_sentence(summary: dict) -> str | None:
+    """The post's lead when the seasonal baseline is usable (n >= 4, not suppressed) and the week starting
+    364 days earlier is complete in the store: "<x> c/kWh, <ratio>x the same week last year (<y> c/kWh)."
+    None otherwise, so a suppressed seasonal baseline adds nothing. Built from the rounded figures the post
+    shows. Single source for the post text and the audit."""
+    sea, last = summary["seasonal"], summary["same_week_last_year"]
+    if sea is None or sea["suppressed"] or not last:
+        return None
+    return (f"{summary['week_mean_c_per_kwh']:.2f} c/kWh, {summary['week_mean'] / last['mean']:.1f}x the same week "
+            f"last year ({last['mean'] / 10:.2f} c/kWh).")
+
+
 def _verdict(pct: float, high: str, low: str) -> str:
     if pct > 95:
         return f"unusually {high}"

@@ -149,6 +149,26 @@ def test_extremum_clause_is_audited_for_dearest_and_cheapest_weeks():
             assert got == {"trailing_extremum_clause"}, got
 
 
+def test_year_on_year_sentence_and_verdict_sentence_are_audited_from_the_shared_functions():
+    from weekly_stats import verdict_sentence, year_on_year_sentence
+    with tempfile.TemporaryDirectory() as t:
+        summary = weekly_summary(date(2026, 10, 19), make_store())          # seasonal n = 4
+        path = build_weekly_post(summary, Path(t))
+        gt = audit_posts.weekly_ground_truth(summary)
+        text = path.read_text()
+        assert gt["year_on_year_sentence"] == year_on_year_sentence(summary) and year_on_year_sentence(summary) in text
+        assert gt["trailing_verdict_sentence"] == verdict_sentence(summary["trailing"]) and verdict_sentence(summary["trailing"]) in text
+        assert flags(audit_posts.audit_weekly_post(path, gt)) == []
+        ratio = year_on_year_sentence(summary).split(", ")[1].split("x")[0]
+        path.write_text(text.replace(f", {ratio}x the same", f", {float(ratio) + 0.1:.1f}x the same"))
+        assert {f for f, *_ in flags(audit_posts.audit_weekly_post(path, gt))} == {"year_on_year_sentence"}
+        path.write_text(text.replace(verdict_sentence(summary["trailing"]), "Against the previous 13 weeks: cheaper."))
+        assert {f for f, *_ in flags(audit_posts.audit_weekly_post(path, gt))} == {"trailing_verdict_sentence"}
+    with tempfile.TemporaryDirectory() as t:                               # n < 4: no lead, no ground truth
+        summary = weekly_summary(WEEK, make_store())
+        assert "year_on_year_sentence" not in audit_posts.weekly_ground_truth(summary)
+
+
 def test_empty_section_flag():
     fm = "---\ntitle: x\ndraft: false\n---\n\n"
     broker = ("## Broker Takeaway\n\n<!-- hint\nspanning lines -->\n\n"

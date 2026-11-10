@@ -18,7 +18,7 @@ from datetime import date, timedelta
 from process import load_dam_data, get_day_data, daily_summary
 from trading_day import expected_periods
 from charts import generate_daily_charts
-from weekly_stats import MIN_N, extremum_clause, ordinal, verdict_sentence
+from weekly_stats import MIN_N, extremum_clause, ordinal, verdict_sentence, year_on_year_sentence
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CONTENT_DIR = Path(__file__).parent.parent / "site" / "content"
@@ -361,11 +361,13 @@ def _day_month(iso: str) -> str:
 
 
 def weekly_verdict_text(summary: dict) -> str:
-    """The post's opening sentence(s), generated from weekly_summary(): the rank first (it is a
-    fact), the baseline label second (it is derived from the rank), then week-on-week if the
+    """The post's opening sentence(s), generated from weekly_summary(): the year-on-year lead when the
+    seasonal baseline has n >= 4, then the rank (it is a fact), the baseline label (it is derived from the
+    rank), then week-on-week if the
     previous week's mean is more than 10% away. With a suppressed baseline it says there is no
     verdict instead of inventing one."""
     t = summary["trailing"]
+    lead = year_on_year_sentence(summary)                  # only with a usable seasonal baseline (n >= 4)
     if t["suppressed"]:
         parts = [f"No verdict this week: the store holds only {t['n']} complete earlier week{'' if t['n'] == 1 else 's'} and a "
                  f"comparison needs {MIN_N['trailing']}, so the week is not ranked or labelled."]
@@ -377,6 +379,8 @@ def weekly_verdict_text(summary: dict) -> str:
         tail = extreme or (f"last dearer: week of {_day_month(t['dearest_since'])}" if t["dearest_since"]
                            else "no earlier week in the store was as dear")
         parts = [f"{head}; {tail}.", verdict_sentence(t)]
+    if lead:
+        parts.insert(0, lead)
     prev = summary["previous_week_mean"]
     if prev and abs(summary["week_mean"] / prev - 1) > 0.10:
         change = (summary["week_mean"] / prev - 1) * 100

@@ -63,7 +63,7 @@ sys.path.insert(0, str(ROOT / "pipeline"))
 import pandas as pd
 from process import daily_summary
 from bess import simulate_bess
-from weekly_stats import weekly_summary, verdict_sentence, extremum_clause
+from weekly_stats import weekly_summary, verdict_sentence, extremum_clause, year_on_year_sentence
 from trading_day import calendar_label_to_utc, expected_periods, period_label_indices, period_start_utc
 
 DB_PATH = ROOT / "data" / "history.db"
@@ -366,6 +366,8 @@ ISO_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 # The opening tail for a week that is the dearest / cheapest of its comparison set (weekly_stats.extremum_clause)
 EXTREMUM_CLAUSE_RE = re.compile(r"(?:dearest|cheapest) week since the week of \d{1,2} \w{3}"
                                 r"|(?:dearest|cheapest) week in the record \(since \d{1,2} \w{3} \d{4}\)")
+# The year-on-year lead (weekly_stats.year_on_year_sentence)
+YEAR_ON_YEAR_RE = re.compile(r"-?\d+\.\d{2} c/kWh, \d+\.\dx the same week last year \(\d+\.\d{2} c/kWh\)\.")
 VERDICT_SENTENCE_RE = re.compile(r"Inside the recent range, (?:at the top end|mid-range|at the bottom end)\.|"
                                  r"Against the previous \d+ weeks: [a-z ]+\.")
 
@@ -388,6 +390,8 @@ def weekly_ground_truth(summary: dict) -> dict:
             if extremum_clause(b):
                 gt["trailing_extremum_clause"] = extremum_clause(b)
         gt[f"{kind}_verdict_volatility"] = b["verdict_volatility"]
+    if year_on_year_sentence(summary):
+        gt["year_on_year_sentence"] = year_on_year_sentence(summary)
     return gt
 
 
@@ -400,6 +404,9 @@ def extract_weekly_rows(lines) -> list:
             vm = VERDICT_SENTENCE_RE.search(line)
             if vm:
                 out.append(("weekly:sentence", "trailing_verdict_sentence", vm.group(0), i))
+            ym = YEAR_ON_YEAR_RE.search(line)
+            if ym:
+                out.append(("weekly:sentence", "year_on_year_sentence", ym.group(0), i))
             em = EXTREMUM_CLAUSE_RE.search(line)
             if em:
                 out.append(("weekly:sentence", "trailing_extremum_clause", em.group(0), i))

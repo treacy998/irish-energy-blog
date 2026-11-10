@@ -98,6 +98,46 @@ def test_a_middling_week_keeps_the_last_dearer_tail():
     assert "dearest of the last 14 weeks; last dearer: week of" in text and "in the record" not in text
 
 
+def test_year_on_year_leads_when_the_seasonal_baseline_is_usable():
+    s = weekly_summary(date(2026, 10, 19), make_store())
+    assert s["seasonal"] and s["seasonal"]["n"] >= 4
+    ly = s["same_week_last_year"]["mean"]
+    lead = f"{s['week_mean_c_per_kwh']:.2f} c/kWh, {s['week_mean'] / ly:.1f}x the same week last year ({ly / 10:.2f} c/kWh)."
+    text = weekly_verdict_text(s)
+    assert text.startswith(lead + " "), text
+    # the trailing sentence follows, unchanged
+    rest = text[len(lead) + 1:]
+    assert "dearest of the last 14 weeks" in rest and verdict_sentence(s["trailing"]) in rest, rest
+    assert text.index(lead) < text.index("dearest of the last") < text.index(verdict_sentence(s["trailing"]))
+
+
+def test_year_on_year_wording_and_ratio_rounding():
+    from weekly_stats import year_on_year_sentence
+    base = {"seasonal": {"suppressed": False}, "week_mean_c_per_kwh": 41.57, "week_mean": 415.7,
+            "same_week_last_year": {"week_start": "2025-11-03", "mean": 140.57}}
+    assert year_on_year_sentence(base) == "41.57 c/kWh, 3.0x the same week last year (14.06 c/kWh)."
+    assert year_on_year_sentence({**base, "week_mean": 198.48, "week_mean_c_per_kwh": 19.85,
+                                  "same_week_last_year": {"week_start": "x", "mean": 97.88}}) == \
+        "19.85 c/kWh, 2.0x the same week last year (9.79 c/kWh)."
+    assert year_on_year_sentence({**base, "week_mean": 50.0, "week_mean_c_per_kwh": 5.0}) == \
+        "5.00 c/kWh, 0.4x the same week last year (14.06 c/kWh)."
+
+
+def test_year_on_year_is_absent_while_the_seasonal_baseline_is_suppressed():
+    from weekly_stats import year_on_year_sentence
+    for ws in (date(2026, 9, 28), date(2026, 10, 12)):          # seasonal n = 1 and 3: "need 4"
+        s = weekly_summary(ws, make_store())
+        assert s["seasonal"] is None
+        assert year_on_year_sentence(s) is None and "same week last year" not in weekly_verdict_text(s)
+    full = weekly_summary(date(2026, 10, 26), make_store(last=date(2026, 11, 8)))
+    assert full["seasonal"]["n"] == 5 and full["same_week_last_year"]["week_start"] == "2025-10-27"
+    conn = make_store(last=date(2026, 11, 8))                   # n = 4, but last year's own week is incomplete
+    conn.execute("DELETE FROM market_prices WHERE date = '2025-10-29'")
+    s = weekly_summary(date(2026, 10, 26), conn)
+    assert s["seasonal"] and s["seasonal"]["n"] == 4 and s["same_week_last_year"] is None
+    assert year_on_year_sentence(s) is None and "same week last year" not in weekly_verdict_text(s)
+
+
 def test_verdict_text_suppressed_says_so_and_invents_nothing():
     conn = make_store()
     conn.execute("DELETE FROM market_prices WHERE date < '2026-06-15'")
