@@ -168,20 +168,18 @@ def cmd_restore(args):
     print(f"restored {n} raw files into data/ for {target}")
 
 
-def cmd_push(args):
-    """Add the manifest-listed raw files that exist in data/. A file already in the raw repo with a
-    different hash aborts the run: raw archives are provenance and are never replaced."""
-    entries = manifest_entries()
-    wanted = [DATA_DIR.parent / rel for rel in sorted(entries) if is_raw_data(rel) and (DATA_DIR.parent / rel).is_file()]
-    if not wanted:
-        raise SystemExit("no manifest-listed raw files found in data/ to archive")
+def push_files(files: list[Path], remote: str, label: str, entries: dict[str, str] | None = None) -> tuple[list[str], list[str]]:
+    """Add `files` (paths under data/) to the raw repo, one commit, one push. A file already there with
+    different bytes is never replaced, except under may_supersede; any other difference aborts the whole
+    push (nothing is pushed). Returns (added, replaced) as repo-relative paths."""
+    entries = manifest_entries() if entries is None else entries
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t) / "raw"
-        non_empty = clone(remote_url(args.remote), tmp)
+        non_empty = clone(remote, tmp)
         if not non_empty:
             git("checkout", "-q", "-b", BRANCH, cwd=tmp)
         added, replaced, conflicts = [], [], []
-        for f in wanted:
+        for f in files:
             rel = f.relative_to(DATA_DIR.parent)
             dest = tmp / rel
             if dest.exists():
@@ -201,13 +199,34 @@ def cmd_push(args):
             raise SystemExit("raw files differ from the archived copy (not replacing):\n  " + "\n  ".join(conflicts))
         if not added and not replaced:
             print("raw repo already holds every file")
-            return
+            return added, replaced
         git("add", "-A", cwd=tmp)
         git("-c", "user.name=raw-archive", "-c", "user.email=raw-archive@users.noreply.github.com",
-            "commit", "-q", "-m", f"raw files for {args.date or 'run'}: {len(added)} added, {len(replaced)} replaced"
+            "commit", "-q", "-m", f"raw files for {label}: {len(added)} added, {len(replaced)} replaced"
             + "".join(f"\nreplaced: {r}" for r in replaced), cwd=tmp)
         git("push", "-q", "origin", f"HEAD:{BRANCH}", cwd=tmp)
     print(f"pushed {len(added)} raw files to the raw repo ({len(replaced)} replaced)")
+    return added, replaced
+
+
+def cmd_push(args):
+    """Add the manifest-listed raw files that exist in data/. A file already in the raw repo with a
+    different hash aborts the run: raw archives are provenance and are never replaced."""
+    entries = manifest_entries()
+    wanted = [DATA_DIR.parent / rel for rel in sorted(entries) if is_raw_data(rel) and (DATA_DIR.parent / rel).is_file()]
+    if not wanted:
+        raise SystemExit("no manifest-listed raw files found in data/ to archive")
+    push_files(wanted, remote_url(args.remote), args.date or "run", entries)
+
+
+def list_archive(remote: str) -> list[str]:
+    """Every path in the raw repo's HEAD, from a blobless clone (no file content is downloaded). [] if empty."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t) / "raw"
+        git("clone", "-q", "--depth", "1", "--filter=blob:none", "--no-checkout", remote, str(tmp))
+        if git("rev-parse", "--verify", "-q", "HEAD", cwd=tmp, check=False).returncode != 0:
+            return []
+        return git("ls-tree", "-r", "--name-only", "HEAD", cwd=tmp).stdout.split()
 
 
 def cmd_seed(args):
