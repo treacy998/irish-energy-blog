@@ -1,0 +1,83 @@
+name: weekly
+
+# Builds the weekly draft from the raw repo and opens a pull request for it. This is the only post CI writes.
+# The laptop is where the Commentary is written: edit the branch (or the PR), set draft: false, merge.
+#
+# Monday 08:00 UTC, retry 11:00 UTC. archive.yml has run at 07:15 and 10:15, so by the first attempt Sunday's raw
+# files are in the raw repo, and by the retry the second archive attempt has had its chance. The first attempt
+# exits 0 with a warning if the week is not complete in the archive; the retry (and any manual run) fails.
+# Either attempt exits 0 without doing anything when the post is already on the default branch or the branch
+# weekly/<sunday> already exists; in the second case it only makes sure that branch has a pull request.
+#
+# Needs Settings > Actions > General > Workflow permissions > "Allow GitHub Actions to create and approve pull
+# requests". Without it the branch is still pushed and the run fails saying so; re-running reuses the branch.
+#
+# Schedules only run from the default branch (see pipeline/README.md).
+on:
+  schedule:
+    - cron: "0 8 * * 1"      # Monday 08:00 UTC
+    - cron: "0 11 * * 1"     # Monday 11:00 UTC: the retry, which fails if the week is still incomplete
+  workflow_dispatch:
+    inputs:
+      week_start:
+        description: "Monday of the week to build, YYYY-MM-DD (blank = the last complete week)"
+        required: false
+        type: string
+
+permissions:
+  contents: write            # pushes the branch weekly/<sunday>
+  pull-requests: write       # opens the pull request
+
+concurrency:
+  group: weekly
+  cancel-in-progress: false
+
+jobs:
+  weekly:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30      # a clone of the raw repo and a store build take a few minutes; the draft under one
+    env:
+      DATA_REPO: ${{ vars.DATA_REPO }}
+      GIT_COMMIT_NAME: ${{ vars.GIT_COMMIT_NAME }}
+      GIT_COMMIT_EMAIL: ${{ vars.GIT_COMMIT_EMAIL }}
+    steps:
+      - name: Require the raw-repo token and the commit identity variables
+        env:
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: |
+          [ -n "$DATA_REPO_TOKEN" ] || { echo "::error::secret DATA_REPO_TOKEN is not set"; exit 1; }
+          [ -n "$GIT_COMMIT_NAME" ] && [ -n "$GIT_COMMIT_EMAIL" ] \
+            || { echo "::error::repo variables GIT_COMMIT_NAME and GIT_COMMIT_EMAIL must both be set"; exit 1; }
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pipeline/requirements-ci.txt
+
+      - run: pip install -r pipeline/requirements-ci.txt
+
+      # Materialises the store from the raw repo into $RUNNER_TEMP and runs weekly.py on it with --db: no feed is
+      # contacted. Retry (or manual) runs pass --final, so an incomplete week fails them.
+      - name: Build the weekly draft from the raw repo
+        id: build
+        env:
+          INPUT_WEEK_START: ${{ inputs.week_start }}
+          FINAL: ${{ github.event.schedule != '0 8 * * 1' }}
+          DATA_REPO_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+        run: |
+          args=()
+          [ -n "$INPUT_WEEK_START" ] && args+=(--week-start "$INPUT_WEEK_START")
+          [ "$FINAL" = "true" ] && args+=(--final)
+          python pipeline/ci_weekly.py "${args[@]}"
+
+      - name: Push the branch and open the pull request
+        if: steps.build.outputs.status == 'built' || steps.build.outputs.status == 'branch'
+        env:
+          PUSH: "1"
+          GH_TOKEN: ${{ github.token }}
+          PR_TITLE_FILE: ${{ steps.build.outputs.title_file }}
+          PR_BODY_FILE: ${{ steps.build.outputs.body_file }}
+        run: scripts/ci_weekly_pr.sh "${{ steps.build.outputs.sunday }}"

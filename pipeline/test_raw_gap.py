@@ -16,12 +16,13 @@ import raw_archive as ra
 import raw_gap
 from test_ci_retry import eirgrid_body
 from test_dam_markets import write_file
+from trading_day import expected_periods
 
 D0 = date(2026, 11, 1)                   # the raw repo holds everything up to and including this delivery date
 
 
 def put_semo(root: Path, d: date, bad_market=False):
-    base = [100.0 + p for p in range(1, 49)]
+    base = [100.0 + p for p in range(1, expected_periods(d) + 1)]
     ni = list(base)
     if bad_market:
         ni[6] += 7
