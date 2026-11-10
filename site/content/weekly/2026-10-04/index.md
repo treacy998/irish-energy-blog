@@ -35,7 +35,7 @@ Same week last year: not available. Only 1 complete seasonal week in the store (
 
 | Day | Mean (c/kWh) | Mean (€/MWh) |
 |-----|--------------|--------------|
-| Mon 28 Sep | 20.91 | 209.05 |
+| Mon 28 Sep | 20.90 | 209.05 |
 | Tue 29 Sep | 15.84 | 158.37 |
 | Wed 30 Sep | 14.25 | 142.52 |
 | Thu 1 Oct | 18.89 | 188.95 |
