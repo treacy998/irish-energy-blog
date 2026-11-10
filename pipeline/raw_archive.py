@@ -314,7 +314,8 @@ def build_throwaway_db(dest: Path, start: date, end: date) -> dict:
     import store                                    # heavy imports (pandas, process); only materialise needs them
     db = dest / "history.db"
     conn = store.build_db(db)
-    prices = store.backfill_market_prices(conn, dest / "data")
+    splits = []
+    prices = store.backfill_market_prices(conn, dest / "data", splits=splits)
     saved, store.fetch_area = store.fetch_area, (lambda *a, **k: None)
     try:
         with contextlib.redirect_stdout(io.StringIO()):
@@ -324,7 +325,7 @@ def build_throwaway_db(dest: Path, start: date, end: date) -> dict:
     days = conn.execute("SELECT count(DISTINCT date) FROM market_prices").fetchone()[0]
     conn.close()
     return {"db": db, "price_rows": prices, "price_days": days, "condition_rows": res.rows,
-            "wind_failed": res.wind_failed, "demand_missing": res.demand_missing}
+            "wind_failed": res.wind_failed, "demand_missing": res.demand_missing, "market_splits": splits}
 
 
 def cmd_materialise(args):
@@ -370,6 +371,7 @@ def cmd_materialise(args):
         print(f"  no archived EirGrid wind for {len(w)} date(s) ({w[0]}..{w[-1]}): their wind/demand figures have no archived ground truth")
     if built["demand_missing"]:
         print(f"  demand incomplete for {len(built['demand_missing'])} date(s): {built['demand_missing'][:5]}")
+    return built
 
 
 def main():

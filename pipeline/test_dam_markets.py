@@ -9,7 +9,7 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from process import load_dam_data, KNOWN_NI_ROI_ROUNDING
+from process import load_dam_data, KNOWN_NI_ROI_ROUNDING, MarketSplitError, report_market_split
 from trading_day import expected_periods, period_starts_utc
 
 DELIVERY = date(2026, 11, 3)
@@ -118,6 +118,74 @@ def test_a_short_ni_block_names_the_missing_period():
     base = [100.0 + p for p in range(1, 49)]
     with tempfile.TemporaryDirectory() as t:
         raises(write_file(Path(t), ni=base[:47]), "2026-11-03", "period 48 (NI-DA missing vs ROI-DA 148,00)")
+
+
+def _split_file(tmp: Path, delivery=DELIVERY, periods=(7, 20)) -> Path:
+    base = [100.0 + p for p in range(1, expected_periods(delivery) + 1)]
+    ni = list(base)
+    for p in periods:
+        ni[p - 1] += 9
+    return write_file(tmp, delivery=delivery, ni=ni, roi=base)
+
+
+def test_a_split_raises_a_market_split_error_carrying_the_date_and_periods():
+    with tempfile.TemporaryDirectory() as t:
+        try:
+            load_dam_data(_split_file(Path(t)))
+            raise AssertionError("accepted")
+        except MarketSplitError as e:
+            assert isinstance(e, ValueError) and e.delivery_date == DELIVERY and e.periods == [7, 20], (e.delivery_date, e.periods)
+            import contextlib, io
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                report_market_split(e)
+            assert err.getvalue() == "MARKET SPLIT 2026-11-03: 7, 20\n", err.getvalue()
+    with tempfile.TemporaryDirectory() as t:                                  # a missing block is not a split
+        try:
+            load_dam_data(write_file(Path(t), ni_block=False))
+        except ValueError as e:
+            assert not isinstance(e, MarketSplitError)
+
+
+def _data_dir_with(tmp: Path) -> Path:
+    """data/ holding one good file (2026-11-04) and one split file (2026-11-03), named like the real ones."""
+    d = tmp / "data"
+    d.mkdir()
+    for delivery, split in ((date(2026, 11, 4), False), (DELIVERY, True)):
+        src = _split_file(tmp / f"w{delivery}", delivery) if split else write_file(tmp / f"w{delivery}", delivery=delivery)
+        stamp = f"{date.fromordinal(delivery.toordinal() - 1):%Y%m%d}"
+        src.rename(d / f"MarketResult_SEM-DA_PWR-MRC-D+1_{stamp}110000_{stamp}115501.csv")
+    return d
+
+
+def test_every_rebuild_path_that_skips_a_split_prints_market_split_to_stderr():
+    import contextlib, io
+    import charts
+    import store
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        for k in ("w2026-11-03", "w2026-11-04"):
+            (tmp / k).mkdir()
+        data = _data_dir_with(tmp)
+        conn = store.build_db(tmp / "h.db")
+        out, err, splits = io.StringIO(), io.StringIO(), []
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rows = store.backfill_market_prices(conn, data, splits=splits)
+        assert rows == 48 and len(splits) == 1 and splits[0].delivery_date == DELIVERY, (rows, splits)
+        assert err.getvalue() == "MARKET SPLIT 2026-11-03: 7, 20\n" and "[store] SKIP" in out.getvalue(), (err.getvalue(), out.getvalue())
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            store.rebuild_price_utc(conn, DELIVERY, date(2026, 11, 4), data)
+        assert err.getvalue() == "MARKET SPLIT 2026-11-03: 7, 20\n", err.getvalue()
+        err, saved = io.StringIO(), charts.DATA_DIR
+        charts.DATA_DIR = data
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+                charts._load_all_dam_data()
+        finally:
+            charts.DATA_DIR = saved
+        assert err.getvalue() == "MARKET SPLIT 2026-11-03: 7, 20\n", err.getvalue()
+        conn.close()
 
 
 def _real_files(pattern):

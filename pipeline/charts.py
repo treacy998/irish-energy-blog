@@ -13,7 +13,7 @@ import numpy as np
 from pathlib import Path
 from datetime import date
 
-from process import load_dam_data, get_day_data, daily_summary, wind_summary
+from process import MarketSplitError, load_dam_data, report_market_split, get_day_data, daily_summary, wind_summary
 from trading_day import clock_change_note, period_keys, period_labels
 from charts_interactive import generate_interactive_charts
 
@@ -596,6 +596,8 @@ def _load_all_dam_data() -> pd.DataFrame:
         try:
             frames.append(load_dam_data(p))
         except Exception as e:
+            if isinstance(e, MarketSplitError):
+                report_market_split(e)
             print(f"  Warning: skipped {p.name} ({e})")
     if not frames:
         return pd.DataFrame()

@@ -38,7 +38,7 @@ from zoneinfo import ZoneInfo
 from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).parent))
-from process import load_dam_data
+from process import MarketSplitError, load_dam_data, report_market_split
 from trading_day import calendar_label_to_utc, expected_periods, iso_z, period_labels, period_starts_utc
 from fetch import (
     AREA_FIELDS, archive_path, archive_row_count, combine_for_trading_day,
@@ -188,12 +188,20 @@ def persist_day(d: date, price_df, conditions_df=None, db_path: Path | None = No
     return price_rows, cond_rows
 
 
-def backfill_market_prices(conn: sqlite3.Connection, data_dir: Path = DATA_DIR) -> int:
-    """Replay every SEMO DAM CSV in data_dir. Returns rows written."""
+def backfill_market_prices(conn: sqlite3.Connection, data_dir: Path = DATA_DIR, splits: list | None = None) -> int:
+    """Replay every SEMO DAM CSV in data_dir. Returns rows written. A file whose NI-DA and ROI-DA prices differ is
+    skipped like any unparseable one, but loudly: MARKET SPLIT <date>: <periods> on stderr, and the error is appended
+    to `splits` (when given) so a caller that must not carry on can fail."""
     rows = 0
     for csv_path in sorted(data_dir.glob("MarketResult_SEM-DA_*.csv")):
         try:
             df = load_dam_data(csv_path)
+        except MarketSplitError as e:
+            report_market_split(e)
+            if splits is not None:
+                splits.append(e)
+            print(f"  [store] SKIP {csv_path.name}: {e}")
+            continue
         except ValueError as e:
             print(f"  [store] SKIP {csv_path.name}: {e}")
             continue
@@ -430,6 +438,8 @@ def backfill_prices(conn: sqlite3.Connection, start: date, end: date, data_dir: 
             conn.commit()
         except Exception as e:
             conn.rollback()
+            if isinstance(e, MarketSplitError):
+                report_market_split(e)
             print(f"  [store] {d.isoformat()}: {type(e).__name__}: {e}", file=sys.stderr)
             rows = 0
         ok = rows == want
@@ -515,6 +525,10 @@ def rebuild_price_utc(conn: sqlite3.Connection, start: date, end: date, data_dir
     for csv_path in sorted(data_dir.glob("MarketResult_SEM-DA_*.csv")):
         try:
             df = load_dam_data(csv_path)
+        except MarketSplitError as e:
+            report_market_split(e)
+            print(f"  [store] SKIP {csv_path.name}: {e}")
+            continue
         except ValueError as e:
             print(f"  [store] SKIP {csv_path.name}: {e}")
             continue
@@ -660,6 +674,8 @@ def catch_up_store(db_path: Path | None = None, data_dir: Path = DATA_DIR, now: 
             if price_df["DeliveryDate"].iloc[0].date() != d:
                 raise ValueError(f"file is for {price_df['DeliveryDate'].iloc[0].date()}, not {d}")
         except Exception as e:
+            if isinstance(e, MarketSplitError):
+                report_market_split(e)
             reason = f"{type(e).__name__}: {' '.join(str(e).split())}"
             if d == yesterday and isinstance(e, FileNotFoundError):     # fetch_semo: no such report yet
                 print(f"{ds} price not published yet ({reason})", flush=True)

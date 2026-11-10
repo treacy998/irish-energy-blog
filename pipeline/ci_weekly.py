@@ -80,7 +80,11 @@ def run(monday: date, remote: str, dest: Path, content_root: Path, chart_dir: Pa
         print(f"branch weekly/{sunday} already exists; nothing to build.")
         emit(status="branch", monday=monday, sunday=sunday)
         return 0
-    ra.cmd_materialise(argparse.Namespace(start=history_from, to=sunday.isoformat(), dest=str(dest), remote=remote))
+    built = ra.cmd_materialise(argparse.Namespace(start=history_from, to=sunday.isoformat(), dest=str(dest), remote=remote))
+    if built and built["market_splits"]:                      # a split day is missing from every baseline: never "waiting"
+        for e in built["market_splits"]:
+            print(f"::error::MARKET SPLIT {e.delivery_date}: periods {', '.join(str(p) for p in e.periods)}; {e}")
+        return 1
     db = dest / "history.db"
     gaps = weekly.week_gaps(db, monday)
     if gaps:

@@ -99,9 +99,12 @@ def verify(d: date, kind: str, data_dir: Path, entries: dict[str, str]) -> Item:
         return it
     it.note = "pinned by the manifest, matches" if rel in entries else "not pinned by the manifest"
     if kind == "semo":
-        from process import load_dam_data
+        from process import MarketSplitError, load_dam_data
         try:
             df = load_dam_data(path)
+        except MarketSplitError as e:
+            it.status, it.note = "refused", f"MARKET SPLIT {e.delivery_date}: periods {', '.join(map(str, e.periods))} ({e})"
+            return it
         except ValueError as e:
             it.status, it.note = "refused", f"does not parse: {e}"
             return it

@@ -9,7 +9,7 @@ chart_social_card(). Skips dates whose card already exists.
 
 from pathlib import Path
 
-from process import load_dam_data, daily_summary
+from process import MarketSplitError, load_dam_data, report_market_split, daily_summary
 from charts import chart_social_card, CHART_DIR, DATA_DIR
 
 CONTENT_DIR = Path(__file__).parent.parent / "site" / "content" / "daily"
@@ -22,6 +22,8 @@ def build_date_to_file_map() -> dict:
         try:
             df = load_dam_data(p)
         except Exception as e:
+            if isinstance(e, MarketSplitError):
+                report_market_split(e)
             print(f"  Warning: skipped {p.name} ({e})")
             continue
         delivery_date = df["DeliveryDate"].dt.date.iloc[0].isoformat()

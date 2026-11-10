@@ -5,6 +5,7 @@ Reads from data/ and outputs processed summaries used by charts.py and scaffold.
 """
 
 import math
+import sys
 
 import pandas as pd
 from pathlib import Path
@@ -30,18 +31,33 @@ KNOWN_NI_ROI_ROUNDING = {
 }
 
 
+class MarketSplitError(ValueError):
+    """NI-DA and ROI-DA cleared at different prices. delivery_date and periods (1-based) name what differs. A
+    ValueError so existing callers still refuse the file; the ones that skip it must call report_market_split."""
+
+    def __init__(self, delivery_date: date, periods: list[int], message: str):
+        super().__init__(message)
+        self.delivery_date, self.periods = delivery_date, periods
+
+
+def report_market_split(e: "MarketSplitError") -> None:
+    """The line every rebuild path that skips a split file must print, to stderr: MARKET SPLIT <date>: <periods>."""
+    print(f"MARKET SPLIT {e.delivery_date}: {', '.join(str(p) for p in e.periods)}", file=sys.stderr, flush=True)
+
+
 def _check_markets_agree(delivery_date: date, ni_vals: list, roi_vals: list) -> None:
-    """Raise ValueError naming the date and the periods where the NI-DA and ROI-DA EUR index prices differ."""
+    """Raise MarketSplitError naming the date and the periods where the NI-DA and ROI-DA EUR index prices differ."""
     n = max(len(ni_vals), len(roi_vals))
-    differ = []
+    periods, differ = [], []
     for period in range(1, n + 1):
         ni = ni_vals[period - 1].strip() if period <= len(ni_vals) else ""
         roi = roi_vals[period - 1].strip() if period <= len(roi_vals) else ""
         if ni != roi and KNOWN_NI_ROI_ROUNDING.get((delivery_date, period)) != (ni, roi):
+            periods.append(period)
             differ.append(f"{period} (NI-DA {ni or 'missing'} vs ROI-DA {roi or 'missing'})")
     if differ:
-        raise ValueError(f"NI-DA and ROI-DA EUR index prices differ for {delivery_date}: period "
-                         f"{', '.join(differ)}. The market has split; refusing to publish either jurisdiction's price.")
+        raise MarketSplitError(delivery_date, periods, f"NI-DA and ROI-DA EUR index prices differ for {delivery_date}: period "
+                               f"{', '.join(differ)}. The market has split; refusing to publish either jurisdiction's price.")
 
 
 def load_dam_data(filepath: Path) -> pd.DataFrame:

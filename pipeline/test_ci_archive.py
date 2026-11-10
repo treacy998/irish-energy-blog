@@ -34,7 +34,7 @@ def env(seeded=None, manifest_text=""):
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t)
         e = type("Env", (), {})()
-        e.requests, e.feed, e.semo_calls, e.semo_wrong, e.semo_error = [], {}, [], False, None
+        e.requests, e.feed, e.semo_calls, e.semo_wrong, e.semo_error, e.semo_split = [], {}, [], False, None, False
         e.remote, runner, seed = tmp / "raw.git", tmp / "runner", tmp / "seed"
         subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(e.remote)], check=True)
         os.environ["RAW_ARCHIVE_REMOTE"] = str(e.remote)
@@ -63,7 +63,7 @@ def env(seeded=None, manifest_text=""):
             e.semo_calls.append(delivery_date)
             if e.semo_error:
                 raise RuntimeError(e.semo_error)
-            made = put_semo(runner, delivery_date + timedelta(days=1) if e.semo_wrong else delivery_date)
+            made = put_semo(runner, delivery_date + timedelta(days=1) if e.semo_wrong else delivery_date, bad_market=e.semo_split)
             if e.semo_wrong:                                  # D+1's content under D's file name
                 stamp = f"{delivery_date - timedelta(days=1):%Y%m%d}"
                 made.rename(made.with_name(f"MarketResult_SEM-DA_PWR-MRC-D+1_{stamp}110000_{stamp}115501.csv"))
@@ -191,6 +191,15 @@ def test_a_semo_file_for_the_wrong_date_is_refused_and_nothing_is_pushed():
         head = e.head()
         code, out = e.run()
         assert code == 1 and "refused: is for 2026-11-11, not 2026-11-10" in out and e.head() == head, out
+
+
+def test_a_market_split_fails_the_run_loudly_naming_the_date_and_periods_and_pushes_nothing():
+    with env() as e:
+        e.semo_split = True                                  # NI-DA differs from ROI-DA at period 7
+        head = e.head()
+        code, out = e.run()
+        assert code == 1 and e.head() == head, out
+        assert f"::error::{TARGET} semo refused: MARKET SPLIT {TARGET}: periods 7 (NI-DA and ROI-DA EUR index prices differ" in out, out
 
 
 def test_a_semo_fetch_failure_fails_the_run_and_names_it():

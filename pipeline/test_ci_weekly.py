@@ -23,7 +23,7 @@ FROM = MONDAY - timedelta(weeks=10)          # ten earlier weeks: more than the 
 
 
 @contextlib.contextmanager
-def env(last_day_missing=False):
+def env(last_day_missing=False, split_day=None):
     saved = (ra.DATA_DIR, ra.MANIFEST, fetch.requests, os.environ.get("GITHUB_OUTPUT"))
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t)
@@ -38,7 +38,7 @@ def env(last_day_missing=False):
         d = FROM
         while d <= SUNDAY:
             if not (last_day_missing and d == SUNDAY):
-                put_semo(seed, d)
+                put_semo(seed, d, bad_market=(d == split_day))
             d += timedelta(days=1)
         d = MONDAY - timedelta(days=1)
         while d <= SUNDAY:
@@ -115,6 +115,17 @@ def test_a_missing_last_day_waits_on_the_first_attempt_and_fails_the_retry():
         shutil.rmtree(e.dest)                                                  # the retry runs on a fresh runner
         code, out, o = e.run(final=True)
         assert code == 1 and "::error::" in out and "this was the last attempt" in out and not o and not e.post.exists(), (out, o)
+
+
+def test_a_market_split_in_the_archive_fails_either_attempt_and_builds_nothing():
+    day = MONDAY - timedelta(weeks=3)
+    with env(split_day=day) as e:
+        for final in (False, True):                           # never "waiting": a split day is not an incomplete week
+            import shutil
+            shutil.rmtree(e.dest, ignore_errors=True)
+            code, out, o = e.run(final=final)
+            assert code == 1 and not o and not e.post.exists(), (final, out, o)
+            assert f"::error::MARKET SPLIT {day}: periods 7;" in out and "NI-DA and ROI-DA EUR index prices differ" in out, out
 
 
 def test_the_workflow_runs_monday_at_08_and_11_and_only_opens_a_pr():
