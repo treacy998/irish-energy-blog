@@ -18,8 +18,35 @@ DUBLIN_TZ = ZoneInfo("Europe/Dublin")
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
+# NI-DA and ROI-DA clear at one price unless the market splits. In 4 archived files (checked 2026-11-10 against all
+# 399 files) they differ by one cent in a single period, a rounding difference and not a split. Each is listed
+# exactly: (delivery date, period) -> (NI-DA cell, ROI-DA cell). Anything else, including these periods with other
+# values, raises.
+KNOWN_NI_ROI_ROUNDING = {
+    (date(2025, 12, 17), 11): ("57,01", "57,00"),
+    (date(2026, 3, 8), 45): ("173,09", "173,08"),
+    (date(2026, 3, 17), 33): ("85,65", "85,66"),
+    (date(2026, 3, 23), 39): ("178,72", "178,71"),
+}
+
+
+def _check_markets_agree(delivery_date: date, ni_vals: list, roi_vals: list) -> None:
+    """Raise ValueError naming the date and the periods where the NI-DA and ROI-DA EUR index prices differ."""
+    n = max(len(ni_vals), len(roi_vals))
+    differ = []
+    for period in range(1, n + 1):
+        ni = ni_vals[period - 1].strip() if period <= len(ni_vals) else ""
+        roi = roi_vals[period - 1].strip() if period <= len(roi_vals) else ""
+        if ni != roi and KNOWN_NI_ROI_ROUNDING.get((delivery_date, period)) != (ni, roi):
+            differ.append(f"{period} (NI-DA {ni or 'missing'} vs ROI-DA {roi or 'missing'})")
+    if differ:
+        raise ValueError(f"NI-DA and ROI-DA EUR index prices differ for {delivery_date}: period "
+                         f"{', '.join(differ)}. The market has split; refusing to publish either jurisdiction's price.")
+
+
 def load_dam_data(filepath: Path) -> pd.DataFrame:
-    """Load a SEMO DAM CSV (semicolon-delimited wide block format)."""
+    """Load a SEMO DAM CSV (semicolon-delimited wide block format). The price is the ROI-DA EUR index price;
+    the NI-DA block must agree with it in every period or this raises (see _check_markets_agree)."""
     with open(filepath, encoding="utf-8") as f:
         rows = [line.rstrip("\n").split(";") for line in f]
 
@@ -32,15 +59,24 @@ def load_dam_data(filepath: Path) -> pd.DataFrame:
     if delivery_date is None:
         raise ValueError("Could not find auction date in file metadata")
 
-    # Locate the EUR index prices block
-    ts_row = val_row = None
+    # The EUR "Index prices" block of each market. A SEM-DA file carries one per market (NI-DA, then ROI-DA);
+    # this site publishes the Republic of Ireland price, so ROI-DA is selected by name, never "the first EUR block".
+    ts_row = val_row = ni_vals = None
+    market = None
     for i, row in enumerate(rows):
-        if row[0] == "Index prices" and len(row) >= 3 and row[2] == "EUR":
-            ts_row = rows[i + 1]
-            val_row = rows[i + 2]
-            break
+        if row[0] == "Market" and len(row) >= 2:
+            market = row[1].strip()
+        elif row[0] == "Index prices" and len(row) >= 3 and row[2] == "EUR":
+            if market == "ROI-DA" and ts_row is None:
+                ts_row, val_row = rows[i + 1], rows[i + 2]
+            elif market == "NI-DA" and ni_vals is None:
+                ni_vals = rows[i + 2]
     if ts_row is None:
-        raise ValueError("Could not find 'Index prices' EUR block")
+        raise ValueError(f"Could not find the 'Index prices' EUR block under 'Market;ROI-DA' for {delivery_date}")
+    if ni_vals is None:
+        raise ValueError(f"Could not find the 'Index prices' EUR block under 'Market;NI-DA' for {delivery_date}: "
+                         f"cannot confirm the market did not split")
+    _check_markets_agree(delivery_date, ni_vals, val_row)
 
     records = []
     for period_num, (ts_str, val_str) in enumerate(zip(ts_row, val_row), start=1):
