@@ -65,9 +65,11 @@ Dearest week since we started tracking in October 2025. At 41.57 c/kWh it's thre
 
 Low wind explains the jump from last week. It doesn't explain the level. The week of 19 October had more wind than usual and still cost double the same week of 2025. Something under the market has been rising all year, and wind data alone can't say what.
 
-This week wind averaged 559 MW against a normal 1282 MW. Tuesday was the dearest day at 48.85, and by the weekend wind had all but vanished: Saturday still cost 45.63. Thursday had the most wind and was the cheapest day at 35.05, which is nearly double the 18.42 a typical week has averaged. The daily spread sat at €253.27/MWh, so it was volatile as well as expensive.
+This week wind averaged 559 MW against a normal 1282 MW. Tuesday was the dearest day at 48.85, and by the weekend wind had all but vanished: Saturday still cost 45.63. Wednesday had the most wind. Thursday, with almost as much, was the cheapest day at 35.05, which is nearly double the 18.42 a typical week has averaged. The daily spread sat at €253.27/MWh, so it was volatile as well as expensive.
 
 This is the spot price, not your contract rate. One week like this is no reason to rush into a fixed price, but it is a reason to know your contract end date and notice window. Give us a windy week next.
+
+Correction, 13 Nov 2026: an earlier version said Thursday had the most wind. It was Wednesday, by a small margin.
 
 ## Methodology
 
