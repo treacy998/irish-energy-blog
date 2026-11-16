@@ -2,6 +2,7 @@
 title: "Weekly Analysis — 2–8 November 2026"
 slug: "2026-11-02"
 date: 2026-11-08
+lastmod: 2026-11-16
 week_start: 2026-11-02
 authors: ["Eoin"]
 tags: ["weekly-analysis", "I-SEM"]
@@ -69,7 +70,7 @@ This week wind averaged 559 MW against a normal 1282 MW. Tuesday was the dearest
 
 This is the spot price, not your contract rate. One week like this is no reason to rush into a fixed price, but it is a reason to know your contract end date and notice window. Give us a windy week next.
 
-Correction, 13 Nov 2026: an earlier version said Thursday had the most wind. It was Wednesday, by a small margin.
+Correction, 16 Nov 2026: an earlier version said Thursday had the most wind. It was Wednesday, by a small margin.
 
 ## Methodology
 
